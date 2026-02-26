@@ -6,38 +6,21 @@ using UnityEngine.UIElements;
 
 namespace UnityEditor.ShaderGraph
 {
-    class PreviewTarget : Target
+    class UITKPreviewTarget : PreviewTarget
     {
-        static readonly GUID kSourceCodeGuid = new GUID("7464b9fcde08e5645a16b9b8ae1e573c"); // PreviewTarget.cs
+        static readonly GUID kSourceCodeGuid = new GUID("25a52015b0f83494a824ccc98f1854d1"); // UITKPreviewTarget.cs
 
-        public PreviewTarget()
+        public UITKPreviewTarget()
         {
             displayName = "Preview";
             isHidden = true;
         }
-
-        public override bool IsActive() => false;
-        internal override bool ignoreCustomInterpolators => false;
 
         public override void Setup(ref TargetSetupContext context)
         {
             context.AddAssetDependency(kSourceCodeGuid, AssetCollection.Flags.SourceDependency);
             context.AddSubShader(SubShaders.Preview);
         }
-
-        public override void GetFields(ref TargetFieldContext context)
-        {
-        }
-
-        public override void GetActiveBlocks(ref TargetActiveBlockContext context)
-        {
-        }
-
-        public override void GetPropertiesGUI(ref TargetPropertyGUIContext context, Action onChange, Action<String> registerUndo)
-        {
-        }
-
-        public override bool WorksWithSRP(RenderPipelineAsset scriptableRenderPipeline) => true;
 
         static class SubShaders
         {
@@ -94,54 +77,12 @@ namespace UnityEditor.ShaderGraph
                     { "Packages/com.unity.shadergraph/ShaderGraphLibrary/ShaderVariables.hlsl", IncludeLocation.Pregraph },
                     { "Packages/com.unity.shadergraph/ShaderGraphLibrary/ShaderVariablesFunctions.hlsl", IncludeLocation.Pregraph },
                     { "Packages/com.unity.shadergraph/ShaderGraphLibrary/Functions.hlsl", IncludeLocation.Pregraph },
+                    { "Packages/com.unity.shadergraph/Editor/Generation/Targets/BuiltIn/ShaderLibrary/Shim/UIShim.hlsl", IncludeLocation.Pregraph },
 
                     // Post-graph
                     { "Packages/com.unity.shadergraph/ShaderGraphLibrary/PreviewVaryings.hlsl", IncludeLocation.Postgraph },
                     { "Packages/com.unity.shadergraph/ShaderGraphLibrary/PreviewPass.hlsl", IncludeLocation.Postgraph },
                 }
-            };
-        }
-
-        protected static class StructDescriptors
-        {
-            public static StructDescriptor PreviewVaryings = new StructDescriptor()
-            {
-                name = "Varyings",
-                packFields = true,
-                fields = new[]
-                {
-                    StructFields.Varyings.positionCS,
-                    StructFields.Varyings.positionWS,
-                    StructFields.Varyings.positionPredisplacementWS,
-                    StructFields.Varyings.normalWS,
-                    StructFields.Varyings.tangentWS,
-                    StructFields.Varyings.texCoord0,
-                    StructFields.Varyings.texCoord1,
-                    StructFields.Varyings.texCoord2,
-                    StructFields.Varyings.texCoord3,
-                    StructFields.Varyings.texCoord4,
-                    StructFields.Varyings.texCoord5,
-                    StructFields.Varyings.texCoord6,
-                    StructFields.Varyings.texCoord7,
-                    StructFields.Varyings.color,
-                    StructFields.Varyings.screenPosition,
-                    StructFields.Varyings.instanceID,
-                    StructFields.Varyings.vertexID,
-                    StructFields.Varyings.cullFace,
-                }
-            };
-        }
-
-        protected static class KeywordDescriptors
-        {
-            public static KeywordDescriptor PreviewKeyword = new KeywordDescriptor()
-            {
-                displayName = "Preview",
-                referenceName = "SHADERGRAPH_PREVIEW",
-                type = KeywordType.Boolean,
-                definition = KeywordDefinition.MultiCompile,
-                scope = KeywordScope.Global,
-                stages = KeywordShaderStage.All,
             };
         }
     }
