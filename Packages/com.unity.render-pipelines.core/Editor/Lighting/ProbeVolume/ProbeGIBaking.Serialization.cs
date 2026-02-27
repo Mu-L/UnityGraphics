@@ -1138,7 +1138,7 @@ namespace UnityEngine.Rendering
 
             var bakingSetGUID = AssetDatabase.AssetPathToGUID(AssetDatabase.GetAssetPath(m_BakingSet));
 
-            m_BakingSet.scenarios[ProbeReferenceVolume.instance.lightingScenario] = new ProbeVolumeBakingSet.PerScenarioDataInfo
+            m_BakingSet.scenarios[m_BakingSet.lightingScenario] = new ProbeVolumeBakingSet.PerScenarioDataInfo
             {
                 sceneHash = sceneStateHash,
                 cellDataAsset = new ProbeVolumeStreamableAsset(kAPVStreamingAssetsPath, cellL0L1DataDescs, L0L1ChunkSize, bakingSetGUID, AssetDatabase.AssetPathToGUID(cellDataFilename)),
@@ -1198,7 +1198,7 @@ namespace UnityEngine.Rendering
                 probeOcclusion.CopyFrom(System.IO.File.ReadAllBytes(cellProbeOcclusionDataFilename));
             }
 
-            var lightingScenario = ProbeReferenceVolume.instance.lightingScenario;
+            var lightingScenario = m_BakingSet.lightingScenario;
             Debug.Assert(m_BakingSet.scenarios.ContainsKey(lightingScenario));
             var scenarioDataInfo = m_BakingSet.scenarios[lightingScenario];
 

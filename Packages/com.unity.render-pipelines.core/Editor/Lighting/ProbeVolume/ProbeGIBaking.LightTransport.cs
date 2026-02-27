@@ -241,11 +241,13 @@ namespace UnityEngine.Rendering
                 skyOcclusionBakingSamples = bakingSet != null ? bakingSet.skyOcclusionBakingSamples : 0;
                 skyOcclusionBakingBounces = bakingSet != null ? bakingSet.skyOcclusionBakingBounces : 0;
 
-#if UNIFIED_BAKER
-                int indirectSampleCount = lightingSettings.indirectSampleCount;
-#else
-                int indirectSampleCount = Math.Max(lightingSettings.indirectSampleCount, lightingSettings.environmentSampleCount);
-#endif
+                var usingComputeLightBaker = UnityEditor.Rendering.EditorGraphicsSettings.defaultLightBaker == UnityEditor.Rendering.LightBaker.UnityComputeLightBaker;
+                int indirectSampleCount = 0;
+                if (usingComputeLightBaker)
+                    indirectSampleCount = lightingSettings.indirectSampleCount;
+                else
+                    indirectSampleCount = Math.Max(lightingSettings.indirectSampleCount, lightingSettings.environmentSampleCount);
+
                 Create(lightingSettings, ignoreEnvironement, lightingSettings.directSampleCount, indirectSampleCount, lightingSettings.environmentSampleCount,
                     (int)lightingSettings.lightProbeSampleCountMultiplier, lightingSettings.maxBounces);
             }
