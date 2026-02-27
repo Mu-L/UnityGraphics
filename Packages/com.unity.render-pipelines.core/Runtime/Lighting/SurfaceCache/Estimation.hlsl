@@ -133,7 +133,12 @@ void SampleEnvironmentAndDirectionalBounceAndMultiBounceRadiance(
     inout bool gotValidSamples)
 {
     UnifiedRT::Ray ray;
-    ray.origin = OffsetRayOrigin(patchGeo.position, patchGeo.normal);
+    // Offset ray origin to avoid self-intersections
+    // This offset is a percentage of the min voxel width (to keep it proportional to the scene scale) and is combined with OffsetRayOrigin
+    // Note: OffsetRayOrigin is not a perfect fit for a patchGeo.position that comes from the rasterization pipeline, as its heuristic is designed
+    // for positions computed via triangle vertices interpolation of a previous ray hit. We use it here nonetheless because its scaling with the distance
+    // to the world origin also helps to counter floating-point precision issues.
+    ray.origin = OffsetRayOrigin(patchGeo.position, patchGeo.normal, _VolumeVoxelMinSize * 0.001);
     ray.tMin = 0;
     ray.tMax = FLT_MAX;
 
