@@ -207,7 +207,11 @@ half3 SampleLightmap(float2 staticLightmapUV, half3 normalWS)
 }
 
 #if defined(_SCREEN_SPACE_IRRADIANCE)
-#define SAMPLE_GI(irradianceTex, pos) SampleScreenSpaceGI(pos)
+    #if !defined(_SURFACE_TYPE_TRANSPARENT)
+        #define SAMPLE_GI(irradianceTex, pos, normal) SampleScreenSpaceGI(pos)
+    #else
+        #define SAMPLE_GI(irradianceTex, pos, normal) EvaluateAmbientProbe(normal)
+    #endif
 #elif defined(LIGHTMAP_ON) && defined(DYNAMICLIGHTMAP_ON)
 #define SAMPLE_GI(staticLmName, dynamicLmName, shName, normalWSName) SampleLightmap(staticLmName, dynamicLmName, normalWSName)
 #elif defined(DYNAMICLIGHTMAP_ON)
@@ -215,11 +219,11 @@ half3 SampleLightmap(float2 staticLightmapUV, half3 normalWS)
 #elif defined(LIGHTMAP_ON)
 #define SAMPLE_GI(staticLmName, shName, normalWSName) SampleLightmap(staticLmName, 0, normalWSName)
 #elif defined(PROBE_VOLUMES_L1) || defined(PROBE_VOLUMES_L2)
-#ifdef USE_APV_PROBE_OCCLUSION
-    #define SAMPLE_GI(shName, absolutePositionWS, normalWS, viewDir, positionSS, vertexProbeOcclusion, probeOcclusion) SampleProbeVolumePixel(shName, absolutePositionWS, normalWS, viewDir, positionSS, vertexProbeOcclusion, probeOcclusion)
-#else
-    #define SAMPLE_GI(shName, absolutePositionWS, normalWS, viewDir, positionSS, vertexProbeOcclusion, probeOcclusion) SampleProbeVolumePixel(shName, absolutePositionWS, normalWS, viewDir, positionSS)
-#endif
+    #ifdef USE_APV_PROBE_OCCLUSION
+        #define SAMPLE_GI(shName, absolutePositionWS, normalWS, viewDir, positionSS, vertexProbeOcclusion, probeOcclusion) SampleProbeVolumePixel(shName, absolutePositionWS, normalWS, viewDir, positionSS, vertexProbeOcclusion, probeOcclusion)
+    #else
+        #define SAMPLE_GI(shName, absolutePositionWS, normalWS, viewDir, positionSS, vertexProbeOcclusion, probeOcclusion) SampleProbeVolumePixel(shName, absolutePositionWS, normalWS, viewDir, positionSS)
+    #endif
 #else
 #define SAMPLE_GI(staticLmName, shName, normalWSName) SampleSHPixel(shName, normalWSName)
 #endif
@@ -372,7 +376,7 @@ half3 CalculateIrradianceFromReflectionProbes(half3 reflectVector, float3 positi
     if (weightProbe0 > 0.01f)
     {
         half3 reflectVector0 = reflectVector;
-        if (_REFLECTION_PROBE_BOX_PROJECTION) 
+        if (_REFLECTION_PROBE_BOX_PROJECTION)
         {
             #if defined(REFLECTION_PROBE_ROTATION)
             reflectVector0 = BoxProjectedCubemapDirection(unity_SpecCube0_Rotation, reflectVector, rotPosWS0, unity_SpecCube0_ProbePosition, unity_SpecCube0_BoxMin, unity_SpecCube0_BoxMax);
