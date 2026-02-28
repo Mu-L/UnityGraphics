@@ -436,7 +436,9 @@ namespace UnityEngine.Rendering.Universal
                 var worldToClipTransform = viewToClipTransform * worldToViewTransform;
                 var clipToWorldTransform = worldToClipTransform.inverse;
 
-                var screenResolution = new int2(cameraData.pixelWidth, cameraData.pixelHeight);
+                var screenResolution = new int2(
+                    (int)(cameraData.pixelWidth * cameraData.renderScale),
+                    (int)(cameraData.pixelHeight * cameraData.renderScale));
 
                 // This avoids applying surface cache to e.g. preview cameras.
                 if (cameraData.cameraType != CameraType.Game && cameraData.cameraType != CameraType.SceneView)
