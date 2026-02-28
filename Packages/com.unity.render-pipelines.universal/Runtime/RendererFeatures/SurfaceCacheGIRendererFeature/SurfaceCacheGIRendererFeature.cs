@@ -1159,7 +1159,7 @@ namespace UnityEngine.Rendering.Universal
                     Light light = lights[i];
                     ref SurfaceCacheWorld.LightDescriptor descriptor = ref descriptors[i];
                     descriptor.Type = light.type;
-                    descriptor.LinearLightColor = Util.GetLinearLightColor(light) * light.bounceIntensity;
+                    descriptor.LinearLightColor = Util.GetLinearLightColor(light, light.bounceIntensity);
                     if (multiplyPunctualLightIntensityByPI && Util.IsPunctualLightType(light.type))
                         descriptor.LinearLightColor *= Mathf.PI;
                     descriptor.Transform = light.transform.localToWorldMatrix;

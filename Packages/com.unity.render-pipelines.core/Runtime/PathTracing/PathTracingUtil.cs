@@ -235,7 +235,13 @@ namespace UnityEngine.PathTracing.Core
 
         internal static Vector3 GetLinearLightColor(Light light)
         {
-            Color lightColor = (GraphicsSettings.lightsUseLinearIntensity) ? RGBMultiplied(light.color.linear, light.intensity) : RGBMultiplied(light.color, light.intensity).linear;
+            return GetLinearLightColor(light, 1.0f);
+        }
+
+        internal static Vector3 GetLinearLightColor(Light light, float intensityMultiplier)
+        {
+            float effectiveIntensity = light.intensity * intensityMultiplier;
+            Color lightColor = (GraphicsSettings.lightsUseLinearIntensity) ? RGBMultiplied(light.color.linear, effectiveIntensity) : RGBMultiplied(light.color, effectiveIntensity).linear;
             lightColor *= light.useColorTemperature ? Mathf.CorrelatedColorTemperatureToRGB(light.colorTemperature) : Color.white;
             return new Vector3(lightColor.r, lightColor.g, lightColor.b) * lightColor.a;
         }
