@@ -80,11 +80,20 @@ void IntegrateDirectRadiance(UnifiedRT::DispatchInfo dispatchInfo)
     #else
     const float monteCarloNormalization = 1.0f / (float)g_SampleCount;
     #endif
+
     for (uint channel = 0; channel < SH_COLOR_CHANNELS; ++channel)
     {
         for (uint i = 0; i < SH_COEFFICIENTS_PER_CHANNEL; ++i)
         {
-            g_RadianceShl2[SHIndex(outProbeIdx, channel, i)] += accumulatedRadianceSH[i][channel] * monteCarloNormalization;
+            #ifdef LIGHT_SAMPLING_ROUND_ROBIN
+            float result = accumulatedRadianceSH[i][channel] * monteCarloNormalization;
+            // If we are past the first iteration, we want to accumulate into the buffer rather than overwriting the current value.
+            if (g_LightIndexInCell > 0)
+                result += g_RadianceShl2[SHIndex(outProbeIdx, channel, i)];
+            g_RadianceShl2[SHIndex(outProbeIdx, channel, i)] = result;
+            #else
+            g_RadianceShl2[SHIndex(outProbeIdx, channel, i)] = accumulatedRadianceSH[i][channel] * monteCarloNormalization;
+            #endif
         }
     }
 }
