@@ -1043,6 +1043,7 @@ namespace UnityEngine.Rendering.HighDefinition
             CoreUtils.Destroy(m_FinalBlitWithOETFTexArraySingleSlice);
 
             XRSystem.Dispose();
+            TextureXR.Cleanup();
             m_WaterSystem.Cleanup();
             m_VolumetricClouds.Cleanup();
             m_SkyManager.Cleanup();
