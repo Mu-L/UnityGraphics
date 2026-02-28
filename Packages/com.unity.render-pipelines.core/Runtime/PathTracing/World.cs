@@ -939,7 +939,7 @@ namespace UnityEngine.PathTracing.Core
             _materialPool.Build(cmdBuf);
             _rayTracingAccelerationStructure.Build(cmdBuf, ref scratchBuffer);
 
-            _cubemapRender.Update(cmdBuf, RenderSettings.sun, envCubemapResolution);
+            _cubemapRender.Update(cmdBuf, RenderSettings.sun, envCubemapResolution, out _);
         }
 
         public UInt64 GetInstanceHandles(InstanceHandle handle)

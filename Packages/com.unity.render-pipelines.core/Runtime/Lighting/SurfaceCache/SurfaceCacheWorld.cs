@@ -489,12 +489,12 @@ namespace UnityEngine.Rendering
             }
         }
 
-        public void Commit(CommandBuffer cmdBuf, ref GraphicsBuffer scratchBuffer, uint envCubemapResolution, UnityEngine.Light sun)
+        public void Commit(CommandBuffer cmdBuf, ref GraphicsBuffer scratchBuffer, uint envCubemapResolution, UnityEngine.Light sun, out bool viewAndProjectionMatricesChanged)
         {
             Debug.Assert(_rayTracingAccelerationStructure != null);
             _materialPool.Build(cmdBuf);
             _rayTracingAccelerationStructure.Build(cmdBuf, ref scratchBuffer);
-            _cubemapRender.Update(cmdBuf, sun, (int)envCubemapResolution);
+            _cubemapRender.Update(cmdBuf, sun, (int)envCubemapResolution, out viewAndProjectionMatricesChanged);
             _lights.Commit(cmdBuf);
         }
     }

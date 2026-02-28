@@ -164,6 +164,8 @@ namespace UnityEngine.Rendering.Universal
                 internal SurfaceCacheWorld World;
                 internal uint EnvCubemapResolution;
                 internal Light Sun;
+                internal Matrix4x4 RestoreViewMatrix;
+                internal Matrix4x4 RestoreProjectionMatrix;
             }
 
             private class DebugPassData
@@ -596,8 +598,8 @@ namespace UnityEngine.Rendering.Universal
                     passData.World = _world;
                     passData.EnvCubemapResolution = _environmentCubemapResolution;
                     passData.Sun = RenderSettings.sun;
-
-
+                    passData.RestoreProjectionMatrix = cameraData.GetProjectionMatrix();
+                    passData.RestoreViewMatrix = worldToViewTransform;
 
                     builder.AllowGlobalStateModification(true);
                     builder.SetRenderFunc((WorldUpdatePassData data, UnsafeGraphContext graphCtx) => UpdateWorld(data, graphCtx, ref _worldUpdateScratch));
@@ -723,7 +725,11 @@ namespace UnityEngine.Rendering.Universal
             static void UpdateWorld(WorldUpdatePassData data, UnsafeGraphContext graphCtx, ref GraphicsBuffer scratch)
             {
                 var cmd = CommandBufferHelpers.GetNativeCommandBuffer(graphCtx.cmd);
-                data.World.Commit(cmd, ref scratch, data.EnvCubemapResolution, data.Sun);
+                data.World.Commit(cmd, ref scratch, data.EnvCubemapResolution, data.Sun, out bool viewAndProjectionMatricesChanged);
+                if (viewAndProjectionMatricesChanged)
+                {
+                    cmd.SetViewProjectionMatrices(data.RestoreViewMatrix, data.RestoreProjectionMatrix);
+                }
             }
 
             static void LookupScreenIrradiance(ScreenIrradianceLookupPassData data, ComputeGraphContext cgContext)
