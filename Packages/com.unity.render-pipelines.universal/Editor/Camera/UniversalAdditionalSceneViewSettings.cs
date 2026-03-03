@@ -15,8 +15,8 @@ namespace UnityEditor.Rendering.Universal
         
         static void EnsureAdditionalData(SceneView sceneView)
         {
-            if (!sceneView.camera.TryGetComponent(out UniversalAdditionalCameraData hdAdditionalCameraData))
-                hdAdditionalCameraData = sceneView.camera.gameObject.AddComponent<UniversalAdditionalCameraData>();
+            if (!sceneView.camera.TryGetComponent(out UniversalAdditionalCameraData _))
+                sceneView.camera.gameObject.AddComponent<UniversalAdditionalCameraData>();
         }
     }
 }
