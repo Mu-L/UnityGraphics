@@ -429,7 +429,7 @@ namespace UnityEngine.Rendering
             Span<bool> isOpaque = stackalloc bool[1];
 
             _materialPool.GetMaterialInfo(material.Value, out materialIndices[0], out bool isTransmissive);
-            isOpaque[0] = !isTransmissive;
+            isOpaque[0] = false; // This property is not used for terrain, set to false.
 
             Component comp = terrain;
             InstanceHandle instance = _instanceHandleSet.Add();
