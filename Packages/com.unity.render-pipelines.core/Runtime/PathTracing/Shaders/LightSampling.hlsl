@@ -15,6 +15,14 @@
 #define TRANSMISSION_IN_SHADOW_RAYS
 #define USE_DISTANCE_ATTENUATION_LUT
 
+#if !defined(LIGHT_SAMPLING_UNIFORM_KEYWORD_DECLARED) && !defined(LIGHT_SAMPLING_RIS_KEYWORD_DECLARED) && !defined(LIGHT_SAMPLING_ROUND_ROBIN_KEYWORD_DECLARED)
+#define LIGHT_SAMPLING_RIS
+#endif
+
+#if !defined(EMISSIVE_SAMPLING_LIGHT_KEYWORD_DECLARED) && !defined(EMISSIVE_SAMPLING_BRDF_KEYWORD_DECLARED) && !defined(EMISSIVE_SAMPLING_MIS_KEYWORD_DECLARED)
+#define EMISSIVE_SAMPLING_BRDF
+#endif
+
 TextureCube<float4>             g_EnvTex;
 SamplerState                    sampler_g_EnvTex;
 float                           g_EnvIntensityMultiplier;
@@ -827,12 +835,13 @@ float EmissiveMISWeightForLightRay(int lightType, float3 lightDirection, float l
     {
         float cosTheta = dot(worldNormal, lightDirection);
         float brdfPdf = cosTheta / PI;
-#if (EMISSIVE_SAMPLING == LIGHT_SAMPLING)
         float misWeight = 1;
-#elif (EMISSIVE_SAMPLING == BRDF_SAMPLING)
-        float misWeight = 0;
-#else
-        float misWeight = PowerHeuristic(lightPdf, brdfPdf);
+#if defined(EMISSIVE_SAMPLING_LIGHT)
+        misWeight = 1;
+#elif defined(EMISSIVE_SAMPLING_BRDF)
+        misWeight = 0;
+#elif defined(EMISSIVE_SAMPLING_MIS)
+        misWeight = PowerHeuristic(lightPdf, brdfPdf);
 #endif
         return misWeight;
     }
@@ -841,15 +850,16 @@ float EmissiveMISWeightForLightRay(int lightType, float3 lightDirection, float l
 
 float EmissiveMISWeightForBrdfRay(float lightPdf, float brdfPdf){
 
-#if (EMISSIVE_SAMPLING == LIGHT_SAMPLING)
-    float misWeight = 0;
-#elif (EMISSIVE_SAMPLING == BRDF_SAMPLING)
     float misWeight = 1;
-#else
+#if defined(EMISSIVE_SAMPLING_LIGHT)
+    misWeight = 0;
+#elif defined(EMISSIVE_SAMPLING_BRDF)
+    misWeight = 1;
+#elif defined(EMISSIVE_SAMPLING_MIS)
     // brdfPdf > 0 condition is here to be able to disable MIS for LiveGI's primary rays.
     // When the primary camera ray directly hits an emissive surface, we should not do MIS at all.
     // We did not have a bounce yet and we therefore set iterator.lastScatterProbabilityDensityto (brdfPdf) to 0.
-    float misWeight = brdfPdf > 0 ? PowerHeuristic(brdfPdf, lightPdf) : 1.0;
+    misWeight = brdfPdf > 0 ? PowerHeuristic(brdfPdf, lightPdf) : 1.0;
 #endif
     return misWeight;
 }
@@ -1123,7 +1133,7 @@ bool SampleLightsRadiance(
     UnifiedRT::DispatchInfo dispatchInfo, UnifiedRT::RayTracingAccelStruct accelStruct, StructuredBuffer<UnifiedRT:: InstanceData> instanceList,
     float3 receiverOrigin, float3 receiverNormal, SampleLightsOptions options, inout PathTracingSampler rngState, out LightSample resLightSample)
 {
-#ifdef RESAMPLED_IMPORTANCE_SAMPLING
+#if defined(LIGHT_SAMPLING_RIS)
     return SampleLightsRadianceRIS(dispatchInfo, accelStruct, instanceList, receiverOrigin, receiverNormal, options, rngState, resLightSample);
 #else
     return SampleLightsRadianceMC(dispatchInfo, accelStruct, instanceList, receiverOrigin, receiverNormal, options, rngState, resLightSample);

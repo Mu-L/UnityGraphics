@@ -158,6 +158,19 @@ namespace UnityEngine.PathTracing.Core
             }
         }
 
+        internal static void SetLightSamplingKeyword(CommandBuffer cmd, IRayTracingShader shader, LightSamplingMode lightSamplingMode)
+        {
+            shader.SetKeyword(cmd, shader.CreateKeyword("LIGHT_SAMPLING_UNIFORM"), lightSamplingMode == LightSamplingMode.Uniform);
+            shader.SetKeyword(cmd, shader.CreateKeyword("LIGHT_SAMPLING_RIS"), lightSamplingMode == LightSamplingMode.RIS);
+            shader.SetKeyword(cmd, shader.CreateKeyword("LIGHT_SAMPLING_ROUND_ROBIN"), lightSamplingMode == LightSamplingMode.RoundRobin);
+        }
+
+        internal static void SetEmissiveSamplingKeyword(CommandBuffer cmd, IRayTracingShader shader, EmissiveSamplingMode lightSamplingMode)
+        {
+            shader.SetKeyword(cmd, shader.CreateKeyword("EMISSIVE_SAMPLING_LIGHT"), lightSamplingMode == EmissiveSamplingMode.LightSampling);
+            shader.SetKeyword(cmd, shader.CreateKeyword("EMISSIVE_SAMPLING_BRDF"), lightSamplingMode == EmissiveSamplingMode.BRDFSampling);
+            shader.SetKeyword(cmd, shader.CreateKeyword("EMISSIVE_SAMPLING_MIS"), lightSamplingMode == EmissiveSamplingMode.MIS);
+        }
 
         internal static RayTracingResources LoadOrCreateRayTracingResources()
         {

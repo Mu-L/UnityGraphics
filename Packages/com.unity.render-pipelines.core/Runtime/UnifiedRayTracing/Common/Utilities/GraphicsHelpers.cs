@@ -70,5 +70,22 @@ namespace UnityEngine.Rendering.UnifiedRayTracing
             cmd.Clear();
             GL.Flush();
         }
+
+        public static void SetKeyword(this IRayTracingShader shader, CommandBuffer cmd, in LocalKeyword keyword, bool value)
+        {
+            if (shader is ComputeRayTracingShader cs)
+                cs.SetKeyword(cmd, in keyword, value);
+            else if (shader is HardwareRayTracingShader rs)
+                rs.SetKeyword(cmd, in keyword, value);
+        }
+
+        public static LocalKeyword CreateKeyword(this IRayTracingShader shader, string name)
+        {
+            if (shader is ComputeRayTracingShader cs)
+                return cs.CreateKeyword(name);
+            else if (shader is HardwareRayTracingShader rs)
+                return rs.CreateKeyword(name);
+            throw new System.NotImplementedException();
+        }
     }
 }

@@ -159,6 +159,16 @@ namespace UnityEngine.Rendering.UnifiedRayTracing
             uint rayCount = width * height * depth;
             return (RadeonRays.RadeonRaysAPI.GetTraceMemoryRequirements(rayCount) * 4);
         }
+
+        public void SetKeyword(CommandBuffer cmd, in LocalKeyword keyword, bool value)
+        {
+            cmd.SetKeyword(m_Shader, keyword, value);
+        }
+
+        public LocalKeyword CreateKeyword(string name)
+        {
+            return new LocalKeyword(m_Shader, name);
+        }
     }
 }
 

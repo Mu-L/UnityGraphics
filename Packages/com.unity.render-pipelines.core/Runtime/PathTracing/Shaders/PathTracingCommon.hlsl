@@ -8,17 +8,13 @@
 #include "Packages/com.unity.render-pipelines.core/Runtime/UnifiedRayTracing/CommonStructs.hlsl"
 #include "Packages/com.unity.render-pipelines.core/Runtime/UnifiedRayTracing/FetchGeometry.hlsl"
 
-#define LIGHT_SAMPLING 0
-#define BRDF_SAMPLING 1
-#define MIS 2
-
 // Force uniform sampling of the skybox for debugging / ground truth generation
 //#define UNIFORM_ENVSAMPLING
 
-// Emissive mesh sampling: we combine explicit light and brdf sampling using MIS.
-// We can disable MIS and use exclusively one of the two sampling techniques with the EMISSIVE_SAMPLING define.
-#ifndef EMISSIVE_SAMPLING
-#define EMISSIVE_SAMPLING BRDF_SAMPLING
+// Emissive mesh sampling: By default we use pure BRDF sampling.
+// This can be overriden with a keyword.
+#ifndef EMISSIVE_SAMPLING_BRDF_KEYWORD_DECLARED
+#define EMISSIVE_SAMPLING_BRDF
 #endif
 
 #define SPOT_LIGHT 0

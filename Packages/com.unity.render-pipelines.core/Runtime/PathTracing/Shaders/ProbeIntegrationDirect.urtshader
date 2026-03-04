@@ -1,12 +1,12 @@
 #pragma only_renderers d3d11 vulkan metal glcore
+
+#pragma multi_compile _ LIGHT_SAMPLING_UNIFORM LIGHT_SAMPLING_RIS LIGHT_SAMPLING_ROUND_ROBIN
+
 #define UNIFIED_RT_GROUP_SIZE_X 128
 #define UNIFIED_RT_GROUP_SIZE_Y 1
 #define UNIFIED_RT_RAYGEN_FUNC IntegrateDirectRadiance
 
 #include "Packages/com.unity.render-pipelines.core/Runtime/UnifiedRayTracing/FetchGeometry.hlsl"
-
-#define RESAMPLED_IMPORTANCE_SAMPLING
-#define LIGHT_SAMPLING_ROUND_ROBIN
 
 #include "PathTracing.hlsl"
 #include "SphericalHarmonicsUtils.hlsl"

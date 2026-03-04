@@ -356,7 +356,7 @@ namespace UnityEditor.PathTracing.LightBakerBridge
 
                 // Build world with extracted data
                 const bool emissiveSampling = true;
-                world.PathTracingWorld.Build(sceneBounds, deviceContext.GetCommandBuffer(), ref world.ScratchBuffer, samplingResources, emissiveSampling, 1024);
+                world.PathTracingWorld.Build(sceneBounds, deviceContext.GetCommandBuffer(), ref world.ScratchBuffer, samplingResources, emissiveSampling, 1024, (int)bakeInput.lightingSettings.lightGridMaxCells);
 
                 LightmapBakeSettings lightmapBakeSettings = GetLightmapBakeSettings(bakeInput);
                 // Build array of lightmap descriptors based on the atlassing data and instances.
@@ -479,7 +479,13 @@ namespace UnityEditor.PathTracing.LightBakerBridge
                 DirectSampleCount = math.max(0, bakeInput.lightingSettings.lightmapSampleCounts.directSampleCount),
                 IndirectSampleCount = math.max(0, bakeInput.lightingSettings.lightmapSampleCounts.indirectSampleCount),
                 BounceCount = math.max(0, bakeInput.lightingSettings.maxBounces),
-                AOMaxDistance = math.max(0.0f, bakeInput.lightingSettings.aoDistance)
+                AOMaxDistance = math.max(0.0f, bakeInput.lightingSettings.aoDistance),
+                DirectLightSamplingMode = bakeInput.lightingSettings.directLightSamplingMode,
+                DirectRISCandidateCount = bakeInput.lightingSettings.directRISCandidateCount,
+                IndirectLightSamplingMode = bakeInput.lightingSettings.indirectLightSamplingMode,
+                IndirectRISCandidateCount = bakeInput.lightingSettings.indirectRISCandidateCount,
+                DirectEmissiveSamplingMode = bakeInput.lightingSettings.directEmissiveSamplingMode,
+                IndirectEmissiveSamplingMode = bakeInput.lightingSettings.indirectEmissiveSamplingMode,
             };
             lightmapBakeSettings.ValiditySampleCount = lightmapBakeSettings.IndirectSampleCount;
             return lightmapBakeSettings;
@@ -898,7 +904,12 @@ namespace UnityEditor.PathTracing.LightBakerBridge
             if (!lightmappingContext.Initialize(deviceContext, initialLightmapResolution, initialLightmapResolution, world, maxIndexCount, maxVertexCount, lightmapResourceLib))
                 return Result.InitializeFailure;
 
+            CommandBuffer cmd = lightmappingContext.GetCommandBuffer();
             lightmappingContext.IntegratorContext.Initialize(samplingResources, lightmapResourceLib, !useLegacyBakingBehavior);
+
+            // Setup keywords only once before accumulation.
+            lightmappingContext.IntegratorContext.LightmapDirectIntegrator.SetupLightSamplingKeywords(cmd, lightmapBakeSettings.DirectLightSamplingMode, lightmapBakeSettings.DirectEmissiveSamplingMode);
+            lightmappingContext.IntegratorContext.LightmapIndirectIntegrator.SetupLightSamplingKeywords(cmd, lightmapBakeSettings.IndirectLightSamplingMode, lightmapBakeSettings.IndirectEmissiveSamplingMode);
 
             // Chart identification happens in multithreaded fashion on the CPU. We start it immediately so it can run in tandem with other work.
             bool usesChartIdentification = AnyLightmapRequestHasOutput(lightmapRequestData.requests, LightmapRequestOutputType.ChartIndex) ||
@@ -918,7 +929,6 @@ namespace UnityEditor.PathTracing.LightBakerBridge
                 }
             }
 
-            CommandBuffer cmd = lightmappingContext.GetCommandBuffer();
             using LightmapIntegrationHelpers.GPUSync gpuSync = new(); // used for sync points in debug mode
             gpuSync.Create();
 
@@ -1458,6 +1468,12 @@ namespace UnityEditor.PathTracing.LightBakerBridge
                 (uint directSampleCount, uint effectiveIndirectSampleCount) = GetProbeSampleCounts(request.sampleCount);
 
                 probeIntegrator.Prepare(deviceContext, world, positionsBuffer.Slice<Vector3>(), pushoff, (int)bounceCount);
+                probeIntegrator.SetLightSamplingSettings(
+                    bakeInput.lightingSettings.directLightSamplingMode,
+                    bakeInput.lightingSettings.directRISCandidateCount,
+                    bakeInput.lightingSettings.indirectLightSamplingMode,
+                    bakeInput.lightingSettings.indirectRISCandidateCount,
+                    bakeInput.lightingSettings.indirectEmissiveSamplingMode);
 
                 List<EventID> eventsToWaitFor = new();
                 List<BufferID> buffersToDestroy = new();

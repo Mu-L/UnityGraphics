@@ -134,7 +134,7 @@ namespace UnityEngine.PathTracing.Tests
             cubemapMat.SetVector("_Radiance", new Vector4(envRed, envGreen, envBlue, 1.0f));
             _world.SetEnvironmentMaterial(cubemapMat);
             GraphicsBuffer buildScratchBuffer = null;
-            _world.Build(new Bounds(), _cmd, ref buildScratchBuffer, _samplingResources, true, 8);
+            _world.Build(new Bounds(), _cmd, ref buildScratchBuffer, _samplingResources, true, 8,  64 * 64 * 64);
             var shader = _rayTracingContext.LoadRayTracingShader("Packages/com.unity.render-pipelines.core/Tests/Runtime/PathTracing/PathIteratorTest.urtshader");
 
             Util.BindWorld(_cmd, shader, _world);
@@ -205,7 +205,7 @@ namespace UnityEngine.PathTracing.Tests
                 true,
                 RenderedGameObjectsFilter.OnlyStatic,
                 true);
-            _world.Build(new Bounds(), _cmd, ref buildScratchBuffer, _samplingResources, true, 8);
+            _world.Build(new Bounds(), _cmd, ref buildScratchBuffer, _samplingResources, true, 8,  64 * 64 * 64);
 
             var shader = _rayTracingContext.LoadRayTracingShader("Packages/com.unity.render-pipelines.core/Tests/Runtime/PathTracing/PathIteratorTest.urtshader");
 

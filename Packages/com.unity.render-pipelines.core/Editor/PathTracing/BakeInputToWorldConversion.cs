@@ -2,13 +2,15 @@ using System;
 using System.Collections.Generic;
 using UnityEngine.PathTracing.Core;
 using UnityEngine.Rendering;
-using UnityEngine.LightTransport;
 using Unity.Mathematics;
+using UnityEditor.LightBaking;
 using UnityEngine;
 using UnityEngine.PathTracing.Lightmapping;
 using UnityEngine.PathTracing.Integration;
 using UnityEngine.Rendering.Sampling;
 using UnityEngine.Rendering.UnifiedRayTracing;
+using InputExtraction = UnityEngine.LightTransport.InputExtraction;
+using Material = UnityEngine.Material;
 
 namespace UnityEditor.PathTracing.LightBakerBridge
 {
@@ -208,7 +210,7 @@ namespace UnityEditor.PathTracing.LightBakerBridge
                 lights[i] = lightDescriptor;
             }
 
-            world.lightPickingMethod = LightPickingMethod.LightGrid;
+            world.lightPickingMethod = bakeInput.lightingSettings.lightAccelerationStructure == LightAccelerationStructure.LightGrid ? LightPickingMethod.LightGrid : LightPickingMethod.Uniform;
             lightHandles = world.AddLights(lights, false, autoEstimateLUTRange, bakeInput.lightingSettings.mixedLightingMode);
         }
 
@@ -537,7 +539,7 @@ namespace UnityEditor.PathTracing.LightBakerBridge
             Dictionary<int, List<LodInstanceBuildData>> lodInstances;
             Dictionary<Int32, List<ContributorLodInfo>> lodgroupToContributorInstances;
             WorldHelpers.AddContributingInstancesToWorld(world.PathTracingWorld, in fatInstances, out lodInstances, out lodgroupToContributorInstances);
-            world.PathTracingWorld.Build(sceneBounds, cmd, ref world.ScratchBuffer, samplingResources, true, 1024);
+            world.PathTracingWorld.Build(sceneBounds, cmd, ref world.ScratchBuffer, samplingResources, true, 1024, (int)input.bakeInput.GetLightingSettings().lightGridMaxCells);
         }
 
         internal static void DeserializeAndInjectBakeInputData(

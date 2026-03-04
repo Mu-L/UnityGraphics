@@ -1,11 +1,11 @@
 #pragma only_renderers d3d11 vulkan metal glcore
+
+#pragma multi_compile _ LIGHT_SAMPLING_UNIFORM LIGHT_SAMPLING_RIS LIGHT_SAMPLING_ROUND_ROBIN
+#pragma multi_compile _ EMISSIVE_SAMPLING_LIGHT EMISSIVE_SAMPLING_BRDF EMISSIVE_SAMPLING_MIS
+
 #define UNIFIED_RT_GROUP_SIZE_X 64
 #define UNIFIED_RT_GROUP_SIZE_Y 1
 #define UNIFIED_RT_RAYGEN_FUNC AccumulateInternal
-
-#define RESAMPLED_IMPORTANCE_SAMPLING
-#define EMISSIVE_SAMPLING MIS
-#define LIGHT_SAMPLING_ROUND_ROBIN
 
 #include "PathTracing.hlsl"
 #include "LightmapIntegrationHelpers.hlsl"
@@ -205,7 +205,7 @@ void AccumulateInternal(UnifiedRT::DispatchInfo dispatchInfo)
 
     // TODO: Decouple BRDF samples from direct light samples in a separate kernel (https://jira.unity3d.com/browse/GFXLIGHT-2107)
     // Sample a light with BRDF sampling, weight with MIS.
-    #if (EMISSIVE_SAMPLING != LIGHT_SAMPLING)
+    #ifndef EMISSIVE_SAMPLING_LIGHT
     EstimateMISWeightedIrradianceUsingCosineSampling(dispatchInfo, accelStruct, g_AccelStructInstanceList, origin, worldNormal, rngState, irradianceBrdf, directionalBrdf);
     #endif
 

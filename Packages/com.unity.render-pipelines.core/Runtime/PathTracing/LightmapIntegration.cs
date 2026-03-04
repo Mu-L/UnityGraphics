@@ -117,6 +117,12 @@ namespace UnityEngine.PathTracing.Integration
         {
         }
 
+        public void SetupLightSamplingKeywords(CommandBuffer cmd, LightSamplingMode lightSamplingMode, EmissiveSamplingMode emissiveSamplingMode)
+        {
+            Util.SetLightSamplingKeyword(cmd, _accumulationShader, lightSamplingMode);
+            Util.SetEmissiveSamplingKeyword(cmd, _accumulationShader, emissiveSamplingMode);
+        }
+
         public void Prepare(IRayTracingShader accumulationShader, ComputeShader normalizationShader, ComputeShader expansionHelpers, SamplingResources samplingResources, RTHandle emptyExposureTexture)
         {
             _accumulationShader = accumulationShader;
@@ -155,6 +161,7 @@ namespace UnityEngine.PathTracing.Integration
             bool receiveShadows,
             float pushOff,
             uint risCandidateCount,
+            LightSamplingMode lightSamplingMode,
             uint maxLightsInAnyCell,
             bool newChunkStarted)
         {
@@ -208,7 +215,7 @@ namespace UnityEngine.PathTracing.Integration
                 _accumulationShader.SetIntParam(cmd, LightmapIntegratorShaderIDs.SampleOffset, (int)currentSampleCountPerTexel);
                 _accumulationShader.SetIntParam(cmd, LightmapIntegratorShaderIDs.MaxLocalSampleCount, (int)sampleCountToTakePerTexel);
 
-                uint loopCount = maxLightsInAnyCell;
+                uint loopCount = lightSamplingMode == LightSamplingMode.RoundRobin ? maxLightsInAnyCell : 1;
                 for (int lightIndexInCell = 0; lightIndexInCell < loopCount; ++lightIndexInCell)
                 {
                     _accumulationShader.SetIntParam(cmd, LightmapIntegratorShaderIDs.LightIndexInCell, lightIndexInCell);
@@ -262,6 +269,12 @@ namespace UnityEngine.PathTracing.Integration
         public LightmapIndirectIntegrator(bool countNEERayAsPathSegment)
         {
             _countNEERayAsPathSegment = countNEERayAsPathSegment;
+        }
+
+        public void SetupLightSamplingKeywords(CommandBuffer cmd, LightSamplingMode lightSamplingMode, EmissiveSamplingMode emissiveSamplingMode)
+        {
+            Util.SetLightSamplingKeyword(cmd, _accumulationShader, lightSamplingMode);
+            Util.SetEmissiveSamplingKeyword(cmd, _accumulationShader, emissiveSamplingMode);
         }
 
         public void Prepare(IRayTracingShader accumulationShader, ComputeShader normalizationShader, ComputeShader expansionHelpers, SamplingResources samplingResources, RTHandle emptyExposureTexture)

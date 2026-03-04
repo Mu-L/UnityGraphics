@@ -1,5 +1,6 @@
 using System;
 using Unity.Mathematics;
+using UnityEngine.PathTracing.Core;
 using UnityEngine.PathTracing.Integration;
 using UnityEngine.Rendering;
 using UnityEngine.Rendering.UnifiedRayTracing;
@@ -69,11 +70,17 @@ namespace UnityEngine.PathTracing.Lightmapping
             public AntiAliasingType ValidityAntiAliasingType = AntiAliasingType.Stochastic;
 
             public uint BounceCount = 4;
-            public uint DirectLightingEvaluationCount = 4;
-            public uint IndirectLightingEvaluationCount = 1;
             public float AOMaxDistance = 1.0f;
             public float PushOff = 0.00001f;
             public UInt64 ExpandedBufferSize = 262144;
+
+            public LightSamplingMode DirectLightSamplingMode;
+            public uint DirectRISCandidateCount;
+            public LightSamplingMode IndirectLightSamplingMode;
+            public uint IndirectRISCandidateCount;
+            public EmissiveSamplingMode DirectEmissiveSamplingMode;
+            public EmissiveSamplingMode IndirectEmissiveSamplingMode;
+
             public uint GetSampleCount(IntegratedOutputType integratedOutputType)
             {
                 switch (integratedOutputType)
@@ -331,7 +338,8 @@ namespace UnityEngine.PathTracing.Lightmapping
                             lightmappingContext.IntegratorContext.CompactedGBufferLength,
                             instance.ReceiveShadows,
                             lightmapBakeSettings.PushOff,
-                            lightmapBakeSettings.DirectLightingEvaluationCount,
+                            lightmapBakeSettings.DirectRISCandidateCount,
+                            lightmapBakeSettings.DirectLightSamplingMode,
                             (uint)lightmappingContext.World.PathTracingWorld.MaxLightsInAnyCell,
                             newChunkStarted
                         );
@@ -359,7 +367,7 @@ namespace UnityEngine.PathTracing.Lightmapping
                             lightmappingContext.CompactedTexelIndices,
                             lightmappingContext.IntegratorContext.CompactedGBufferLength,
                             lightmapBakeSettings.PushOff,
-                            lightmapBakeSettings.IndirectLightingEvaluationCount,
+                            lightmapBakeSettings.IndirectRISCandidateCount,
                             newChunkStarted
                         );
                         break;

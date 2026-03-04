@@ -5,6 +5,8 @@ using System.Runtime.InteropServices;
 using Unity.Mathematics;
 using UnityEngine;
 using Unity.Collections.LowLevel.Unsafe;
+using UnityEditor.LightBaking;
+using MixedLightingMode = UnityEngine.MixedLightingMode;
 
 // The types defined in this file should match the types defined in BakeInput.h.
 namespace UnityEditor.PathTracing.LightBakerBridge
@@ -252,6 +254,15 @@ namespace UnityEditor.PathTracing.LightBakerBridge
         public float aoDistance;
         public bool useHardwareRayTracing;
 
+        public LightSamplingMode directLightSamplingMode;
+        public uint directRISCandidateCount;
+        public LightSamplingMode indirectLightSamplingMode;
+        public UInt32 indirectRISCandidateCount;
+        public LightAccelerationStructure lightAccelerationStructure;
+        public uint lightGridMaxCells;
+        public EmissiveSamplingMode directEmissiveSamplingMode;
+        public EmissiveSamplingMode indirectEmissiveSamplingMode;
+
         public void Transfer(IBakeInputVisitor visitor)
         {
             visitor.Transfer(ref lightmapSampleCounts);
@@ -263,6 +274,15 @@ namespace UnityEditor.PathTracing.LightBakerBridge
             visitor.TransferBoolean(ref aoEnabled);
             visitor.TransferBlittable(ref aoDistance);
             visitor.TransferBoolean(ref useHardwareRayTracing);
+
+            visitor.TransferBlittable(ref directLightSamplingMode);
+            visitor.TransferBlittable(ref directRISCandidateCount);
+            visitor.TransferBlittable(ref indirectLightSamplingMode);
+            visitor.TransferBlittable(ref indirectRISCandidateCount);
+            visitor.TransferBlittable(ref lightAccelerationStructure);
+            visitor.TransferBlittable(ref lightGridMaxCells);
+            visitor.TransferBlittable(ref directEmissiveSamplingMode);
+            visitor.TransferBlittable(ref indirectEmissiveSamplingMode);
         }
     }
 
@@ -927,7 +947,7 @@ namespace UnityEditor.PathTracing.LightBakerBridge
     {
         // Should match BakeInputSerialization::kCurrentFileVersion in BakeInputSerialization.h.
         // If these are out of sync, the implementation in this file probably needs to be updated.
-        const UInt64 CurrentFileVersion = 202601191;
+        const UInt64 CurrentFileVersion = 202601301;
 
         public static bool Deserialize(string path, out BakeInput bakeInput)
         {

@@ -1,4 +1,8 @@
 #pragma only_renderers d3d11 vulkan metal glcore
+
+#pragma multi_compile _ LIGHT_SAMPLING_UNIFORM LIGHT_SAMPLING_RIS LIGHT_SAMPLING_ROUND_ROBIN
+#pragma multi_compile _ EMISSIVE_SAMPLING_LIGHT EMISSIVE_SAMPLING_BRDF EMISSIVE_SAMPLING_MIS
+
 #define UNIFIED_RT_GROUP_SIZE_X 128
 #define UNIFIED_RT_GROUP_SIZE_Y 1
 #define UNIFIED_RT_RAYGEN_FUNC IntegrateIndirectRadiance
@@ -38,7 +42,10 @@ float3 EstimateProbeRadiance(UnifiedRT::DispatchInfo dispatchInfo, UnifiedRT::Ra
         {
             if (!isFirstPathSegment)
                 AddEmissionRadiance(pathIter, accelStruct, g_AccelStructInstanceList, false);
-            AddRadianceFromDirectIllumination(pathIter, shadowRayMask, dispatchInfo, accelStruct, g_AccelStructInstanceList, rngState, false);
+            
+            // Check if we should do NEE, respecting the max bounce count
+            if (!g_CountNEERayAsPathSegment || bounceIndex < g_BounceCount)
+                AddRadianceFromDirectIllumination(pathIter, shadowRayMask, dispatchInfo, accelStruct, g_AccelStructInstanceList, rngState, false);
         }
 
         if (traceResult == TRACE_MISS)
