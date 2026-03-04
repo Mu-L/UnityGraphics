@@ -335,8 +335,8 @@ namespace UnityEditor.ShaderGraph.Drawing
 
         static void ForeachConnectedNode(AbstractMaterialNode node, PropagationDirection dir, Action<AbstractMaterialNode> action)
         {
-            using (var tempEdges = PooledList<IEdge>.Get())
-            using (var tempSlots = PooledList<MaterialSlot>.Get())
+            using (UnityEngine.Pool.ListPool<IEdge>.Get(out var tempEdges))
+            using (UnityEngine.Pool.ListPool<MaterialSlot>.Get(out var tempSlots))
             {
                 // Loop through all nodes that the node feeds into.
                 if (dir == PropagationDirection.Downstream)
@@ -470,10 +470,10 @@ namespace UnityEditor.ShaderGraph.Drawing
         }
 
         private static readonly ProfilerMarker CollectPreviewPropertiesMarker = new ProfilerMarker("CollectPreviewProperties");
-        void CollectPreviewProperties(IEnumerable<AbstractMaterialNode> nodesToCollect, PooledList<PreviewProperty> perMaterialPreviewProperties)
+        void CollectPreviewProperties(IEnumerable<AbstractMaterialNode> nodesToCollect, List<PreviewProperty> perMaterialPreviewProperties)
         {
             using (CollectPreviewPropertiesMarker.Auto())
-            using (var tempPreviewProps = PooledList<PreviewProperty>.Get())
+            using (UnityEngine.Pool.ListPool<PreviewProperty>.Get(out var tempPreviewProps))
             {
                 // collect from all of the changed nodes
                 foreach (var propNode in nodesToCollect)
@@ -639,10 +639,10 @@ namespace UnityEditor.ShaderGraph.Drawing
         public void RenderPreviews(EditorWindow editorWindow, bool requestShaders = true)
         {
             using (RenderPreviewsMarker.Auto())
-            using (var renderList2D = PooledList<PreviewRenderData>.Get())
-            using (var renderList3D = PooledList<PreviewRenderData>.Get())
-            using (var nodesToDraw = PooledHashSet<AbstractMaterialNode>.Get())
-            using (var perMaterialPreviewProperties = PooledList<PreviewProperty>.Get())
+            using (UnityEngine.Pool.ListPool<PreviewRenderData>.Get(out var renderList2D))
+            using (UnityEngine.Pool.ListPool<PreviewRenderData>.Get(out var renderList3D))
+            using (UnityEngine.Pool.HashSetPool<AbstractMaterialNode>.Get(out var nodesToDraw))
+            using (UnityEngine.Pool.ListPool<PreviewProperty>.Get(out var perMaterialPreviewProperties))
             {
                 // update topology cached data
                 // including list of time-dependent previews, and the preview mode (2d/3d)
@@ -830,7 +830,7 @@ namespace UnityEditor.ShaderGraph.Drawing
         {
             // Check for shaders that finished compiling and set them to redraw
             using (ProcessCompletedShaderCompilationsMarker.Auto())
-            using (var previewsCompiled = PooledHashSet<PreviewRenderData>.Get())
+            using (UnityEngine.Pool.HashSetPool<PreviewRenderData>.Get(out var previewsCompiled))
             {
                 foreach (var preview in m_PreviewsCompiling)
                 {
@@ -905,7 +905,7 @@ namespace UnityEditor.ShaderGraph.Drawing
         {
             // Start compilation for nodes that need to recompile
             using (KickOffShaderCompilationsMarker.Auto())
-            using (var previewsToCompile = PooledHashSet<PreviewRenderData>.Get())
+            using (UnityEngine.Pool.HashSetPool<PreviewRenderData>.Get(out var previewsToCompile))
             {
                 // master node compile is first in the priority list, as it takes longer than the other previews
                 if (m_PreviewsCompiling.Count + previewsToCompile.Count < m_MaxPreviewsCompiling)
@@ -940,7 +940,7 @@ namespace UnityEditor.ShaderGraph.Drawing
                 }
 
                 if (previewsToCompile.Count >= 0)
-                    using (var nodesToCompile = PooledHashSet<AbstractMaterialNode>.Get())
+                    using (UnityEngine.Pool.HashSetPool<AbstractMaterialNode>.Get(out var nodesToCompile))
                     {
                         // remove the selected nodes from the recompile list
                         m_PreviewsNeedsRecompile.ExceptWith(previewsToCompile);
@@ -989,7 +989,7 @@ namespace UnityEditor.ShaderGraph.Drawing
                 {
                     // nodes with shader changes cause all downstream nodes to need recompilation
                     // (since they presumably include the code for these nodes)
-                    using (var nodesToRecompile = PooledHashSet<AbstractMaterialNode>.Get())
+                    using (UnityEngine.Pool.HashSetPool<AbstractMaterialNode>.Get(out var nodesToRecompile))
                     {
                         PropagateNodes(m_NodesShaderChanged, PropagationDirection.Downstream, nodesToRecompile);
                         ForEachNodesPreview(nodesToRecompile, p => m_PreviewsNeedsRecompile.Add(p));
@@ -1255,7 +1255,7 @@ namespace UnityEditor.ShaderGraph.Drawing
                 return;
 
             using (UpdateTopologyMarker.Auto())
-            using (var timedNodes = PooledHashSet<AbstractMaterialNode>.Get())
+            using (UnityEngine.Pool.HashSetPool<AbstractMaterialNode>.Get(out var timedNodes))
             {
                 timedNodes.UnionWith(m_Graph.GetNodes<AbstractMaterialNode>().Where(n => n.RequiresTime()));
 
@@ -1291,7 +1291,7 @@ namespace UnityEditor.ShaderGraph.Drawing
         }
 
         private static readonly ProfilerMarker RenderPreviewMarker = new ProfilerMarker("RenderPreview");
-        void RenderPreview(PreviewRenderData renderData, Mesh mesh, Matrix4x4 transform, PooledList<PreviewProperty> perMaterialPreviewProperties)
+        void RenderPreview(PreviewRenderData renderData, Mesh mesh, Matrix4x4 transform, List<PreviewProperty> perMaterialPreviewProperties)
         {
             using (RenderPreviewMarker.Auto())
             {

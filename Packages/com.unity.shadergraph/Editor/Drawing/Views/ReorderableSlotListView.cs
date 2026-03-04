@@ -134,7 +134,7 @@ namespace UnityEditor.ShaderGraph.Drawing
 
                     if (displayName != oldSlot.RawDisplayName())
                     {
-                        using (var tempSlots = PooledList<MaterialSlot>.Get())
+                        using (UnityEngine.Pool.ListPool<MaterialSlot>.Get(out var tempSlots))
                         {
                             m_Node.GetSlots(tempSlots);
 

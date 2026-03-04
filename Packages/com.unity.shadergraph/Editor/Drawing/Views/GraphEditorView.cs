@@ -19,6 +19,7 @@ using Unity.Profiling;
 using UnityEditor.ShaderGraph.Internal;
 using UnityEditor.Experimental;
 using UnityEditor.PackageManager.UI;
+using UnityEngine.Pool;
 
 namespace UnityEditor.ShaderGraph.Drawing
 {
@@ -253,7 +254,7 @@ namespace UnityEditor.ShaderGraph.Drawing
                 GUILayout.Label("Color Mode");
                 var newColorIndex = EditorGUILayout.Popup(m_ColorManager.activeIndex, colorProviders, GUILayout.Width(100f));
                 GUILayout.Space(4);
-                
+
                 m_UserViewSettings.isBlackboardVisible = GUILayout.Toggle(m_UserViewSettings.isBlackboardVisible, BlackboardIcon, EditorStyles.toolbarButton);
 
                 GUILayout.Space(6);
@@ -1397,7 +1398,7 @@ namespace UnityEditor.ShaderGraph.Drawing
             nodeStack.Clear();
             foreach (var nodeView in nodeViews)
                 nodeStack.Push((Node)nodeView);
-            PooledList<Edge> edgesToUpdate = PooledList<Edge>.Get();
+            var edgesToUpdate = ListPool<Edge>.Get();
             while (nodeStack.Any())
             {
                 var nodeView = nodeStack.Pop();
@@ -1456,7 +1457,7 @@ namespace UnityEditor.ShaderGraph.Drawing
                 }
             }
             var edges = edgesToUpdate.ToArray();
-            edgesToUpdate.Dispose();
+            ListPool<Edge>.Release(edgesToUpdate);
             schedule.Execute(() =>
             {
                 foreach (Edge e in edges)

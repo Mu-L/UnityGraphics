@@ -183,7 +183,7 @@ namespace UnityEditor.ShaderGraph.ProviderSystem
             if (this.Provider == null || this.Provider.Definition == null)
                 return;
 
-            using (var slots = PooledList<MaterialSlot>.Get())
+            using (UnityEngine.Pool.ListPool<MaterialSlot>.Get(out var slots))
             {
                 GetSlots<MaterialSlot>(slots);
                 Dictionary<string, (MaterialSlot input, MaterialSlot output)> paramSlotMap = new();

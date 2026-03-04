@@ -116,7 +116,7 @@ namespace UnityEditor.ShaderGraph
 
         public bool RequiresMeshUV(UVChannel channel, ShaderStageCapability stageCapability)
         {
-            using (var tempSlots = PooledList<MaterialSlot>.Get())
+            using (UnityEngine.Pool.ListPool<MaterialSlot>.Get(out var tempSlots))
             {
                 GetInputSlots(tempSlots);
                 var result = false;

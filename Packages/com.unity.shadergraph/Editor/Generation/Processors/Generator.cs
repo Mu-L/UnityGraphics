@@ -457,7 +457,8 @@ namespace UnityEditor.ShaderGraph
             PropertyCollector subshaderProperties = new PropertyCollector();
 
             // Collect shader properties declared by active nodes
-            using (var activeNodes = PooledHashSet<AbstractMaterialNode>.Get())
+
+            using (Pool.HashSetPool<AbstractMaterialNode>.Get(out var activeNodes))
             {
                 if (outputNode == null)
                 {
@@ -916,7 +917,7 @@ namespace UnityEditor.ShaderGraph
             spliceCommands.Add("InterpolatorPack", interpolatorBuilder.ToCodeBlock());
             }
 
-            // Generated String Builders for all struct types            
+            // Generated String Builders for all struct types
             var passStructBuilder = new ShaderStringBuilder(humanReadable: m_HumanReadable);
             // using (s_profileStructTypes.Auto())
             {
@@ -1086,7 +1087,7 @@ namespace UnityEditor.ShaderGraph
                 if (propertyBuilder.length == 0)
                     propertyBuilder.AppendLine("// GraphProperties: <None>");
                 spliceCommands.Add("GraphProperties", propertyBuilder.ToCodeBlock());
-            }            
+            }
 
             // --------------------------------------------------
             // Graph Defines

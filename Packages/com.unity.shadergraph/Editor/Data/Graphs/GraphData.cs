@@ -2059,7 +2059,7 @@ namespace UnityEditor.ShaderGraph
                 m_MovedContexts = true;
             }
 
-            using (var inputsToRemove = PooledList<ShaderInput>.Get())
+            using (ListPool<ShaderInput>.Get(out var inputsToRemove))
             {
                 foreach (var property in m_Properties.SelectValue())
                     inputsToRemove.Add(property);
@@ -2114,7 +2114,7 @@ namespace UnityEditor.ShaderGraph
                     RemoveEdgeNoValidate(edge, false);
             }
 
-            using (var nodesToRemove = PooledList<AbstractMaterialNode>.Get())
+            using (ListPool<AbstractMaterialNode>.Get(out var nodesToRemove))
             {
                 nodesToRemove.AddRange(m_Nodes.SelectValue());
                 foreach (var node in nodesToRemove)
@@ -2754,23 +2754,24 @@ namespace UnityEditor.ShaderGraph
                 ChangeVersion(latestVersion);
             }
 
-            PooledList<(LegacyUnknownTypeNode, AbstractMaterialNode)> updatedNodes = PooledList<(LegacyUnknownTypeNode, AbstractMaterialNode)>.Get();
-            foreach (var node in m_Nodes.SelectValue())
+            using (ListPool<(LegacyUnknownTypeNode, AbstractMaterialNode)>.Get(out var updatedNodes))
             {
-                if (node is LegacyUnknownTypeNode lNode && lNode.foundType != null)
+                foreach (var node in m_Nodes.SelectValue())
                 {
-                    AbstractMaterialNode legacyNode = (AbstractMaterialNode)Activator.CreateInstance(lNode.foundType);
-                    JsonUtility.FromJsonOverwrite(lNode.serializedData, legacyNode);
-                    legacyNode.group = lNode.group;
-                    updatedNodes.Add((lNode, legacyNode));
+                    if (node is LegacyUnknownTypeNode lNode && lNode.foundType != null)
+                    {
+                        AbstractMaterialNode legacyNode = (AbstractMaterialNode)Activator.CreateInstance(lNode.foundType);
+                        JsonUtility.FromJsonOverwrite(lNode.serializedData, legacyNode);
+                        legacyNode.group = lNode.group;
+                        updatedNodes.Add((lNode, legacyNode));
+                    }
+                }
+                foreach (var nodePair in updatedNodes)
+                {
+                    m_Nodes.Add(nodePair.Item2);
+                    ReplaceNodeWithNode(nodePair.Item1, nodePair.Item2);
                 }
             }
-            foreach (var nodePair in updatedNodes)
-            {
-                m_Nodes.Add(nodePair.Item2);
-                ReplaceNodeWithNode(nodePair.Item1, nodePair.Item2);
-            }
-            updatedNodes.Dispose();
 
             m_NodeDictionary = new Dictionary<string, AbstractMaterialNode>(m_Nodes.Count);
 

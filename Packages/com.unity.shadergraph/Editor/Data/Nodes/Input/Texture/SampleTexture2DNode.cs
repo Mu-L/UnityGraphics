@@ -3,6 +3,7 @@ using UnityEngine;
 using UnityEditor.Graphing;
 using UnityEditor.ShaderGraph.Drawing.Controls;
 using UnityEditor.ShaderGraph.Internal;
+using UnityEngine.Pool;
 
 namespace UnityEditor.ShaderGraph
 {
@@ -185,7 +186,7 @@ namespace UnityEditor.ShaderGraph
 
         public bool RequiresMeshUV(UVChannel channel, ShaderStageCapability stageCapability)
         {
-            using (var tempSlots = PooledList<MaterialSlot>.Get())
+            using (ListPool<MaterialSlot>.Get(out var tempSlots))
             {
                 GetInputSlots(tempSlots);
                 var result = false;

@@ -114,8 +114,8 @@ namespace UnityEditor.ShaderGraph
 
         public void GenerateNodeCode(ShaderStringBuilder sb, GenerationMode generationMode)
         {
-            using (var inputSlots = PooledList<MaterialSlot>.Get())
-            using (var outputSlots = PooledList<MaterialSlot>.Get())
+            using (UnityEngine.Pool.ListPool<MaterialSlot>.Get(out var inputSlots))
+            using (UnityEngine.Pool.ListPool<MaterialSlot>.Get(out var outputSlots))
             {
                 GetInputSlots(inputSlots);
                 GetOutputSlots(outputSlots);
@@ -172,8 +172,8 @@ namespace UnityEditor.ShaderGraph
 
         void GetFunctionDefinition(ShaderStringBuilder sb)
         {
-            using (var inputSlots = PooledList<MaterialSlot>.Get())
-            using (var outputSlots = PooledList<MaterialSlot>.Get())
+            using (UnityEngine.Pool.ListPool<MaterialSlot>.Get(out var inputSlots))
+            using (UnityEngine.Pool.ListPool<MaterialSlot>.Get(out var outputSlots))
             {
                 ShaderStringBuilder body = new();
                 body.AppendLine("Out = Fallback;");

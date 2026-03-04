@@ -11,8 +11,8 @@ namespace UnityEditor.ShaderGraph
         {
             public static void ApplyActionLeafFirst(GraphData graph, Action<AbstractMaterialNode> action)
             {
-                var temporaryMarks = PooledHashSet<string>.Get();
-                var permanentMarks = PooledHashSet<string>.Get();
+                var temporaryMarks = HashSetPool<string>.Get();
+                var permanentMarks = HashSetPool<string>.Get();
                 var slots = ListPool<MaterialSlot>.Get();
 
                 // Make sure we process a node's children before the node itself.
@@ -58,8 +58,8 @@ namespace UnityEditor.ShaderGraph
 
                 StackPool<AbstractMaterialNode>.Release(stack);
                 ListPool<MaterialSlot>.Release(slots);
-                temporaryMarks.Dispose();
-                permanentMarks.Dispose();
+                HashSetPool<string>.Release(temporaryMarks);
+                HashSetPool<string>.Release(permanentMarks);
             }
         }
     }

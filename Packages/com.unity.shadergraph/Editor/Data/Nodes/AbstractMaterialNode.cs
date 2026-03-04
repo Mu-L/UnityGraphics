@@ -797,8 +797,8 @@ namespace UnityEditor.ShaderGraph
             hasError = false;
             owner?.ClearErrorsForNode(this);
 
-            using (var inputSlots = PooledList<MaterialSlot>.Get())
-            using (var outputSlots = PooledList<MaterialSlot>.Get())
+            using (ListPool<MaterialSlot>.Get(out var inputSlots))
+            using (ListPool<MaterialSlot>.Get(out var outputSlots))
             {
                 GetInputSlots(inputSlots);
                 GetOutputSlots(outputSlots);
@@ -847,9 +847,9 @@ namespace UnityEditor.ShaderGraph
 
         public virtual void CollectPreviewMaterialProperties(List<PreviewProperty> properties)
         {
-            using (var tempSlots = PooledList<MaterialSlot>.Get())
-            using (var tempPreviewProperties = PooledList<PreviewProperty>.Get())
-            using (var tempEdges = PooledList<IEdge>.Get())
+            using (ListPool<MaterialSlot>.Get(out var tempSlots))
+            using (ListPool<PreviewProperty>.Get(out var tempPreviewProperties))
+            using (ListPool<IEdge>.Get(out var tempEdges))
             {
                 GetInputSlots(tempSlots);
                 foreach (var s in tempSlots)
