@@ -288,6 +288,8 @@ namespace UnityEngine.Rendering.Universal
             rgDesc.useDynamicScale = desc.useDynamicScale;
             rgDesc.useDynamicScaleExplicit = desc.useDynamicScaleExplicit;
             rgDesc.vrUsage = desc.vrUsage;
+            rgDesc.useMipMap = desc.useMipMap;
+            rgDesc.autoGenerateMips = desc.autoGenerateMips;
         }
 
         internal static TextureHandle CreateRenderGraphTexture(RenderGraph renderGraph, in TextureDesc desc, string name, bool clear, Color clearColor,
@@ -538,7 +540,7 @@ namespace UnityEngine.Rendering.Universal
                     var colorHistory = history.GetHistoryForWrite<RawColorHistory>();
                     if (colorHistory != null)
                     {
-                        colorHistory.Update(ref cameraData.cameraTargetDescriptor, xrMultipassEnabled);
+                        colorHistory.Update(cameraData, ref cameraData.cameraTargetDescriptor, xrMultipassEnabled);
                         if (colorHistory.GetCurrentTexture(multipassId) != null)
                         {
                             var colorHistoryTarget = renderGraph.ImportTexture(colorHistory.GetCurrentTexture(multipassId));
@@ -576,6 +578,36 @@ namespace UnityEngine.Rendering.Universal
 
                             // See pass create in UniversalRenderer() for execution order.
                             m_HistoryRawDepthCopyPass.Render(renderGraph, frameData, depthHistoryTarget, resourceData.cameraDepth, false);
+                        }
+                    }
+                }
+            }
+        }
+
+        // Copy internal color buffer before transparents into the history.
+        private void RenderBeforeTransparentsColorHistory(RenderGraph renderGraph, UniversalCameraData cameraData, UniversalResourceData resourceData)
+        {
+            if (cameraData != null && cameraData.historyManager != null && resourceData != null)
+            {
+                UniversalCameraHistory history = cameraData.historyManager;
+
+                bool xrMultipassEnabled = false;
+                int multipassId = 0;
+#if ENABLE_VR && ENABLE_XR_MODULE
+                xrMultipassEnabled = cameraData.xr.enabled && !cameraData.xr.singlePassEnabled;
+                multipassId = cameraData.xr.multipassId;
+#endif
+
+                if (history.IsAccessRequested<BeforeTransparentsColorHistory>() && resourceData.cameraColor.IsValid())
+                {
+                    var colorHistory = history.GetHistoryForWrite<BeforeTransparentsColorHistory>();
+                    if (colorHistory != null)
+                    {
+                        colorHistory.Update(cameraData, ref cameraData.cameraTargetDescriptor, xrMultipassEnabled);
+                        if (colorHistory.GetCurrentTexture(multipassId) != null)
+                        {
+                            var colorHistoryTarget = renderGraph.ImportTexture(colorHistory.GetCurrentTexture(multipassId));
+                            m_HistoryBeforeTransparentsColorCopyPass.RenderToExistingTexture(renderGraph, frameData, colorHistoryTarget, resourceData.cameraColor, Downsampling.None);
                         }
                     }
                 }
@@ -1249,6 +1281,8 @@ namespace UnityEngine.Rendering.Universal
             }
 #endif
 
+            RenderBeforeTransparentsColorHistory(renderGraph, cameraData, resourceData);
+
 #if ENABLE_ADAPTIVE_PERFORMANCE
             if (needTransparencyPass)
 #endif
@@ -1871,7 +1905,7 @@ namespace UnityEngine.Rendering.Universal
                 DepthNormalOnlyPass.k_CameraNormalsTextureName : DeferredLights.k_GBufferNames[m_DeferredLights.GBufferNormalSmoothnessIndex];
             descriptor.format = !usesDeferredLighting ?
                 DepthNormalOnlyPass.GetGraphicsFormat() : m_DeferredLights.GetGBufferFormat(m_DeferredLights.GBufferNormalSmoothnessIndex);
-            resourceData.cameraNormalsTexture = CreateRenderGraphTexture(renderGraph, descriptor, normalsName, true, Color.black);
+            resourceData.cameraNormalsTexture = CreateRenderGraphTexture(renderGraph, descriptor, normalsName, true, Color.clear);
         }
 
         void CreateRenderingLayersTexture(RenderGraph renderGraph, TextureDesc descriptor)

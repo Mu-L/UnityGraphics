@@ -1421,6 +1421,7 @@ namespace UnityEditor.Rendering.Universal.ShaderGraph
 
         public static readonly BlockFieldDescriptor[] FragmentDepthNormals = new BlockFieldDescriptor[]
         {
+            BlockFields.SurfaceDescription.Smoothness,
             BlockFields.SurfaceDescription.NormalOS,
             BlockFields.SurfaceDescription.NormalTS,
             BlockFields.SurfaceDescription.NormalWS,
@@ -2393,6 +2394,25 @@ namespace UnityEditor.Rendering.Universal.ShaderGraph
             definition = KeywordDefinition.MultiCompile,
             scope = KeywordScope.Global,
             stages = KeywordShaderStage.Fragment,
+        };
+
+        public static readonly KeywordDescriptor ScreenSpaceReflection = new KeywordDescriptor()
+        {
+            displayName = "Screen Space Reflection",
+            referenceName = "_SCREEN_SPACE_REFLECTION",
+            type = KeywordType.Boolean,
+            definition = KeywordDefinition.MultiCompile,
+            scope = KeywordScope.Global,
+            stages = KeywordShaderStage.Fragment,
+        };
+
+        public static readonly KeywordDescriptor WriteSmoothness = new KeywordDescriptor()
+        {
+            displayName = "Write Smoothness",
+            referenceName = "_WRITE_SMOOTHNESS",
+            type = KeywordType.Boolean,
+            definition = KeywordDefinition.MultiCompile,
+            scope = KeywordScope.Global,
         };
 
         public static readonly KeywordDescriptor UseLegacyLightmaps = new KeywordDescriptor()

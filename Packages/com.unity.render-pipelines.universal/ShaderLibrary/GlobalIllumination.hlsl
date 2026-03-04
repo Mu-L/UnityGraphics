@@ -4,6 +4,7 @@
 #include "Packages/com.unity.render-pipelines.core/ShaderLibrary/EntityLighting.hlsl"
 #include "Packages/com.unity.render-pipelines.core/ShaderLibrary/ImageBasedLighting.hlsl"
 #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/RealtimeLights.hlsl"
+#include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/SampleScreenSpaceReflection.hlsl"
 
 #define AMBIENT_PROBE_BUFFER 0
 #include "Packages/com.unity.render-pipelines.core/ShaderLibrary/AmbientProbe.hlsl"
@@ -421,37 +422,52 @@ half3 CalculateIrradianceFromReflectionProbes(half3 reflectVector, float3 positi
 
 half3 GlossyEnvironmentReflection(half3 reflectVector, float3 positionWS, half perceptualRoughness, half occlusion, float2 normalizedScreenSpaceUV)
 {
-    half3 irradiance;
+    half3 irradiance = 0;
+    #if defined(_SCREENSPACEREFLECTIONS_OFF)
+    half4 ssrColor = 0;
+    #else
+    half4 ssrColor = GetScreenSpaceReflection(normalizedScreenSpaceUV, perceptualRoughness);
+    #endif
 
-#if !defined(_ENVIRONMENTREFLECTIONS_OFF)
-    if (_REFLECTION_PROBE_BLENDING)
+    // We skip sampling reflection probes if they would be overwritten by SSR anyways.
+    // This optimization causes a miscompilation when using FXC, and the rendering path
+    // is single pass stereo instancing, so disable it in that path.
+    #if !defined(STEREO_INSTANCING_ON) || defined(UNITY_COMPILER_DXC)
+    if (ssrColor.a < 1.0)
+    #endif
     {
-        irradiance = CalculateIrradianceFromReflectionProbes(reflectVector, positionWS, perceptualRoughness, normalizedScreenSpaceUV);
-    }
-    else
-    {
-        if (_REFLECTION_PROBE_BOX_PROJECTION)
+        #if !defined(_ENVIRONMENTREFLECTIONS_OFF)
+        if (_REFLECTION_PROBE_BLENDING)
         {
-            #if defined(REFLECTION_PROBE_ROTATION)
-            float3 probeCenterPosWS0 = unity_SpecCube0_BoxMin.xyz + (unity_SpecCube0_BoxMax.xyz - unity_SpecCube0_BoxMin.xyz) / 2;
-            float3 rotPosWS0 = RotateVectorByQuat(unity_SpecCube0_Rotation, positionWS - probeCenterPosWS0) + probeCenterPosWS0;
-            half3 rotReflectVector0 = RotateVectorByQuat(unity_SpecCube0_Rotation, reflectVector);
-            float4 inverseRotation0 = -unity_SpecCube0_Rotation;
-            inverseRotation0.w = -inverseRotation0.w;
-            reflectVector = BoxProjectedCubemapDirection(rotReflectVector0, rotPosWS0, unity_SpecCube0_ProbePosition, unity_SpecCube0_BoxMin, unity_SpecCube0_BoxMax);
-            reflectVector = RotateVectorByQuat(inverseRotation0, reflectVector);
-            #else
-            reflectVector = BoxProjectedCubemapDirection(reflectVector, positionWS, unity_SpecCube0_ProbePosition, unity_SpecCube0_BoxMin, unity_SpecCube0_BoxMax);
-            #endif
+            irradiance = CalculateIrradianceFromReflectionProbes(reflectVector, positionWS, perceptualRoughness, normalizedScreenSpaceUV);
         }
-        half mip = PerceptualRoughnessToMipmapLevel(perceptualRoughness);
-        half4 encodedIrradiance = half4(SAMPLE_TEXTURECUBE_LOD(unity_SpecCube0, samplerunity_SpecCube0, reflectVector, mip));
+        else
+        {
+            if (_REFLECTION_PROBE_BOX_PROJECTION)
+            {
+                #if defined(REFLECTION_PROBE_ROTATION)
+                float3 probeCenterPosWS0 = unity_SpecCube0_BoxMin.xyz + (unity_SpecCube0_BoxMax.xyz - unity_SpecCube0_BoxMin.xyz) / 2;
+                float3 rotPosWS0 = RotateVectorByQuat(unity_SpecCube0_Rotation, positionWS - probeCenterPosWS0) + probeCenterPosWS0;
+                half3 rotReflectVector0 = RotateVectorByQuat(unity_SpecCube0_Rotation, reflectVector);
+                float4 inverseRotation0 = -unity_SpecCube0_Rotation;
+                inverseRotation0.w = -inverseRotation0.w;
+                reflectVector = BoxProjectedCubemapDirection(rotReflectVector0, rotPosWS0, unity_SpecCube0_ProbePosition, unity_SpecCube0_BoxMin, unity_SpecCube0_BoxMax);
+                reflectVector = RotateVectorByQuat(inverseRotation0, reflectVector);
+                #else
+                reflectVector = BoxProjectedCubemapDirection(reflectVector, positionWS, unity_SpecCube0_ProbePosition, unity_SpecCube0_BoxMin, unity_SpecCube0_BoxMax);
+                #endif
+            }
+            half mip = PerceptualRoughnessToMipmapLevel(perceptualRoughness);
+            half4 encodedIrradiance = half4(SAMPLE_TEXTURECUBE_LOD(unity_SpecCube0, samplerunity_SpecCube0, reflectVector, mip));
 
-        irradiance = DecodeHDREnvironment(encodedIrradiance, unity_SpecCube0_HDR);
+            irradiance = DecodeHDREnvironment(encodedIrradiance, unity_SpecCube0_HDR);
+        }
+        #else // _ENVIRONMENTREFLECTIONS_OFF
+        irradiance = _GlossyEnvironmentColor.rgb;
+        #endif // !_ENVIRONMENTREFLECTIONS_OFF
     }
-#else // _ENVIRONMENTREFLECTIONS_OFF
-    irradiance = _GlossyEnvironmentColor.rgb;
-#endif // !_ENVIRONMENTREFLECTIONS_OFF
+
+    irradiance = lerp(irradiance.rgb, ssrColor.rgb, ssrColor.a);
 
     return irradiance * occlusion;
 }

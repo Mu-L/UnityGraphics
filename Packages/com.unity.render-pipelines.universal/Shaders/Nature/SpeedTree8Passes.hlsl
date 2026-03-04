@@ -595,11 +595,21 @@ half4 SpeedTree8FragDepthNormal(SpeedTreeDepthNormalFragmentInput input) : SV_Ta
         normalTs = normalize(normalTs);
     #endif
 
+    half outputAlpha = 0.0;
+    #ifdef _WRITE_SMOOTHNESS
+        #ifdef EFFECT_EXTRA_TEX
+            half4 extra = tex2D(_ExtraTex, uv);
+            outputAlpha = extra.r;
+        #else
+            outputAlpha = _Glossiness;
+        #endif
+    #endif
+
     #if defined(EFFECT_BUMP)
         float3 normalWS = TransformTangentToWorld(normalTs, half3x3(input.interpolated.tangentWS.xyz, input.interpolated.bitangentWS.xyz, input.interpolated.normalWS.xyz));
-        return half4(NormalizeNormalPerPixel(normalWS), 0.0h);
+        return half4(NormalizeNormalPerPixel(normalWS), outputAlpha);
     #else
-        return half4(NormalizeNormalPerPixel(input.interpolated.normalWS), 0.0h);
+        return half4(NormalizeNormalPerPixel(input.interpolated.normalWS), outputAlpha);
     #endif
 }
 

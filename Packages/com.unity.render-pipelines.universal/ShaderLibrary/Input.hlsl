@@ -125,6 +125,12 @@ uint _MainLightLayerMask;
 // w: directLightStrength
 half4 _AmbientOcclusionParam;
 
+// x: SSR Enabled/Disabled (Needed for situations when OFF keyword is stripped out but feature disabled in runtime)
+// y: Minimum smoothness, used as a mask for SSR.
+// z: Smoothness fade start.
+// w is currently unused
+half4 _ScreenSpaceReflectionParam;
+
 half4 _AdditionalLightsCount;
 
 uint _RenderingLayerMaxInt;

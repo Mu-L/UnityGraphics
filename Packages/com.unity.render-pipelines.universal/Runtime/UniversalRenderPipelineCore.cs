@@ -914,6 +914,7 @@ namespace UnityEngine.Rendering.Universal
         public static GlobalKeyword ReflectionProbeBlending;
         public static GlobalKeyword ReflectionProbeAtlas;
         public static GlobalKeyword ReflectionProbeRotation;
+        public static GlobalKeyword ScreenSpaceReflection;
         public static GlobalKeyword SoftShadows;
         public static GlobalKeyword SoftShadowsLow;
         public static GlobalKeyword SoftShadowsMedium;
@@ -937,6 +938,7 @@ namespace UnityEngine.Rendering.Universal
         public static GlobalKeyword DecalNormalBlendHigh;
         public static GlobalKeyword DecalLayers;
         public static GlobalKeyword WriteRenderingLayers;
+        public static GlobalKeyword WriteSmoothness;
         public static GlobalKeyword ScreenSpaceOcclusion;
         public static GlobalKeyword ScreenSpaceIrradiance;
         public static GlobalKeyword _SPOT;
@@ -1033,6 +1035,7 @@ namespace UnityEngine.Rendering.Universal
             ShaderGlobalKeywords.ReflectionProbeBlending = GlobalKeyword.Create(ShaderKeywordStrings.ReflectionProbeBlending);
             ShaderGlobalKeywords.ReflectionProbeAtlas = GlobalKeyword.Create(ShaderKeywordStrings.ReflectionProbeAtlas);
             ShaderGlobalKeywords.ReflectionProbeRotation = GlobalKeyword.Create(ShaderKeywordStrings.ReflectionProbeRotation);
+            ShaderGlobalKeywords.ScreenSpaceReflection = GlobalKeyword.Create(ShaderKeywordStrings.ScreenSpaceReflection);
             ShaderGlobalKeywords.SoftShadows = GlobalKeyword.Create(ShaderKeywordStrings.SoftShadows);
             ShaderGlobalKeywords.SoftShadowsLow = GlobalKeyword.Create(ShaderKeywordStrings.SoftShadowsLow);
             ShaderGlobalKeywords.SoftShadowsMedium = GlobalKeyword.Create(ShaderKeywordStrings.SoftShadowsMedium);
@@ -1056,6 +1059,7 @@ namespace UnityEngine.Rendering.Universal
             ShaderGlobalKeywords.DecalNormalBlendHigh = GlobalKeyword.Create(ShaderKeywordStrings.DecalNormalBlendHigh);
             ShaderGlobalKeywords.DecalLayers = GlobalKeyword.Create(ShaderKeywordStrings.DecalLayers);
             ShaderGlobalKeywords.WriteRenderingLayers = GlobalKeyword.Create(ShaderKeywordStrings.WriteRenderingLayers);
+            ShaderGlobalKeywords.WriteSmoothness = GlobalKeyword.Create(ShaderKeywordStrings.WriteSmoothness);
             ShaderGlobalKeywords.ScreenSpaceOcclusion = GlobalKeyword.Create(ShaderKeywordStrings.ScreenSpaceOcclusion);
             ShaderGlobalKeywords.ScreenSpaceIrradiance = GlobalKeyword.Create(ShaderKeywordStrings.ScreenSpaceIrradiance);
             ShaderGlobalKeywords._SPOT = GlobalKeyword.Create(ShaderKeywordStrings._SPOT);
@@ -1153,6 +1157,9 @@ namespace UnityEngine.Rendering.Universal
         /// <summary> Keyword used for ReflectionProbe rotation. </summary>
         public const string ReflectionProbeRotation = "REFLECTION_PROBE_ROTATION";
 
+        /// <summary> Keyword used for Screen Space Reflection (SSR). </summary>
+        public const string ScreenSpaceReflection = "_SCREEN_SPACE_REFLECTION";
+
         /// <summary> Keyword used for soft shadows. </summary>
         public const string SoftShadows = "_SHADOWS_SOFT";
 
@@ -1227,6 +1234,9 @@ namespace UnityEngine.Rendering.Universal
 
         /// <summary> Keyword used for writing Rendering Layers. </summary>
         public const string WriteRenderingLayers = "_WRITE_RENDERING_LAYERS";
+
+        /// <summary> Keyword used for writing roughness to alpha channel of normals texture. </summary>
+        public const string WriteSmoothness = "_WRITE_SMOOTHNESS";
 
         /// <summary> Keyword used for low quality Subpixel Morphological Anti-aliasing (SMAA). </summary>
         public const string SmaaLow = "_SMAA_PRESET_LOW";
@@ -1943,6 +1953,7 @@ namespace UnityEngine.Rendering.Universal
         MainLightShadow,
         ResolveShadows,
         SSAO,
+        SSR,
 
         // PostProcessPass
         StopNaNs,

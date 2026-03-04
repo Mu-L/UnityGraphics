@@ -664,8 +664,10 @@ namespace UnityEngine.Rendering.Universal
                 int mipLevel = standardRequest != null ? standardRequest.mipLevel : singleRequest.mipLevel;
                 int slice = standardRequest != null ? standardRequest.slice : singleRequest.slice;
                 int face = standardRequest != null ? (int)standardRequest.face : (int)singleRequest.face;
+                bool isPreview = standardRequest != null ? standardRequest.isPreview : false;
 
                 //store data that will be changed
+                var originalCameraType = camera.cameraType;
                 var originalTarget = camera.targetTexture;
 
                 //set data
@@ -690,6 +692,8 @@ namespace UnityEngine.Rendering.Universal
                     temporaryRT = RenderTexture.GetTemporary(RTDesc);
                 }
 
+                if (isPreview)
+                    camera.cameraType = CameraType.Preview;
                 camera.targetTexture = temporaryRT ? temporaryRT : destination;
 
                 if (standardRequest != null)
@@ -761,6 +765,7 @@ namespace UnityEngine.Rendering.Universal
                 }
 
                 //restore data
+                camera.cameraType = originalCameraType;
                 camera.targetTexture = originalTarget;
                 Graphics.SetRenderTarget(originalTarget);
                 RenderTexture.ReleaseTemporary(temporaryRT);
@@ -787,9 +792,17 @@ namespace UnityEngine.Rendering.Universal
         internal static void RenderSingleCameraInternal(ScriptableRenderContext context, Camera camera, bool isLastBaseCamera = true)
         {
             UniversalAdditionalCameraData additionalCameraData = null;
+            #if URP_SCREEN_SPACE_REFLECTION
+            camera.gameObject.TryGetComponent(out additionalCameraData);
+
+            // We need this to support screen space reflections in the scene view, as it requires color history,
+            // which in turn requires a UniversalAdditionalCameraData component to be present on the scene view camera.
+            if (camera.cameraType == CameraType.SceneView && additionalCameraData == null)
+                additionalCameraData = camera.gameObject.AddComponent<UniversalAdditionalCameraData>();
+            #else
             if (IsGameCamera(camera))
                 camera.gameObject.TryGetComponent(out additionalCameraData);
-
+            #endif
             RenderSingleCameraInternal(context, camera, ref additionalCameraData, isLastBaseCamera);
         }
 

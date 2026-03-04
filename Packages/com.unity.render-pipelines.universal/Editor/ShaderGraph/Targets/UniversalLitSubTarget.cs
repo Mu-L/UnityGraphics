@@ -655,7 +655,7 @@ namespace UnityEditor.Rendering.Universal.ShaderGraph
                     renderStates = CoreRenderStates.DepthNormalsOnly(target),
                     pragmas = CorePragmas.Instanced,
                     defines = new DefineCollection(),
-                    keywords = new KeywordCollection(),
+                    keywords = new KeywordCollection { CoreKeywordDescriptors.WriteSmoothness, CoreKeywordDescriptors.GBufferNormalsOct },
                     includes = new IncludeCollection { CoreIncludes.DepthNormalsOnly },
 
                     // Custom Interpolator Support
@@ -695,7 +695,7 @@ namespace UnityEditor.Rendering.Universal.ShaderGraph
                     renderStates = CoreRenderStates.DepthNormalsOnly(target),
                     pragmas = CorePragmas.Instanced,
                     defines = new DefineCollection(),
-                    keywords = new KeywordCollection(),
+                    keywords = new KeywordCollection { CoreKeywordDescriptors.WriteSmoothness },
                     includes = new IncludeCollection { CoreIncludes.DepthNormalsOnly },
 
                     // Custom Interpolator Support
@@ -844,6 +844,7 @@ namespace UnityEditor.Rendering.Universal.ShaderGraph
             public static readonly KeywordCollection Forward = new KeywordCollection
             {
                 { CoreKeywordDescriptors.ScreenSpaceAmbientOcclusion },
+                { CoreKeywordDescriptors.ScreenSpaceReflection },
                 { CoreKeywordDescriptors.ScreenSpaceIrradiance },
                 { CoreKeywordDescriptors.StaticLightmap },
                 { CoreKeywordDescriptors.DynamicLightmap },
@@ -870,6 +871,7 @@ namespace UnityEditor.Rendering.Universal.ShaderGraph
 
             public static readonly KeywordCollection GBuffer = new KeywordCollection
             {
+                { CoreKeywordDescriptors.ScreenSpaceReflection },
                 { CoreKeywordDescriptors.ScreenSpaceIrradiance },
                 { CoreKeywordDescriptors.StaticLightmap },
                 { CoreKeywordDescriptors.DynamicLightmap },
