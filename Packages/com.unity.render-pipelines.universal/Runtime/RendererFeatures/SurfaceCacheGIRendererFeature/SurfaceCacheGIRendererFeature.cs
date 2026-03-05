@@ -94,6 +94,8 @@ namespace UnityEngine.Rendering.Universal
             FlatNormal
         }
 
+        public static readonly string k_StaticBatchingErrorMesssage = "Surface Cache GI cannot run because it is incompatible with Static Batching. You can disable the option in the Player Settings.";
+
         // URP currently cannot render motion vectors properly in Scene View, so we disable it.
         // https://jira.unity3d.com/browse/SRP-743
         // When this is fixed, we probably want to enable this always.
@@ -438,9 +440,7 @@ namespace UnityEngine.Rendering.Universal
                 var worldToClipTransform = viewToClipTransform * worldToViewTransform;
                 var clipToWorldTransform = worldToClipTransform.inverse;
 
-                var screenResolution = new int2(
-                    (int)(cameraData.pixelWidth * cameraData.renderScale),
-                    (int)(cameraData.pixelHeight * cameraData.renderScale));
+                var screenResolution = new int2(cameraData.pixelWidth, cameraData.pixelHeight);
 
                 // This avoids applying surface cache to e.g. preview cameras.
                 if (cameraData.cameraType != CameraType.Game && cameraData.cameraType != CameraType.SceneView)
@@ -1032,8 +1032,8 @@ namespace UnityEngine.Rendering.Universal
 
                 foreach (var meshRenderer in addedMeshRenderers)
                 {
-                    Debug.Assert(!meshRenderer.isPartOfStaticBatch);
-
+                    Debug.Assert(meshRenderer.isPartOfStaticBatch, "Static Batching is not supported by Surface Cache GI.");
+               
                     var mesh = meshRenderer.GetComponent<MeshFilter>().sharedMesh;
 
                     if (mesh == null || mesh.vertexCount == 0)
@@ -1461,85 +1461,103 @@ namespace UnityEngine.Rendering.Universal
             _rtContext = null;
         }
 
+        bool ResourcesCreated()
+        {
+            return _pass != null;
+        }
+
         public override void Create()
         {
             ClearResources();
 
-            if (isActive)
-            {
-                var rtBackend = RayTracingBackend.Compute;
+            if (!isActive)
+                return;
 
-                {
-                    var resources = new RayTracingResources();
 #if UNITY_EDITOR
-                    resources.Load();
-#else
-                    resources.LoadFromRenderPipelineResources();
+            if (CheckStaticBatchingStatus())
+                return;
 #endif
-                    _rtContext = new RayTracingContext(rtBackend, resources);
-                }
 
-                var universalRenderPipelineResources = GraphicsSettings.GetRenderPipelineSettings<SurfaceCacheRenderPipelineResourceSet>();
-                Debug.Assert(universalRenderPipelineResources != null);
+            var rtBackend = RayTracingBackend.Compute;
 
-                var worldResources = new WorldResourceSet();
-                var worldLoadResult = worldResources.LoadFromRenderPipelineResources();
-                Debug.Assert(worldLoadResult);
-
-                var coreResources = new Rendering.SurfaceCacheResourceSet((uint)SystemInfo.computeSubGroupSize);
-                var coreResourceLoadResult = coreResources.LoadFromRenderPipelineResources(_rtContext);
-                Debug.Assert(coreResourceLoadResult);
-
-                var volParams = new SurfaceCacheVolumeParameterSet
-                {
-                    Resolution = _parameterSet.VolumeParams.Resolution,
-                    Size = _parameterSet.VolumeParams.Size,
-                    CascadeCount = _parameterSet.VolumeParams.CascadeCount
-                };
-
-                var estimationParams = new SurfaceCacheEstimationParameterSet
-                {
-                    MultiBounce = _parameterSet.MultiBounce,
-                    SampleCount = _parameterSet.EstimationParams.SampleCount,
-                };
-
-                var patchFilteringParams = new SurfaceCachePatchFilteringParameterSet
-                {
-                    TemporalSmoothing = _parameterSet.PatchFilteringParams.TemporalSmoothing,
-                    SpatialFilterEnabled = _parameterSet.PatchFilteringParams.SpatialFilterEnabled,
-                    SpatialFilterSampleCount = _parameterSet.PatchFilteringParams.SpatialFilterSampleCount,
-                    SpatialFilterRadius = _parameterSet.PatchFilteringParams.SpatialFilterRadius,
-                    TemporalPostFilterEnabled = _parameterSet.PatchFilteringParams.TemporalPostFilterEnabled
-                };
-
-                _pass = new SurfaceCachePass(
-                    _rtContext,
-                    coreResources,
-                    worldResources,
-                    universalRenderPipelineResources.allocationShader,
-                    universalRenderPipelineResources.screenResolveLookupShader,
-                    universalRenderPipelineResources.screenResolveUpsamplingShader,
-                    universalRenderPipelineResources.debugShader,
-                    universalRenderPipelineResources.flatNormalResolutionShader,
-                    universalRenderPipelineResources.fallbackMaterial,
-                    _parameterSet.DebugEnabled,
-                    _parameterSet.DebugViewMode,
-                    _parameterSet.DebugShowSamplePosition,
-                    _parameterSet.ScreenFilteringParams.LookupSampleCount,
-                    _parameterSet.ScreenFilteringParams.UpsamplingKernelSize,
-                    _parameterSet.ScreenFilteringParams.UpsamplingSampleCount,
-                    _parameterSet.AdvancedParams.DefragCount,
-                    volParams,
-                    estimationParams,
-                    patchFilteringParams,
-                    _parameterSet.VolumeParams.Movement);
-
-                _pass.renderPassEvent = RenderPassEvent.AfterRenderingPrePasses + 1;
+            {
+                var resources = new RayTracingResources();
+#if UNITY_EDITOR
+                resources.Load();
+#else
+                resources.LoadFromRenderPipelineResources();
+#endif
+                _rtContext = new RayTracingContext(rtBackend, resources);
             }
+
+            var universalRenderPipelineResources = GraphicsSettings.GetRenderPipelineSettings<SurfaceCacheRenderPipelineResourceSet>();
+            Debug.Assert(universalRenderPipelineResources != null);
+
+            var worldResources = new WorldResourceSet();
+            var worldLoadResult = worldResources.LoadFromRenderPipelineResources();
+            Debug.Assert(worldLoadResult);
+
+            var coreResources = new Rendering.SurfaceCacheResourceSet((uint)SystemInfo.computeSubGroupSize);
+            var coreResourceLoadResult = coreResources.LoadFromRenderPipelineResources(_rtContext);
+            Debug.Assert(coreResourceLoadResult);
+
+            var volParams = new SurfaceCacheVolumeParameterSet
+            {
+                Resolution = _parameterSet.VolumeParams.Resolution,
+                Size = _parameterSet.VolumeParams.Size,
+                CascadeCount = _parameterSet.VolumeParams.CascadeCount
+            };
+
+            var estimationParams = new SurfaceCacheEstimationParameterSet
+            {
+                MultiBounce = _parameterSet.MultiBounce,
+                SampleCount = _parameterSet.EstimationParams.SampleCount,
+            };
+
+            var patchFilteringParams = new SurfaceCachePatchFilteringParameterSet
+            {
+                TemporalSmoothing = _parameterSet.PatchFilteringParams.TemporalSmoothing,
+                SpatialFilterEnabled = _parameterSet.PatchFilteringParams.SpatialFilterEnabled,
+                SpatialFilterSampleCount = _parameterSet.PatchFilteringParams.SpatialFilterSampleCount,
+                SpatialFilterRadius = _parameterSet.PatchFilteringParams.SpatialFilterRadius,
+                TemporalPostFilterEnabled = _parameterSet.PatchFilteringParams.TemporalPostFilterEnabled
+            };
+
+            _pass = new SurfaceCachePass(
+                _rtContext,
+                coreResources,
+                worldResources,
+                universalRenderPipelineResources.allocationShader,
+                universalRenderPipelineResources.screenResolveLookupShader,
+                universalRenderPipelineResources.screenResolveUpsamplingShader,
+                universalRenderPipelineResources.debugShader,
+                universalRenderPipelineResources.flatNormalResolutionShader,
+                universalRenderPipelineResources.fallbackMaterial,
+                _parameterSet.DebugEnabled,
+                _parameterSet.DebugViewMode,
+                _parameterSet.DebugShowSamplePosition,
+                _parameterSet.ScreenFilteringParams.LookupSampleCount,
+                _parameterSet.ScreenFilteringParams.UpsamplingKernelSize,
+                _parameterSet.ScreenFilteringParams.UpsamplingSampleCount,
+                _parameterSet.AdvancedParams.DefragCount,
+                volParams,
+                estimationParams,
+                patchFilteringParams,
+                _parameterSet.VolumeParams.Movement);
+
+            _pass.renderPassEvent = RenderPassEvent.AfterRenderingPrePasses + 1;
         }
 
         public override void AddRenderPasses(ScriptableRenderer renderer, ref RenderingData renderingData)
         {
+#if UNITY_EDITOR
+            if (CheckStaticBatchingStatus())
+                return;
+
+            if (!ResourcesCreated()) // can happen if static batching is disabled after the SurfaceCacheGIRendererFeature has been created
+                Create();
+#endif
+
             ScriptableRenderPassInput inputs = ScriptableRenderPassInput.Depth | ScriptableRenderPassInput.Normal;
             if (UseMotionVectorPatchSeeding(renderingData.cameraData.cameraType))
             {
@@ -1554,6 +1572,20 @@ namespace UnityEngine.Rendering.Universal
             ClearResources();
             base.Dispose(disposing);
         }
+
+#if UNITY_EDITOR
+        bool _staticBatchingEnabled;
+        bool CheckStaticBatchingStatus()
+        {
+            bool previousStatus = _staticBatchingEnabled;
+            _staticBatchingEnabled = UnityEditor.PlayerSettings.GetStaticBatchingForPlatform(UnityEditor.EditorUserBuildSettings.activeBuildTarget);
+
+            if (_staticBatchingEnabled && _staticBatchingEnabled != previousStatus)
+                Debug.LogError(k_StaticBatchingErrorMesssage);
+
+            return _staticBatchingEnabled;
+        }
+#endif
     }
 }
 
