@@ -136,7 +136,7 @@ namespace UnityEngine.Rendering.Universal
         internal bool HDRDebugViewIsActive(bool resolveFinalTarget)
         {
             // HDR debug views should only apply to the last camera in the stack
-            return DebugDisplaySettings.lightingSettings.hdrDebugMode != HDRDebugMode.None && resolveFinalTarget;
+            return m_HDRDebugViewMaterial != null && DebugDisplaySettings.lightingSettings.hdrDebugMode != HDRDebugMode.None && resolveFinalTarget;
         }
 
         internal bool WriteToDebugScreenTexture(bool resolveFinalTarget)
