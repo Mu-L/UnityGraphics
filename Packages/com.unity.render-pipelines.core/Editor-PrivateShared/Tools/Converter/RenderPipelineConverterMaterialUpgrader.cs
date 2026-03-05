@@ -76,6 +76,9 @@ namespace UnityEditor.Rendering.Converter
     [Serializable]
     internal abstract class RenderPipelineConverterMaterialUpgrader : IRenderPipelineConverter
     {
+        public virtual bool isEnabled => m_UpgradersCache != null && m_UpgradersCache.Count > 0;
+        public virtual string isDisabledMessage => "No material upgraders specified for this converter.";
+
         /// <summary>
         /// List of material upgraders to use for this converter.
         /// </summary>

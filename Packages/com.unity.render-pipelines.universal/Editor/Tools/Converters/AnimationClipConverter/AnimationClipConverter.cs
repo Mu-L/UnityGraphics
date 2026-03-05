@@ -1,10 +1,10 @@
 using System;
 using System.Collections.Generic;
 using System.Text;
-using NUnit.Framework;
 using UnityEditor.Rendering.Converter;
 using UnityEngine;
 using UnityEngine.Categorization;
+using UnityEngine.Rendering;
 using UnityEngine.Rendering.Universal;
 using static UnityEditor.Rendering.AnimationClipUpgrader;
 using ClipPath = UnityEditor.Rendering.AnimationClipUpgrader.ClipPath;
@@ -46,6 +46,18 @@ namespace UnityEditor.Rendering.Universal
                  Description = "Updates animation clips that reference material properties to work with URP shaders.\nEnsures material animations continue working after converting Materials from Built-in RP to URP.")]
     internal sealed class AnimationClipConverter : IRenderPipelineConverter
     {
+        public bool isEnabled
+        {
+            get
+            {
+                if (GraphicsSettings.currentRenderPipeline is not UniversalRenderPipelineAsset urpAsset)
+                    return false;
+
+                return urpAsset.scriptableRenderer is UniversalRenderer;
+            }
+        }
+        public string isDisabledMessage => "Converter requires URP with an Universal Renderer. Convert your project to URP to use this converter.";
+
         [SerializeField]
         internal List<AnimationClipConverterItem> assets = new();
 
@@ -106,14 +118,21 @@ namespace UnityEditor.Rendering.Universal
                     (
                         SearchServiceUtils.IndexingOptions.DeepSearch,
                         query,
-                        (searchItem, path) =>
+                        (item, path) =>
                         {
-                            if (searchItem.ToObject() is not GameObject go || go.scene == null)
+                            var unityObject = item.ToObject();
+
+                            if (unityObject == null)
                                 return;
 
-                            var gid = GlobalObjectId.GetGlobalObjectIdSlow(go);
+                            var gid = GlobalObjectId.GetGlobalObjectIdSlow(unityObject);
+                            int type = gid.identifierType; // 1=Asset, 2=SceneObject
 
-                            var assetItem = new RenderPipelineConverterAssetItem(gid, go.scene.path);
+                            var assetItem = new RenderPipelineConverterAssetItem(gid.ToString())
+                            {
+                                name = unityObject.name,
+                                info = path,
+                            };
 
                             if (animatorUsingClip.TryGetValue(path, out var list))
                             {

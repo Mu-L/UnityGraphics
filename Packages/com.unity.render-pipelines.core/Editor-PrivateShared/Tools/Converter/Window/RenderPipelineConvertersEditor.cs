@@ -221,7 +221,8 @@ namespace UnityEditor.Rendering.Converter
                     if (converterNodeCategory.name == to.label)
                         currentContainer = converterNodeCategory;
                 }
-                HideUnhideConverters();
+
+                ConfigureUI();
             };
 
             m_SourcePipelineDropDown.RegisterCallback<ChangeEvent<string>>((evt) =>
@@ -234,40 +235,51 @@ namespace UnityEditor.Rendering.Converter
                 HideUnhideConverters();
             });
 
-            HideUnhideConverters();
-            EnableOrDisableScanButton();
-            EnableOrDisableConvertButton();
+            ConfigureUI();
 
             UpdateUiForPlayMode(EditorApplication.isPlaying);
         }
 
+        private void ConfigureUI()
+        {
+            HideUnhideConverters();
+            EnableOrDisableScanButton();
+            EnableOrDisableConvertButton();
+        }
+
         private bool CanEnableScan()
         {
-            foreach (var kvp in m_ConvertersVisualElements)
+            foreach (var child in currentContainer.children)
             {
-                var ve = kvp.Value;
-                if (ve.isSelectedAndEnabled &&
-                    !ve.state.isInitialized)
+                if (m_ConvertersVisualElements.TryGetValue(child, out var ve))
                 {
-                    return true;
+                    if (ve.isSelectedAndEnabled &&
+                        !ve.state.isInitialized)
+                    {
+                        return true;
+                    }
                 }
             }
+
             return false;
         }
 
         private bool CanEnableConvert()
         {
-            foreach (var kvp in m_ConvertersVisualElements)
+            foreach (var child in currentContainer.children)
             {
-                var ve = kvp.Value;
-                if (ve.isSelectedAndEnabled &&
-                    ve.state.isInitialized &&
-                    ve.state.selectedItemsCount > 0 &&
-                    ve.state.pending > 0)
+                if (m_ConvertersVisualElements.TryGetValue(child, out var ve))
                 {
-                    return true;
+                    if (ve.isSelectedAndEnabled &&
+                        ve.state.isInitialized &&
+                        ve.state.selectedItemsCount > 0 &&
+                        ve.state.pending > 0)
+                    {
+                        return true;
+                    }
                 }
             }
+
             return false;
         }
 

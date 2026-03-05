@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Text;
+using UnityEngine;
 
 namespace UnityEditor.Rendering.Converter
 {
@@ -24,16 +25,42 @@ namespace UnityEditor.Rendering.Converter
                 onScanFinish?.Invoke(returnList);
             }
 
+            var processedIds = new HashSet<string>();
+
             SearchServiceUtils.RunQueuedSearch
             (
                 SearchServiceUtils.IndexingOptions.DeepSearch,
                 contextSearchQueriesAndIds,
                 (item, description) =>
                 {
-                    var assetItem = new RenderPipelineConverterAssetItem(item.id)
+                    // Direct conversion - works for both assets and scene objects
+                    var unityObject = item.ToObject();
+
+                    if (unityObject == null)
+                            return;
+
+                    // Ensure we're always working with GameObjects
+                    GameObject go = null;
+
+                    if (unityObject is GameObject gameObject)
+                        go = gameObject;
+                    else if (unityObject is Component component)
+                        go = component.gameObject;
+                    else
+                        return; // Not a GameObject or Component
+
+                    var gid = GlobalObjectId.GetGlobalObjectIdSlow(go);
+                    if (!processedIds.Add(gid.ToString()))
+                        return;
+
+                    int type = gid.identifierType; // 1=Asset, 2=SceneObject
+
+                    var assetItem = new RenderPipelineConverterAssetItem(gid.ToString())
                     {
-                        info = description
+                        name = $"{unityObject.name} ({(type == 1 ? "Prefab" : "SceneObject")})",
+                        info = type == 1 ? AssetDatabase.GetAssetPath(unityObject) : go.scene.path,
                     };
+
                     assets.Add(assetItem);
                 },
                 OnSearchFinish
