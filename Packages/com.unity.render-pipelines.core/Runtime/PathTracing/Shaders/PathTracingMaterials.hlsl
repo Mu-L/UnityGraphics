@@ -26,7 +26,7 @@ float4 SampleAtlas(Texture2DArray<float4> atlas, SamplerState atlasSampler, uint
     return MaterialPool::SampleAtlas(atlas, atlasSampler, g_AtlasTexelSize, index, uv, scale, offset, pointFilterMode);
 }
 
-MaterialProperties LoadMaterialProperties(UnifiedRT::InstanceData instanceInfo, bool useWhiteAsBaseColor, float2 uv0, float2 uv1)
+MaterialProperties LoadMaterialProperties(UnifiedRT::InstanceData instanceInfo, float2 uv0, float2 uv1)
 {
     MaterialProperties output = MaterialPool::LoadMaterialProperties(
         g_MaterialList,
@@ -41,12 +41,6 @@ MaterialProperties LoadMaterialProperties(UnifiedRT::InstanceData instanceInfo, 
         instanceInfo.userMaterialID,
         uv0,
         uv1);
-
-    if (useWhiteAsBaseColor)
-    {
-        // override to white albedo, because albedo is multiplied with lightmap color at runtime
-        output.baseColor = float3(1, 1, 1);
-    }
 
     return output;
 }

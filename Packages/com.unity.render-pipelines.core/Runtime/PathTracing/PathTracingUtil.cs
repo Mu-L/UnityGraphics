@@ -35,7 +35,6 @@ namespace UnityEngine.PathTracing.Core
             public static readonly int EnvTex = Shader.PropertyToID("g_EnvTex");
             public static readonly int LightEvaluations = Shader.PropertyToID("g_LightEvaluations");
             public static readonly int PathtracerAsGiPreviewMode = Shader.PropertyToID("g_PathtracerAsGiPreviewMode");
-            public static readonly int CountNEERayAsPathSegment = Shader.PropertyToID("g_CountNEERayAsPathSegment");
             public static readonly int RenderedInstances = Shader.PropertyToID("g_RenderedInstances");
             public static readonly int PreExpose = Shader.PropertyToID("g_PreExpose");
             public static readonly int BounceCount = Shader.PropertyToID("g_BounceCount");
@@ -128,7 +127,6 @@ namespace UnityEngine.PathTracing.Core
         static internal void BindPathTracingInputs(
             CommandBuffer cmd,
             IRayTracingShader shader,
-            bool countNEERayAsPathSegment,
             uint risCandidateCount,
             bool preExpose,
             int bounces,
@@ -139,7 +137,6 @@ namespace UnityEngine.PathTracing.Core
         {
             shader.SetIntParam(cmd, ShaderProperties.LightEvaluations, (int)risCandidateCount);
             shader.SetIntParam(cmd, ShaderProperties.PathtracerAsGiPreviewMode, 0);
-            shader.SetIntParam(cmd, ShaderProperties.CountNEERayAsPathSegment, countNEERayAsPathSegment ? 1 : 0);
             shader.SetIntParam(cmd, ShaderProperties.RenderedInstances, (int)renderedGameObjectsFilter);
             shader.SetIntParam(cmd, ShaderProperties.PreExpose, preExpose ? 1 : 0);
             shader.SetIntParam(cmd, ShaderProperties.BounceCount, bounces);

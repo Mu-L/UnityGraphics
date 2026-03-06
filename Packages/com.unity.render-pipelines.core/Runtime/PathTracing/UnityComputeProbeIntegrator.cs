@@ -36,9 +36,9 @@ namespace UnityEngine.PathTracing.Integration
         private Rendering.Sampling.SamplingResources _samplingResources;
         private ProbeIntegratorResources _integrationResources;
 
-        public UnityComputeProbeIntegrator(bool countNEERayAsPathSegment, Rendering.Sampling.SamplingResources samplingResources, ProbeIntegratorResources integrationResources, ComputeShader probeOcclusionLightIndexMappingShader)
+        public UnityComputeProbeIntegrator(Rendering.Sampling.SamplingResources samplingResources, ProbeIntegratorResources integrationResources, ComputeShader probeOcclusionLightIndexMappingShader)
         {
-            _probeIntegrator = new ProbeIntegrator(countNEERayAsPathSegment);
+            _probeIntegrator = new ProbeIntegrator();
             _samplingResources = samplingResources;
             _probeOcclusionLightIndexMappingShader = probeOcclusionLightIndexMappingShader;
             _probeOcclusionLightIndexMappingKernel = _probeOcclusionLightIndexMappingShader.FindKernel("MapIndices");

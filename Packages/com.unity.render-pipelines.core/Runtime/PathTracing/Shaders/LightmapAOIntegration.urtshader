@@ -49,7 +49,7 @@ void AccumulateInternal(UnifiedRT::DispatchInfo dispatchInfo)
             UnifiedRT::InstanceData instance = UnifiedRT::GetInstance(hitResult.instanceID);
             PTHitGeom geometry = GetHitGeomInfo(instance, hitResult);
             geometry.FixNormals(direction);
-            MaterialProperties material = LoadMaterialProperties(instance, false, geometry.uv0, geometry.uv1);
+            MaterialProperties material = LoadMaterialProperties(instance, geometry.uv0, geometry.uv1);
 
             // Transmissive material, continue with a probability
             if (ShouldTransmitRay(rngState, material))

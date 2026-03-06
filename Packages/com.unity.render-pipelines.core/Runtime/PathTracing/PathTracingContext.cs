@@ -225,7 +225,6 @@ namespace UnityEngine.Rendering.LiveGI
                 _rayTracingShader.SetIntParam(cmd, Shader.PropertyToID("g_SampleCount"), settings.sampleCount);
                 _rayTracingShader.SetIntParam(cmd, Shader.PropertyToID("g_LightEvaluations"), settings.lightEvaluations);
                 _rayTracingShader.SetIntParam(cmd, Shader.PropertyToID("g_PathtracerAsGiPreviewMode"), (_pathTracingOutput == PathTracingOutput.GIPreview) ? 1 : 0);
-                _rayTracingShader.SetIntParam(cmd, Shader.PropertyToID("g_CountNEERayAsPathSegment"), 1);
                 _rayTracingShader.SetIntParam(cmd, Shader.PropertyToID("g_RenderedInstances"), (int)settings.renderedGameObjects);
                 _rayTracingShader.SetIntParam(cmd, Shader.PropertyToID("g_PreExpose"), preExpose ? 1 : 0);
                 _rayTracingShader.SetIntParam(cmd, Shader.PropertyToID("g_MaxIntensity"), settings.maxIntensity > 0 ? settings.maxIntensity : int.MaxValue);

@@ -110,7 +110,7 @@ void EstimateMISWeightedIrradianceUsingCosineSampling(
             UnifiedRT::InstanceData instance = UnifiedRT::GetInstance(hitResult.instanceID);
             PTHitGeom geometry = GetHitGeomInfo(instance, hitResult);
             geometry.FixNormals(ray.direction);
-            MaterialProperties material = LoadMaterialProperties(instance, false, geometry.uv0, geometry.uv1);
+            MaterialProperties material = LoadMaterialProperties(instance, geometry.uv0, geometry.uv1);
 
             // Transmissive material, either continue or terminate ray, then apply attenuation.
             if (ShouldTransmitRay(rngState, material))

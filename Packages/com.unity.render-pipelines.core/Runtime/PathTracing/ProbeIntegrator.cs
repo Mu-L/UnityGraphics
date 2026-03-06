@@ -37,7 +37,6 @@ namespace UnityEngine.PathTracing.Integration
         ProbeIntegratorResources _resourceLibrary;
         GraphicsBuffer _traceScratchBuffer;
         RTHandle _emptyExposureTexture;
-        bool _countNEERayAsPathSegment;
         private BakeProgressState _progressState;
 
         // This is a magic number, chosen to be a decent balance between performance and memory usage.
@@ -61,11 +60,6 @@ namespace UnityEngine.PathTracing.Integration
             public static readonly int PerProbeLightIndicesOffset = Shader.PropertyToID("g_PerProbeLightIndicesOffset");
             public static readonly int MaxLightsPerProbe = Shader.PropertyToID("g_MaxLightsPerProbe");
             public static readonly int LightIndexInCell = Shader.PropertyToID("g_LightIndexInCell");
-        }
-
-        public ProbeIntegrator(bool countNEERayAsPathSegment)
-        {
-            _countNEERayAsPathSegment = countNEERayAsPathSegment;
         }
 
         internal void Prepare(GraphicsBuffer positionsBuffer, ProbeIntegratorResources integrationResources, SamplingResources samplingResources)
@@ -119,7 +113,7 @@ namespace UnityEngine.PathTracing.Integration
             // General path tracing parameters
             Util.SetLightSamplingKeyword(cmd, shader, lightSamplingMode);
             bool preExpose = false;
-            Util.BindPathTracingInputs(cmd, shader, _countNEERayAsPathSegment, risCandidateCount, preExpose, (int)bounceCount, environmentIntensityMultiplier, RenderedGameObjectsFilter.OnlyStatic, _samplingResources, _emptyExposureTexture);
+            Util.BindPathTracingInputs(cmd, shader, risCandidateCount, preExpose, (int)bounceCount, environmentIntensityMultiplier, RenderedGameObjectsFilter.OnlyStatic, _samplingResources, _emptyExposureTexture);
             Util.BindWorld(cmd, shader, world);
 
             // Zero initialize the output buffer

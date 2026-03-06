@@ -138,7 +138,7 @@ namespace UnityEngine.PathTracing.Tests
             var shader = _rayTracingContext.LoadRayTracingShader("Packages/com.unity.render-pipelines.core/Tests/Runtime/PathTracing/PathIteratorTest.urtshader");
 
             Util.BindWorld(_cmd, shader, _world);
-            Util.BindPathTracingInputs(_cmd, shader, false, 1, false, 4, 1.0f, RenderedGameObjectsFilter.OnlyStatic, _samplingResources, _emptyExposureTexture);
+            Util.BindPathTracingInputs(_cmd, shader, 1, false, 4, 1.0f, RenderedGameObjectsFilter.OnlyStatic, _samplingResources, _emptyExposureTexture);
 
             shader.SetIntParam(_cmd, Shader.PropertyToID("g_SampleCount"), (int)sampleCount);
             shader.SetBufferParam(_cmd, Shader.PropertyToID("_Output"), deviceOutputBuffer);
@@ -210,7 +210,7 @@ namespace UnityEngine.PathTracing.Tests
             var shader = _rayTracingContext.LoadRayTracingShader("Packages/com.unity.render-pipelines.core/Tests/Runtime/PathTracing/PathIteratorTest.urtshader");
 
             Util.BindWorld(_cmd, shader, _world);
-            Util.BindPathTracingInputs(_cmd, shader, false, 1, false, 4, 1.0f, RenderedGameObjectsFilter.OnlyStatic, _samplingResources, _emptyExposureTexture);
+            Util.BindPathTracingInputs(_cmd, shader, 1, false, 4, 1.0f, RenderedGameObjectsFilter.OnlyStatic, _samplingResources, _emptyExposureTexture);
 
             shader.SetIntParam(_cmd, Shader.PropertyToID("g_SampleCount"), (int)sampleCount);
             shader.SetBufferParam(_cmd, Shader.PropertyToID("_Output"), deviceOutputBuffer);

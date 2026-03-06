@@ -24,27 +24,24 @@ float3 EstimateProbeRadiance(UnifiedRT::DispatchInfo dispatchInfo, UnifiedRT::Ra
     InitPathIterator(pathIter, ray);
 
     int transparencyBounce = 0;
-    // We start at bounce index 1, as bounce index is defined relative to the camera for this path tracer.
-    // Since this function is used for baking, we already implicitly have the first "hit", and are about
-    // to process the second path segment.
-    for (int bounceIndex = 1; bounceIndex <= g_BounceCount && transparencyBounce < MAX_TRANSMISSION_BOUNCES; bounceIndex++)
+    for (int bounceIndex = 0; bounceIndex <= g_BounceCount && transparencyBounce < MAX_TRANSMISSION_BOUNCES; bounceIndex++)
     {
         // The first path segment is special for the indirect pass - we should not add radiance from the
         // environment or emission, as these are already explicitly sampled in the direct pass.
-        bool isFirstPathSegment = bounceIndex == 1;
+        bool isFirstPathSegment = bounceIndex == 0;
 
-        uint pathRayMask = RayMask(bounceIndex == 0);
+        uint pathRayMask = RayMask(isFirstPathSegment);
         uint shadowRayMask = ShadowRayMask();
 
-        uint traceResult = TraceBounceRay(pathIter, bounceIndex, pathRayMask, dispatchInfo, accelStruct, rngState);
+        uint traceResult = TraceBounceRay(pathIter, pathRayMask, dispatchInfo, accelStruct, rngState);
 
         if (traceResult == TRACE_HIT)
         {
             if (!isFirstPathSegment)
                 AddEmissionRadiance(pathIter, accelStruct, g_AccelStructInstanceList, false);
-            
+
             // Check if we should do NEE, respecting the max bounce count
-            if (!g_CountNEERayAsPathSegment || bounceIndex < g_BounceCount)
+            if (bounceIndex < g_BounceCount)
                 AddRadianceFromDirectIllumination(pathIter, shadowRayMask, dispatchInfo, accelStruct, g_AccelStructInstanceList, rngState, false);
         }
 

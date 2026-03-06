@@ -191,7 +191,7 @@ namespace UnityEngine.PathTracing.Lightmapping
             CompactedGBufferLength?.Dispose();
         }
 
-        internal void Initialize(SamplingResources samplingResources, LightmapResourceLibrary lightmapResourceLib, bool countNEERayAsPathSegment)
+        internal void Initialize(SamplingResources samplingResources, LightmapResourceLibrary lightmapResourceLib)
         {
             SamplingResources = samplingResources;
             _emptyExposureTexture = RTHandles.Alloc(1, 1, enableRandomWrite: true, name: "Empty EV100 Exposure", colorFormat: GraphicsFormat.R8G8B8A8_UNorm);
@@ -200,7 +200,7 @@ namespace UnityEngine.PathTracing.Lightmapping
             UVFallbackBufferBuilder.Prepare(lightmapResourceLib.UVFallbackBufferGenerationMaterial);
             LightmapDirectIntegrator = new LightmapDirectIntegrator();
             LightmapDirectIntegrator.Prepare(lightmapResourceLib.DirectAccumulationShader, lightmapResourceLib.NormalizationShader, lightmapResourceLib.ExpansionHelpers, SamplingResources, _emptyExposureTexture);
-            LightmapIndirectIntegrator = new LightmapIndirectIntegrator(countNEERayAsPathSegment);
+            LightmapIndirectIntegrator = new LightmapIndirectIntegrator();
             LightmapIndirectIntegrator.Prepare(lightmapResourceLib.IndirectAccumulationShader, lightmapResourceLib.NormalizationShader, lightmapResourceLib.ExpansionHelpers, SamplingResources, _emptyExposureTexture);
             LightmapAOIntegrator = new LightmapAOIntegrator();
             LightmapAOIntegrator.Prepare(lightmapResourceLib.AOAccumulationShader, lightmapResourceLib.NormalizationShader, lightmapResourceLib.ExpansionHelpers, SamplingResources, _emptyExposureTexture);
