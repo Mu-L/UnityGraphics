@@ -1032,8 +1032,8 @@ namespace UnityEngine.Rendering.Universal
 
                 foreach (var meshRenderer in addedMeshRenderers)
                 {
-                    Debug.Assert(meshRenderer.isPartOfStaticBatch, "Static Batching is not supported by Surface Cache GI.");
-               
+                    Debug.Assert(!meshRenderer.isPartOfStaticBatch, "Static Batching is not supported by Surface Cache GI.");
+
                     var mesh = meshRenderer.GetComponent<MeshFilter>().sharedMesh;
 
                     if (mesh == null || mesh.vertexCount == 0)
