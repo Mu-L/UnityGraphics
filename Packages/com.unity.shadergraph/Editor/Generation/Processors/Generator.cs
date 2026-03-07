@@ -198,7 +198,7 @@ namespace UnityEditor.ShaderGraph
                 {
                     if (target.activeSubTarget is IUISubTarget)
                     {
-                        return new Target[] { new UITKPreviewTarget() };
+                        return new Target[] { new PreviewTarget(true) };
                     }
                 }
                 return new Target[] { new PreviewTarget() };
