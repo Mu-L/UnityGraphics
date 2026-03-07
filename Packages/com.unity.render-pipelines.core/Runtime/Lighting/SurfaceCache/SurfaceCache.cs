@@ -451,7 +451,7 @@ namespace UnityEngine.Rendering
             _volume = new SurfaceCacheVolume(volParams.Resolution, volParams.CascadeCount, volParams.Size);
             _ringConfig = new SurfaceCacheRingConfig();
             _patches = new SurfaceCachePatchList(patchCapacity);
-            _punctualLightSamples = new GraphicsBuffer(GraphicsBuffer.Target.Structured, (int)punctualLightSampleCount, sizeof(float) * 19);
+            _punctualLightSamples = new GraphicsBuffer(GraphicsBuffer.Target.Structured, (int)punctualLightSampleCount, sizeof(float) * 17);
 
             _estimationParams = estimationParams;
             _patchFilteringParams = patchFilteringParams;
@@ -682,6 +682,7 @@ namespace UnityEngine.Rendering
 
             {
                 var shader = data.EstimationShader;
+                shader.SetBufferParam(cmd, ShaderIDs._PunctualLights, punctualLightBuffer);
                 shader.SetBufferParam(cmd, ShaderIDs._RingConfigBuffer, data.RingConfigBuffer);
                 shader.SetBufferParam(cmd, ShaderIDs._PunctualLightSamples, data.PunctualLightSamples);
                 shader.SetBufferParam(cmd, ShaderIDs._PatchIrradiances, data.PatchIrradiances);

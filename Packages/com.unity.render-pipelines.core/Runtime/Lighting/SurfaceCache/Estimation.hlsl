@@ -17,6 +17,7 @@ StructuredBuffer<uint> _CellPatchIndices;
 StructuredBuffer<int3> _CascadeOffsets;
 StructuredBuffer<MaterialPool::MaterialEntry> _MaterialEntries;
 StructuredBuffer<PunctualLightSample> _PunctualLightSamples;
+StructuredBuffer<PunctualLight> _PunctualLights;
 Texture2DArray _AlbedoTextures;
 Texture2DArray _TransmissionTextures;
 Texture2DArray _EmissionTextures;
@@ -83,10 +84,24 @@ void ProjectAndAccumulate(inout SphericalHarmonics::RGBL1 accumulator, float3 sa
     accumulator.l1s[2] += sampleRadiance * SphericalHarmonics::y1Constant * sampleDirection.x;
 }
 
+float GetAdditionalRayOffset(float volumeVoxelMinSize)
+{
+    // We currently use the OffsetRayOrigin() heuristic to offset ray origins to avoid self-intersections. While this
+    // helps for Surface Cache it is not enough since the ray origins are relatively imprecise because they are derived
+    // from output of the rasterizer (as opposed to being reconstructed via barycentrics).
+    // We fix this by adding an additional offset. This offset is a percentage of the min voxel size to keep it
+    // somewhat proportional to the scene scale.
+    return volumeVoxelMinSize * 0.001;
+}
+
 void SamplePunctualLightBounceRadiance(
     inout QrngKronecker2D rng,
     UnifiedRT::RayTracingAccelStruct accelStruct,
     UnifiedRT::DispatchInfo dispatchInfo,
+    StructuredBuffer<PunctualLight> lights,
+    StructuredBuffer<PunctualLightSample> punctualLightSamples,
+    uint punctualLightSampleCount,
+    float volumeVoxelMinSize,
     PatchUtil::PatchGeometry patchGeo,
     inout SphericalHarmonics::RGBL1 accumulator,
     inout bool gotValidSamples)
@@ -100,11 +115,13 @@ void SamplePunctualLightBounceRadiance(
         PunctualLightBounceRadianceSample sample_ = SamplePunctualLightBounceRadiance(
             dispatchInfo,
             accelStruct,
-            _PunctualLightSamples,
-            _PunctualLightSampleCount,
+            lights,
+            punctualLightSamples,
+            punctualLightSampleCount,
             rng.GetSample(0).x,
             patchGeo.position,
-            patchGeo.normal);
+            patchGeo.normal,
+            GetAdditionalRayOffset(volumeVoxelMinSize));
 
         if (!sample_.IsValid())
             continue;
@@ -129,16 +146,12 @@ void SampleEnvironmentAndDirectionalBounceAndMultiBounceRadiance(
     UnifiedRT::DispatchInfo dispatchInfo,
     MaterialPoolParamSet matPoolParams,
     PatchUtil::PatchGeometry patchGeo,
+    float volumeVoxelMinSize,
     inout SphericalHarmonics::RGBL1 accumulator,
     inout bool gotValidSamples)
 {
     UnifiedRT::Ray ray;
-    // Offset ray origin to avoid self-intersections
-    // This offset is a percentage of the min voxel width (to keep it proportional to the scene scale) and is combined with OffsetRayOrigin
-    // Note: OffsetRayOrigin is not a perfect fit for a patchGeo.position that comes from the rasterization pipeline, as its heuristic is designed
-    // for positions computed via triangle vertices interpolation of a previous ray hit. We use it here nonetheless because its scaling with the distance
-    // to the world origin also helps to counter floating-point precision issues.
-    ray.origin = OffsetRayOrigin(patchGeo.position, patchGeo.normal, _VolumeVoxelMinSize * 0.001);
+    ray.origin = OffsetRayOrigin(patchGeo.position, patchGeo.normal, GetAdditionalRayOffset(volumeVoxelMinSize));
     ray.tMin = 0;
     ray.tMax = FLT_MAX;
 
@@ -220,6 +233,7 @@ void Estimate(UnifiedRT::DispatchInfo dispatchInfo)
         dispatchInfo,
         matPoolParams,
         patchGeo,
+        _VolumeVoxelMinSize,
         radianceSampleMean,
         gotValidSamples);
 
@@ -230,6 +244,10 @@ void Estimate(UnifiedRT::DispatchInfo dispatchInfo)
             rng,
             accelStruct,
             dispatchInfo,
+            _PunctualLights,
+            _PunctualLightSamples,
+            _PunctualLightSampleCount,
+            _VolumeVoxelMinSize,
             patchGeo,
             radianceSampleMean,
             gotValidSamples);

@@ -28,7 +28,7 @@ namespace UnityEngine.Rendering
             public Vector3 LinearLightColor;
             public Matrix4x4 Transform;
             public float ColorTemperature;
-            public float SpotAngle;
+            public float OuterSpotAngle;
             public float InnerSpotAngle;
             public float Range;
         }
@@ -44,7 +44,12 @@ namespace UnityEngine.Rendering
             internal Vector3 Position;
             internal Vector3 Direction;
             internal Vector3 Intensity;
-            internal float CosAngle;
+            internal float CosOuterAngle;
+            internal float Range;
+            // If innerAngle = outerAngle then 1/(cosInnerAngle-cosOuterAngle), otherwise 0.
+            internal float AngleAttenuationValue1;
+            // If innerAngle = outerAngle then cosOuterAngle/(cosOuterAngle-cosInnerAngle), otherwise 1.
+            internal float AngleAttenuationValue2;
         }
 
         internal class LightSet : IDisposable
@@ -57,7 +62,7 @@ namespace UnityEngine.Rendering
                 private List<T> _list = new();
                 private Dictionary<Handle<Light>, int> _handleToIndex = new();
                 private Dictionary<int, Handle<Light>> _indexToHandle = new();
-                private bool _gpuDirty = false;
+                private bool _gpuDirty = true;
                 private GraphicsBuffer _buffer;
 
                 internal uint Count => (uint)_list.Count;
@@ -106,7 +111,7 @@ namespace UnityEngine.Rendering
                         if (_buffer == null || _buffer.count < _list.Count)
                         {
                             _buffer?.Dispose();
-                            _buffer = new GraphicsBuffer(GraphicsBuffer.Target.Structured, _list.Count, UnsafeUtility.SizeOf<T>());
+                            _buffer = new GraphicsBuffer(GraphicsBuffer.Target.Structured, Math.Max(1, _list.Count), UnsafeUtility.SizeOf<T>());
                         }
                         cmd.SetBufferData(_buffer, _list);
                     }
@@ -173,12 +178,31 @@ namespace UnityEngine.Rendering
 
             static PunctualLight ConvertSpotLight(LightDescriptor desc)
             {
+                float cosOuterAngle = Mathf.Cos(desc.OuterSpotAngle * Mathf.Deg2Rad * 0.5f);
+                float cosInnerAngle = Mathf.Cos(desc.InnerSpotAngle * Mathf.Deg2Rad * 0.5f);
+
+                float angleAttenuationValue1;
+                float angleAttenuationValue2;
+                if (desc.InnerSpotAngle != desc.OuterSpotAngle)
+                {
+                    angleAttenuationValue1 = 1.0f / (cosInnerAngle - cosOuterAngle);
+                    angleAttenuationValue2 = cosOuterAngle * -angleAttenuationValue1;
+                }
+                else
+                {
+                    angleAttenuationValue1 = 0;
+                    angleAttenuationValue2 = 1;
+                }
+
                 return new PunctualLight()
                 {
                     Position = desc.Transform.GetPosition(),
                     Direction = GetLightDirection(desc),
                     Intensity = desc.LinearLightColor,
-                    CosAngle = Mathf.Cos(desc.SpotAngle / 360.0f * 2.0f * Mathf.PI * 0.5f)
+                    CosOuterAngle = cosOuterAngle,
+                    AngleAttenuationValue1 = angleAttenuationValue1,
+                    AngleAttenuationValue2 = angleAttenuationValue2,
+                    Range = desc.Range
                 };
             }
 
@@ -189,7 +213,8 @@ namespace UnityEngine.Rendering
                     Position = desc.Transform.GetPosition(),
                     Direction = Vector3.up, // doesn't matter
                     Intensity = desc.LinearLightColor,
-                    CosAngle = -1.0f // cos(pi) = -1
+                    CosOuterAngle = -1.0f, // cos(pi) = -1
+                    Range = desc.Range
                 };
             }
 

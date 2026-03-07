@@ -1,4 +1,3 @@
-#include "Packages/com.unity.render-pipelines.core/ShaderLibrary/Macros.hlsl"
 #include "Packages/com.unity.render-pipelines.core/ShaderLibrary/GeometricTools.hlsl"
 #include "Packages/com.unity.render-pipelines.core/ShaderLibrary/Sampling/Sampling.hlsl"
 #include "Packages/com.unity.render-pipelines.core/Runtime/UnifiedRayTracing/Bindings.hlsl"
@@ -44,22 +43,22 @@ void SamplePunctualLights(UnifiedRT::DispatchInfo dispatchInfo)
     QrngKronecker2D rng;
     rng.Init(dispatchInfo.globalThreadIndex.x, _FrameIdx);
 
-    const uint spotLightIndex = min(rng.GetSample(0).x * _PunctualLightCount, _PunctualLightCount - 1);
-    const PunctualLight light = _PunctualLights[spotLightIndex];
+    const uint punctualLightIndex = min(rng.GetSample(0).x * _PunctualLightCount, _PunctualLightCount - 1);
+    const PunctualLight light = _PunctualLights[punctualLightIndex];
 
     UnifiedRT::Ray ray;
     ray.tMin = 0;
-    ray.tMax = FLT_MAX;
+    ray.tMax = light.range;
     ray.origin = light.position;
     {
         float2 coneSample = rng.GetSample(1);
-        float3 localDir = SampleConeUniform(coneSample.x, coneSample.y, light.cosAngle);
+        float3 localDir = SampleConeUniform(coneSample.x, coneSample.y, light.cosOuterAngle);
         float3x3 spotBasis = OrthoBasisFromVector(light.direction);
         ray.direction = mul(spotBasis, localDir);
     }
 
     PunctualLightSample lightSample = (PunctualLightSample)0;
-    lightSample.dir = ray.direction;
+    lightSample.rayDirection = ray.direction;
 
     UnifiedRT::Hit hitResult = UnifiedRT::TraceRayClosestHit(dispatchInfo, accelStruct, 0xFFFFFFFF, ray, UnifiedRT::kRayFlagNone);
     if (hitResult.IsValid() && hitResult.isFrontFace)
@@ -84,10 +83,10 @@ void SamplePunctualLights(UnifiedRT::DispatchInfo dispatchInfo)
         lightSample.hitNormal = hitGeo.normal;
         lightSample.distance = hitResult.hitDistance;
         lightSample.hitAlbedo = hitMat.baseColor;
-        lightSample.reciprocalDensity = AreaOfSphericalCapWithRadiusOne(light.cosAngle) * _PunctualLightCount;
+        lightSample.reciprocalDensity = AreaOfSphericalCapWithRadiusOne(light.cosOuterAngle) * _PunctualLightCount;
         lightSample.hitInstanceId = hitResult.instanceID;
         lightSample.hitPrimitiveIndex = hitResult.primitiveIndex;
-        lightSample.intensity = light.intensity;
+        lightSample.lightIndex = punctualLightIndex;
     }
     else
     {

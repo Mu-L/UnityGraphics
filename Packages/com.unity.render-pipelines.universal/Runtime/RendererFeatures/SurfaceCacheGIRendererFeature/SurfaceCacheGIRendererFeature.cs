@@ -1386,7 +1386,7 @@ namespace UnityEngine.Rendering.Universal
                         descriptor.LinearLightColor *= Mathf.PI;
                     descriptor.Transform = light.transform.localToWorldMatrix;
                     descriptor.ColorTemperature = light.colorTemperature;
-                    descriptor.SpotAngle = light.spotAngle;
+                    descriptor.OuterSpotAngle = light.spotAngle;
                     descriptor.InnerSpotAngle = light.innerSpotAngle;
                     descriptor.Range = light.range;
                 }
