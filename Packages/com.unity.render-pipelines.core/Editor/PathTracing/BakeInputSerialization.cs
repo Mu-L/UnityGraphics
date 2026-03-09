@@ -913,7 +913,9 @@ namespace UnityEditor.PathTracing.LightBakerBridge
         public UInt32[] instanceToTextureDataIndex; // Index into albedoData and emissiveData for each instance
         public Int32[] materialToTransmissionDataIndex; // Index into transmissionData and transmissionDataProperties for each material
         public TextureData[] albedoData;
+        public TextureProperties[] albedoDataProperties; // Same size as albedoData
         public TextureData[] emissiveData;
+        public TextureProperties[] emissiveDataProperties; // Same size as emissiveData
         public TextureData[] transmissionData; // Same size as transmissionDataProperties
         public TextureProperties[] transmissionDataProperties; // Same size as transmissionData
         // Cookie data
@@ -934,7 +936,9 @@ namespace UnityEditor.PathTracing.LightBakerBridge
             visitor.TransferBlittableArray(ref instanceToTextureDataIndex);
             visitor.TransferBlittableArray(ref materialToTransmissionDataIndex);
             visitor.TransferArray(ref albedoData);
+            visitor.TransferArray(ref albedoDataProperties);
             visitor.TransferArray(ref emissiveData);
+            visitor.TransferArray(ref emissiveDataProperties);
             visitor.TransferArray(ref transmissionData);
             visitor.TransferArray(ref transmissionDataProperties);
             visitor.TransferArray(ref cookieData);
@@ -947,7 +951,7 @@ namespace UnityEditor.PathTracing.LightBakerBridge
     {
         // Should match BakeInputSerialization::kCurrentFileVersion in BakeInputSerialization.h.
         // If these are out of sync, the implementation in this file probably needs to be updated.
-        const UInt64 CurrentFileVersion = 202601301;
+        const UInt64 CurrentFileVersion = 202603061;
 
         public static bool Deserialize(string path, out BakeInput bakeInput)
         {

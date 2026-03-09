@@ -269,15 +269,27 @@ namespace UnityEditor.PathTracing.LightBakerBridge
             // Create albedo and emission textures from materials
             var perTexturePairMaterials = new MaterialPool.MaterialDescriptor[bakeInput.albedoData.Length];
             Debug.Assert(bakeInput.albedoData.Length == bakeInput.emissiveData.Length);
+            Debug.Assert(bakeInput.albedoData.Length == bakeInput.albedoDataProperties.Length);
+            Debug.Assert(bakeInput.emissiveData.Length == bakeInput.emissiveDataProperties.Length);
             for (int i = 0; i < bakeInput.albedoData.Length; i++)
             {
                 ref var material = ref perTexturePairMaterials[i];
                 var baseTexture = CreateTexture2DFromTextureData(in bakeInput.albedoData[i], $"World (albedo) {i}");
+                ref readonly TextureProperties albedoProperties = ref bakeInput.albedoDataProperties[i];
+                baseTexture.wrapModeU = albedoProperties.wrapModeU;
+                baseTexture.wrapModeV = albedoProperties.wrapModeV;
+                baseTexture.filterMode = albedoProperties.filterMode;
                 allocatedObjects.Add(baseTexture);
                 var emissiveTexture = CreateTexture2DFromTextureData(in bakeInput.emissiveData[i], $"World (emissive) {i}");
+                ref readonly TextureProperties emissiveProperties = ref bakeInput.emissiveDataProperties[i];
+                emissiveTexture.wrapModeU = emissiveProperties.wrapModeU;
+                emissiveTexture.wrapModeV = emissiveProperties.wrapModeV;
+                emissiveTexture.filterMode = emissiveProperties.filterMode;
                 allocatedObjects.Add(emissiveTexture);
                 material.Albedo = baseTexture;
                 material.Emission = emissiveTexture;
+                material.PointSampleAlbedo = albedoProperties.filterMode == FilterMode.Point;
+                material.PointSampleEmission = emissiveProperties.filterMode == FilterMode.Point;
 
                 // Only mark emissive if it isn't the default black texture
                 bool isEmissiveSinglePixel = bakeInput.emissiveData[i].data.Length == 1;

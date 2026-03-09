@@ -752,7 +752,8 @@ float3 GetEmissiveMeshEmission(LightShapeSample lightSample)
     float3 emission = 0;
     if (matInfo.emissionTextureIndex != -1)
     {
-        emission = SampleAtlas(g_EmissionTextures, sampler_g_EmissionTextures, matInfo.emissionTextureIndex, lightSample.uv, matInfo.emissionScale, matInfo.emissionOffset, false).rgb;
+        bool pointSampleEmission = (matInfo.flags & 16) != 0;
+        emission = SampleAtlas(g_EmissionTextures, sampler_g_EmissionTextures, matInfo.emissionTextureIndex, lightSample.uv, matInfo.emissionScale, matInfo.emissionOffset, pointSampleEmission).rgb;
     }
     else
     {

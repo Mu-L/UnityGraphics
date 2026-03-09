@@ -77,7 +77,8 @@ namespace MaterialPool
         if (matEntry.albedoTextureIndex != -1)
         {
             float2 textureUV = matEntry.albedoAndEmissionUVChannel == 1 ? uv1 : uv0;
-            float4 texColor = SampleAtlas(albedoTextures, albedoSamplerState, atlasTexelSize, matEntry.albedoTextureIndex, textureUV, matEntry.albedoScale, matEntry.albedoOffset, false);
+            bool pointSampleAlbedo = (matEntry.flags & 8) != 0;
+            float4 texColor = SampleAtlas(albedoTextures, albedoSamplerState, atlasTexelSize, matEntry.albedoTextureIndex, textureUV, matEntry.albedoScale, matEntry.albedoOffset, pointSampleAlbedo);
             material.baseColor = texColor.rgb;
             // apply albedo boost, but still keep the reflectance at maximum 100%
             material.baseColor = min(albedoBoost * material.baseColor, float3(1.0, 1.0, 1.0));
@@ -87,7 +88,8 @@ namespace MaterialPool
         if (matEntry.emissionTextureIndex != -1)
         {
             float2 textureUV = matEntry.albedoAndEmissionUVChannel == 1 ? uv1 : uv0;
-            material.emissive = SampleAtlas(emissionTextures, emissionSamplerState, atlasTexelSize, matEntry.emissionTextureIndex, textureUV, matEntry.emissionScale, matEntry.emissionOffset, false).rgb;
+            bool pointSampleEmission = (matEntry.flags & 16) != 0;
+            material.emissive = SampleAtlas(emissionTextures, emissionSamplerState, atlasTexelSize, matEntry.emissionTextureIndex, textureUV, matEntry.emissionScale, matEntry.emissionOffset, pointSampleEmission).rgb;
         }
         else
         {
