@@ -20,12 +20,18 @@ public class HDRP_Runtime_Graphics_Tests
     [OneTimeSetUp]
     public void SetDefaultResolution()
     {
-        // Standard resolution for backbuffer capture is 1080p
         Screen.SetResolution(1920, 1080, true);
-
+        // Standard resolution for backbuffer capture is 1080p      
         #if UNITY_EDITOR
         GameViewSize.SetGameViewSize(1920, 1080);
         #endif
+    }
+
+    [UnityOneTimeSetUp]
+    public IEnumerable UnityOneTimeSetUp()
+    {
+        // Required because of resolution inconsistencies on some platforms                     
+        yield return GlobalResolutionSetter.SetResolutionWithRetry(1920, 1080, true);
     }
 
     [UnityTest]

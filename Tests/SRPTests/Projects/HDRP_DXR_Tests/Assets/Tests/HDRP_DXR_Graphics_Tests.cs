@@ -116,13 +116,20 @@ namespace UnityEngine.Rendering.HighDefinition.DXR_Tests
         
         [OneTimeSetUp]
         public void OneTimeSetUp()
-        {
-            // Standard resolution for backbuffer capture is 1080p
+        {            
             Screen.SetResolution(1920, 1080, true);
 
+            // Standard resolution for backbuffer capture is 1080p          
             #if UNITY_EDITOR
             GameViewSize.SetGameViewSize(1920, 1080);
             #endif
+        }
+
+        [UnityOneTimeSetUp]
+        public IEnumerable UnityOneTimeSetUp()
+        {
+            // Some platforms seem to require setting the resolution after play mode, otherwise resolution is not consistently set.                    
+            yield return GlobalResolutionSetter.SetResolutionWithRetry(1920, 1080, true);
         }
 
 #if UNITY_EDITOR
