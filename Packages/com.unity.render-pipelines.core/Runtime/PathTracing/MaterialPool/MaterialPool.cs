@@ -611,7 +611,7 @@ namespace UnityEngine.PathTracing.Core
         }
 
         // Render out an albedo/emission texture using the meta pass
-        private static Texture RenderGITexture(Material material, TextureType textureType)
+        private static Texture EvaluateMetaPass(Material material, TextureType textureType)
         {
             if (textureType == TextureType.Transmission)
             {
@@ -663,13 +663,13 @@ namespace UnityEngine.PathTracing.Core
             descriptor.EmissionColor = emission.Color;
             if (emission.Type == MaterialPropertyType.Texture)
             {
-                descriptor.Emission = RenderGITexture(material, TextureType.Emission);
+                descriptor.Emission = EvaluateMetaPass(material, TextureType.Emission);
                 descriptor.EmissionScale = Vector2.one; // Scale and offset handled by meta pass
                 descriptor.EmissionOffset = Vector2.zero;
             }
 
             // Albedo
-            descriptor.Albedo = RenderGITexture(material, TextureType.Albedo);
+            descriptor.Albedo = EvaluateMetaPass(material, TextureType.Albedo);
             descriptor.AlbedoScale = Vector2.one; // Scale and offset handled by meta pass
             descriptor.AlbedoOffset = Vector2.zero;
 
