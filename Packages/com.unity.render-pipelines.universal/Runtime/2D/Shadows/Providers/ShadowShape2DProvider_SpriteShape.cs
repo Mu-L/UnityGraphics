@@ -7,8 +7,6 @@ using Unity.Collections;
 using Unity.Collections.LowLevel.Unsafe;
 using UnityEngine.U2D;
 using Unity.Mathematics;
-using UnityEngine.Scripting.APIUpdating;
-
 
 #if UNITY_EDITOR
 using UnityEditor;
@@ -17,8 +15,7 @@ using UnityEditor;
 namespace UnityEngine.Rendering.Universal
 {
     [Serializable]
-    [MovedFrom(true, "UnityEngine.Rendering.Universal", "Unity.RenderPipelines.Universal", "ShadowShape2DProvider_SpriteShape")]
-    internal class ShadowCaster2DProvider_SpriteShape : ShadowCaster2DProvider
+    internal class ShadowShape2DProvider_SpriteShape : ShadowShape2DProvider
     {
         const float k_InitialTrim = 0.02f;
 
