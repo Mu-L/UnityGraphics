@@ -1408,6 +1408,11 @@ namespace UnityEngine.Rendering.Universal
             if (stack.GetComponent<MotionBlur>().IsActive())
                 return true;
 
+            if (LensFlareCommonSRP.IsOcclusionRTCompatible()
+                && !LensFlareCommonSRP.Instance.IsEmpty()
+                && UniversalRenderPipeline.asset.supportDataDrivenLensFlare)
+                return true;
+
             return false;
         }
 
