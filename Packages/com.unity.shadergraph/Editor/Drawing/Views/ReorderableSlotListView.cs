@@ -178,6 +178,8 @@ namespace UnityEditor.ShaderGraph.Drawing
                     m_Node.SetSlotOrder(orderedSlotIds);
 
                     RecreateList();
+                    // Editing a node's slots doesn't automatically re-concretize them, so we must explicitly do so
+                    m_Node.Concretize();
                     m_Node.ValidateNode();
                 }
             };
