@@ -918,7 +918,9 @@ namespace UnityEngine.Rendering.Universal
                 return;
 #endif
 
-            var rtBackend = RayTracingBackend.Compute;
+            var rtBackend = SystemInfo.supportsRayTracing
+                ? RayTracingBackend.Hardware
+                : RayTracingBackend.Compute;
 
             {
                 var resources = new RayTracingResources();
