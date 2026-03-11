@@ -203,7 +203,7 @@ void AddEmissionRadiance(inout PathIterator iterator, UnifiedRT::RayTracingAccel
     float lightDensity = ComputeEmissiveTriangleDensity(instanceList, iterator.hitGeo, iterator.hitResult.instanceID, iterator.ray.origin);
     lightDensity /= GetNumLights(iterator.ray.origin);
 
-    float3 emission = iterator.material.emissive;
+    float3 emission = iterator.material.emission;
     if (applyIndirectScale)
         emission *= g_IndirectScale;
     AddRadiance(iterator.radianceSample, iterator.throughput, emission * EmissiveMISWeightForBrdfRay(lightDensity, iterator.lastScatterProbabilityDensity));

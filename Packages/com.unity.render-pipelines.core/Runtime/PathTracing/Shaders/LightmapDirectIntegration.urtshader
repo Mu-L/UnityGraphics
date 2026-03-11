@@ -121,11 +121,11 @@ void EstimateMISWeightedIrradianceUsingCosineSampling(
                 continue;
             }
             // Hit emissive frontface
-            else if (!ShouldTreatAsBackface(hitResult, material) && any(material.emissive))
+            else if (!ShouldTreatAsBackface(hitResult, material) && any(material.emission))
             {
                 lightDensity = ComputeEmissiveTriangleDensity(instanceList, geometry, hitResult.instanceID, ray.origin);
                 lightDensity /= GetNumLights(ray.origin);
-                emission = material.emissive;
+                emission = material.emission;
             }
             break;
         }

@@ -43,11 +43,9 @@ struct MaterialPoolParamSet
 {
     StructuredBuffer<MaterialPool::MaterialEntry> materialEntries;
     Texture2DArray albedoTextures;
-    Texture2DArray transmissionTextures;
     Texture2DArray emissionTextures;
     SamplerState emissionSampler;
     SamplerState albedoSampler;
-    SamplerState transmissionSampler;
     float atlasTexelSize; // The size of 1 texel in the atlases above
     float albedoBoost;
 };
@@ -302,19 +300,9 @@ float3 IncomingEnviromentAndDirectionalBounceAndMultiBounceRadiance(
         {
             const UnifiedRT::InstanceData hitInstance = UnifiedRT::GetInstance(hitResult.instanceID);
             const SurfaceGeometry hitGeo = FetchSurfaceGeometry(hitInstance, hitResult);
-            const MaterialPool::MaterialProperties hitMat = MaterialPool::LoadMaterialProperties(
-                matPoolParams.materialEntries,
-                matPoolParams.albedoTextures,
-                matPoolParams.albedoSampler,
-                matPoolParams.transmissionTextures,
-                matPoolParams.transmissionSampler,
-                matPoolParams.emissionTextures,
-                matPoolParams.emissionSampler,
-                matPoolParams.albedoBoost,
-                matPoolParams.atlasTexelSize,
-                hitInstance.userMaterialID,
-                hitGeo.uv0,
-                hitGeo.uv1);
+            const MaterialPool::MaterialEntry matEntry = matPoolParams.materialEntries[hitInstance.userMaterialID];
+            const float3 hitAlbedo = MaterialPool::LoadAlbedoWithBoost(matEntry, matPoolParams.albedoTextures, matPoolParams.albedoSampler, matPoolParams.atlasTexelSize, matPoolParams.albedoBoost, hitGeo.uv0, hitGeo.uv1);
+            const float3 hitEmission = MaterialPool::LoadEmission(matEntry, matPoolParams.emissionTextures, matPoolParams.emissionSampler, matPoolParams.atlasTexelSize, hitGeo.uv0, hitGeo.uv1);
 
             radiance = OutgoingDirectionalBounceAndMultiBounceRadiance(
                 hitGeo.position,
@@ -331,8 +319,8 @@ float3 IncomingEnviromentAndDirectionalBounceAndMultiBounceRadiance(
                 volumeTargetPos,
                 cascadeCount,
                 volumeVoxelMinSize,
-                hitMat.baseColor,
-                hitMat.emissive);
+                hitAlbedo,
+                hitEmission);
         }
     }
     else

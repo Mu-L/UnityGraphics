@@ -15,11 +15,7 @@ RWStructuredBuffer<PunctualLightSample> _Samples;
 
 StructuredBuffer<MaterialPool::MaterialEntry> _MaterialEntries;
 Texture2DArray _AlbedoTextures;
-Texture2DArray _TransmissionTextures;
-Texture2DArray _EmissionTextures;
-SamplerState sampler_EmissionTextures;
 SamplerState sampler_AlbedoTextures;
-SamplerState sampler_TransmissionTextures;
 float _MaterialAtlasTexelSize;
 float _AlbedoBoost;
 uint _FrameIdx;
@@ -32,11 +28,7 @@ void SamplePunctualLights(UnifiedRT::DispatchInfo dispatchInfo)
     MaterialPoolParamSet matPoolParams;
     matPoolParams.materialEntries = _MaterialEntries;
     matPoolParams.albedoTextures = _AlbedoTextures;
-    matPoolParams.transmissionTextures = _TransmissionTextures;
-    matPoolParams.emissionTextures = _EmissionTextures;
-    matPoolParams.emissionSampler = sampler_EmissionTextures;
     matPoolParams.albedoSampler = sampler_AlbedoTextures;
-    matPoolParams.transmissionSampler = sampler_TransmissionTextures;
     matPoolParams.atlasTexelSize = _MaterialAtlasTexelSize;
     matPoolParams.albedoBoost = _AlbedoBoost;
 
@@ -65,24 +57,13 @@ void SamplePunctualLights(UnifiedRT::DispatchInfo dispatchInfo)
     {
         const UnifiedRT::InstanceData hitInstance = UnifiedRT::GetInstance(hitResult.instanceID);
         const SurfaceGeometry hitGeo = FetchSurfaceGeometry(hitInstance, hitResult);
-        const MaterialPool::MaterialProperties hitMat = MaterialPool::LoadMaterialProperties(
-            matPoolParams.materialEntries,
-            matPoolParams.albedoTextures,
-            matPoolParams.albedoSampler,
-            matPoolParams.transmissionTextures,
-            matPoolParams.transmissionSampler,
-            matPoolParams.emissionTextures,
-            matPoolParams.emissionSampler,
-            matPoolParams.albedoBoost,
-            matPoolParams.atlasTexelSize,
-            hitInstance.userMaterialID,
-            hitGeo.uv0,
-            hitGeo.uv1);
+        const MaterialPool::MaterialEntry matEntry = matPoolParams.materialEntries[hitInstance.userMaterialID];
+        const float3 hitAlbedo = MaterialPool::LoadAlbedoWithBoost(matEntry, matPoolParams.albedoTextures, matPoolParams.albedoSampler, matPoolParams.atlasTexelSize, matPoolParams.albedoBoost, hitGeo.uv0, hitGeo.uv1);
 
         lightSample.hitPos = ray.origin + ray.direction * hitResult.hitDistance;
         lightSample.hitNormal = hitGeo.normal;
         lightSample.distance = hitResult.hitDistance;
-        lightSample.hitAlbedo = hitMat.baseColor;
+        lightSample.hitAlbedo = hitAlbedo;
         lightSample.reciprocalDensity = AreaOfSphericalCapWithRadiusOne(light.cosOuterAngle) * _PunctualLightCount;
         lightSample.hitInstanceId = hitResult.instanceID;
         lightSample.hitPrimitiveIndex = hitResult.primitiveIndex;

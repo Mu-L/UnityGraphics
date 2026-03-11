@@ -19,11 +19,9 @@ StructuredBuffer<MaterialPool::MaterialEntry> _MaterialEntries;
 StructuredBuffer<PunctualLightSample> _PunctualLightSamples;
 StructuredBuffer<PunctualLight> _PunctualLights;
 Texture2DArray _AlbedoTextures;
-Texture2DArray _TransmissionTextures;
 Texture2DArray _EmissionTextures;
 SamplerState sampler_EmissionTextures;
 SamplerState sampler_AlbedoTextures;
-SamplerState sampler_TransmissionTextures;
 TextureCube<float3> _EnvironmentCubemap;
 SamplerState sampler_EnvironmentCubemap;
 UNIFIED_RT_DECLARE_ACCEL_STRUCT(_RayTracingAccelerationStructure);
@@ -212,11 +210,9 @@ void Estimate(UnifiedRT::DispatchInfo dispatchInfo)
     MaterialPoolParamSet matPoolParams;
     matPoolParams.materialEntries = _MaterialEntries;
     matPoolParams.albedoTextures = _AlbedoTextures;
-    matPoolParams.transmissionTextures = _TransmissionTextures;
     matPoolParams.emissionTextures = _EmissionTextures;
     matPoolParams.emissionSampler = sampler_EmissionTextures;
     matPoolParams.albedoSampler = sampler_AlbedoTextures;
-    matPoolParams.transmissionSampler = sampler_TransmissionTextures;
     matPoolParams.atlasTexelSize = _MaterialAtlasTexelSize;
     matPoolParams.albedoBoost = _AlbedoBoost;
 
