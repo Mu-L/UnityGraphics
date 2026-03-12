@@ -157,6 +157,7 @@ namespace UnityEngine.Rendering.PostProcessing
             /// <summary>
             /// A reference to the bundle itself.
             /// </summary>
+            [NonSerialized]
             public PostProcessBundle bundle; // Not serialized, is set/reset when deserialization kicks in
         }
 

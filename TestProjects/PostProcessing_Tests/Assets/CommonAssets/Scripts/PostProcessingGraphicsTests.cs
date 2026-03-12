@@ -20,7 +20,7 @@ public class PostProcessingGraphicsTests
         var camera = GameObject.FindGameObjectWithTag("MainCamera").GetComponent<Camera>();
 
 #if UNITY_2020_3_OR_NEWER
-        var settings = Object.FindFirstObjectByType<PostProcessingGraphicsTestSettings>();
+        var settings = Object.FindAnyObjectByType<PostProcessingGraphicsTestSettings>();
 #else
         var settings = Object.FindObjectOfType<PostProcessingGraphicsTestSettings>();
 #endif

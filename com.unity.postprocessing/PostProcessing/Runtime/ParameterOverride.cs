@@ -6,6 +6,7 @@ namespace UnityEngine.Rendering.PostProcessing
     /// The base abstract class for all parameter override types.
     /// </summary>
     /// <seealso cref="ParameterOverride{T}"/>
+    [Serializable]
     public abstract class ParameterOverride
     {
         /// <summary>
