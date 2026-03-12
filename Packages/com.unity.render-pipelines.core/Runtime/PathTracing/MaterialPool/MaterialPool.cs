@@ -653,12 +653,12 @@ namespace UnityEngine.PathTracing.Core
         }
 
         // The textures referenced by the material descriptor are owned by the material descriptor.
-        public static MaterialPool.MaterialDescriptor ConvertUnityMaterialToMaterialDescriptor(Material material)
+        public static MaterialPool.MaterialDescriptor ConvertUnityMaterialToMaterialDescriptor(Material material, EmissionMode emissionMode)
         {
             MaterialPool.MaterialDescriptor descriptor = new();
 
             // Emission
-            var emission = MaterialAspectOracle.GetEmission(material);
+            var emission = MaterialAspectOracle.GetEmission(material, emissionMode);
             descriptor.EmissionType = emission.Type;
             descriptor.EmissionColor = emission.Color;
             if (emission.Type == MaterialPropertyType.Texture)

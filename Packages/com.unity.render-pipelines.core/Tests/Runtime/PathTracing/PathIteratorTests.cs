@@ -188,7 +188,7 @@ namespace UnityEngine.PathTracing.Tests
             var material = new Material(Shader.Find("PathIteratorTesting/UniformAlbedoMetaPass"));
             material.SetColor("_Albedo", new Color(albedoRed, albedoGreen, albedoBlue, 1));
 
-            var matDesc = MaterialPool.ConvertUnityMaterialToMaterialDescriptor(material);
+            var matDesc = MaterialPool.ConvertUnityMaterialToMaterialDescriptor(material, EmissionMode.Baked);
 
             _world.SetEnvironmentMaterial(cubemapMaterial);
             var matHandle = _world.AddMaterial(matDesc, UVChannel.UV0);

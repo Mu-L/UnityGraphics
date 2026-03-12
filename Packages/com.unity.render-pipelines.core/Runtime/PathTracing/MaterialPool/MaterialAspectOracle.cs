@@ -12,6 +12,12 @@ namespace UnityEngine.PathTracing.Core
         public float3 Color; // Unused if type == Textured
     }
 
+    internal enum EmissionMode
+    {
+        Baked,
+        Realtime
+    }
+
     internal enum TransmissionChannels { None = 0, RGB, Alpha }
 
     internal struct TransmissionDesc
@@ -25,13 +31,35 @@ namespace UnityEngine.PathTracing.Core
     internal static class MaterialAspectOracle
     {
         // See gi::HasBakedEmissive in Materials.cpp
-        public static MaterialPropertyDesc GetEmission(Material mat)
+        public static MaterialPropertyDesc GetEmission(Material mat, EmissionMode emissionMode)
         {
-            // If the material is not marked as baked emissive, or if it is black, there is no emission
             var emissiveFlags = mat.globalIlluminationFlags;
+
+            // If the material is explicitly marked as black, there is no emission
             bool isBlack = emissiveFlags.HasFlag(MaterialGlobalIlluminationFlags.EmissiveIsBlack);
+            if (isBlack)
+            {
+                return new MaterialPropertyDesc { Type = MaterialPropertyType.None, Color = float3.zero };
+            }
+
             bool isBaked = emissiveFlags.HasFlag(MaterialGlobalIlluminationFlags.BakedEmissive);
-            if (isBlack || !isBaked)
+            bool isRealtime = emissiveFlags.HasFlag(MaterialGlobalIlluminationFlags.RealtimeEmissive);
+
+            bool emissionEnabled = false;
+            switch (emissionMode)
+            {
+                case EmissionMode.Baked:
+                    emissionEnabled = isBaked;
+                    break;
+                case EmissionMode.Realtime:
+                    emissionEnabled = isRealtime;
+                    break;
+                default:
+                    Debug.LogError($"Unexpected emission mode: {emissionMode}");
+                    break;
+            }
+
+            if (!emissionEnabled)
             {
                 return new MaterialPropertyDesc { Type = MaterialPropertyType.None, Color = float3.zero };
             }
@@ -151,7 +179,7 @@ namespace UnityEngine.PathTracing.Core
                         return mat.GetColor(mat.shader.GetPropertyNameId(i)).a;
                     }
                 }
-                
+
                 return 1.0f;
             }
         }

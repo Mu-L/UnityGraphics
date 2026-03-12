@@ -158,7 +158,7 @@ namespace UnityEngine.Rendering.LiveGI
             worldResources.LoadFromAssetDatabase();
 #endif
             _world.Init(_rayTracingContext, worldResources);
-            _defaultMaterialDescriptor = MaterialPool.ConvertUnityMaterialToMaterialDescriptor(_defaultMaterial);
+            _defaultMaterialDescriptor = MaterialPool.ConvertUnityMaterialToMaterialDescriptor(_defaultMaterial, EmissionMode.Baked);
             var defaultHandle = _world.AddMaterial(in _defaultMaterialDescriptor, UVChannel.UV0);
             _instanceIDToWorldMaterialHandles.Add(_defaultMaterial.GetEntityId(), defaultHandle);
             _instanceIDToWorldMaterialDescriptors.Add(_defaultMaterial.GetEntityId(), _defaultMaterialDescriptor);
@@ -353,7 +353,7 @@ namespace UnityEngine.Rendering.LiveGI
             foreach (var material in addedMaterials)
             {
                 // Add material to the world
-                var descriptor = MaterialPool.ConvertUnityMaterialToMaterialDescriptor(material);
+                var descriptor = MaterialPool.ConvertUnityMaterialToMaterialDescriptor(material, EmissionMode.Baked);
                 var handle = world.AddMaterial(in descriptor, UVChannel.UV0);
                 instanceIDToHandle.Add(material.GetEntityId(), handle);
 
@@ -370,7 +370,7 @@ namespace UnityEngine.Rendering.LiveGI
 
                 // Update the material in the world using the new descriptor
                 Debug.Assert(instanceIDToHandle.ContainsKey(material.GetEntityId()));
-                var newDescriptor = MaterialPool.ConvertUnityMaterialToMaterialDescriptor(material);
+                var newDescriptor = MaterialPool.ConvertUnityMaterialToMaterialDescriptor(material, EmissionMode.Baked);
                 world.UpdateMaterial(instanceIDToHandle[material.GetEntityId()], in newDescriptor, UVChannel.UV0);
                 instanceIDToDescriptor[material.GetEntityId()] = newDescriptor;
             }

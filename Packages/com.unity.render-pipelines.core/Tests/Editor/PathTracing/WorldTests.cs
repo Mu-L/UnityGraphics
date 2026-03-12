@@ -50,7 +50,7 @@ namespace UnityEngine.PathTracing.Tests
             var worldResources = new WorldResourceSet();
             worldResources.LoadFromAssetDatabase();
             _world.Init(_rayTracingContext, worldResources);
-            _world.AddMaterial(MaterialPool.ConvertUnityMaterialToMaterialDescriptor(_defaultMaterial), UVChannel.UV0);
+            _world.AddMaterial(MaterialPool.ConvertUnityMaterialToMaterialDescriptor(_defaultMaterial, EmissionMode.Baked), UVChannel.UV0);
 
             _samplingResources = new SamplingResources();
             _samplingResources.Load((uint)SamplingResources.ResourceType.All);
@@ -128,7 +128,7 @@ namespace UnityEngine.PathTracing.Tests
             const bool isStatic = true;
             uint objectLayerMask = 1;
             bool enableEmissiveSampling = true;
-            var materialHandle = _world.AddMaterial(MaterialPool.ConvertUnityMaterialToMaterialDescriptor(material), UVChannel.UV0);
+            var materialHandle = _world.AddMaterial(MaterialPool.ConvertUnityMaterialToMaterialDescriptor(material, EmissionMode.Baked), UVChannel.UV0);
             var mask = World.GetInstanceMask(ShadowCastingMode.On, isStatic, RenderedGameObjectsFilter.OnlyStatic);
 
             return _world.AddInstance(mesh, new MaterialHandle[] { materialHandle }, new uint[] { mask }, objectLayerMask, localToWorld, bounds, isStatic, RenderedGameObjectsFilter.OnlyStatic, enableEmissiveSampling);
