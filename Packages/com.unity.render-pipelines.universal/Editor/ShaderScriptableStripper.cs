@@ -1088,13 +1088,13 @@ namespace UnityEditor.Rendering.Universal
 
         internal bool StripUnusedPass_Meta(ref IShaderScriptableStrippingData strippingData)
         {
-            // Meta pass is needed in the player for Enlighten Precomputed Realtime GI albedo and emission.
+            // Meta pass is needed for Enlighten and Surface Cache realtime GI systems.
             if (strippingData.passType == PassType.Meta)
             {
                 if (SupportedRenderingFeatures.active.enlighten == false
-                    || ((int)SupportedRenderingFeatures.active.lightmapBakeTypes | (int)LightmapBakeType.Realtime) == 0
+                    && ((int)SupportedRenderingFeatures.active.lightmapBakeTypes | (int)LightmapBakeType.Realtime) == 0
 #if SURFACE_CACHE
-                    || !strippingData.IsShaderFeatureEnabled(ShaderFeatures.SurfaceCache)
+                    && !strippingData.IsShaderFeatureEnabled(ShaderFeatures.SurfaceCache)
 #endif
                    )
                     return true;
