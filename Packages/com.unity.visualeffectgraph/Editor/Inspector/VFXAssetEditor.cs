@@ -660,6 +660,7 @@ class VisualEffectAssetEditor : UnityEditor.Editor
             header.AddToClassList("inspector-header");
             header.focusable = false;
             root.Add(header);
+            header.enabledSelf = !EditorApplication.isPlaying;
 
             var allImportersSerializedObject = new SerializedObject(importers.ToArray());
             var useAsTemplateProperty = allImportersSerializedObject.FindProperty("m_UseAsTemplate");

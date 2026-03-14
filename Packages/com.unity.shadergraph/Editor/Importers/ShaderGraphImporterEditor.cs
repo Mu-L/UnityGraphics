@@ -140,6 +140,7 @@ namespace UnityEditor.ShaderGraph
                 GUIUtility.systemCopyBuffer = generator.generatedShader;
             }
 
+            EditorGUI.BeginDisabled(EditorApplication.isPlaying);
             EditorGUILayout.Space();
             EditorGUI.BeginChangeCheck();
             EditorGUILayout.PropertyField(serializedObject.FindProperty(ShaderGraphImporter.UseAsTemplateFieldName));
@@ -155,6 +156,7 @@ namespace UnityEditor.ShaderGraph
                 EditorGUILayout.PropertyField(serializedObject.FindProperty(ShaderGraphImporter.TemplateFieldName));
                 needsSaveMetaFile |= EditorGUI.EndChangeCheck();
             }
+            EditorGUI.EndDisabled();
 
             if (materialEditor)
             {
