@@ -10,6 +10,13 @@ using UnityEngine.Rendering.UnifiedRayTracing;
 
 namespace UnityEngine.Rendering.Universal
 {
+    internal struct SurfaceCacheScreenFilteringParameterSet
+    {
+        public uint LookupSampleCount;
+        public float UpsamplingKernelSize;
+        public uint UpsamplingSampleCount;
+    }
+
     [Serializable]
     [SupportedOnRenderPipeline]
     [Categorization.CategoryInfo(Name = "R: Surface Cache URP Integration", Order = 1000), HideInInspector]
@@ -91,6 +98,11 @@ namespace UnityEngine.Rendering.Universal
         }
 
         public static readonly string k_StaticBatchingErrorMesssage = "Surface Cache GI cannot run because it is incompatible with Static Batching. You can disable the option in the Player Settings.";
+
+        private const uint DEFAULT_DEFRAG_COUNT = 2; // Default value for how many patches to defragment per frame.
+        private const float DEFAULT_VOLUME_SIZE = 128.0f; // Default value for the size of the volume in world units.
+        private const uint DEFAULT_VOLUME_RESOLUTION = 32; // Default value for the voxel resolution of the volume.
+        private const uint DEFAULT_VOLUME_CASCADE_COUNT = 4; // Default value for the number of cascades in the volume.
 
         // URP currently cannot render motion vectors properly in Scene View, so we disable it.
         // https://jira.unity3d.com/browse/SRP-743
@@ -320,23 +332,31 @@ namespace UnityEngine.Rendering.Universal
             private uint3 _flatNormalResolutionKernelGroupSize;
 
             private uint _frameIdx;
-            private bool _cascadeMovement;
 
             // Debug
             private readonly bool _debugEnabled;
             private readonly DebugViewMode_ _debugViewMode;
             private readonly bool _debugShowSamplePosition;
 
-            // Screen Filtering
-            private readonly uint _lookupSampleCount;
-            private readonly float _upsamplingKernelSize;
-            private readonly uint _upsamplingSampleCount;
-
             private SurfaceCache _cache;
 
             private Matrix4x4 _prevClipToWorldTransform = Matrix4x4.identity;
 
             private readonly uint _environmentCubemapResolution = 32;
+            private const int k_UpscaleFactor = 4;
+
+            // Defaults, used as fallback when no volume override is active.
+            private const uint DEFAULT_ESTIMATION_SAMPLE_COUNT = 2;
+            private const float DEFAULT_TEMPORAL_SMOOTHING = 0.8f;
+            private const uint DEFAULT_SPATIAL_FILTER_SAMPLE_COUNT = 4;
+            private const float DEFAULT_SPATIAL_FILTER_RADIUS = 1.0f;
+            private const uint DEFAULT_LOOKUP_SAMPLE_COUNT = 6;
+            private const float DEFAULT_UPSAMPLING_KERNEL_SIZE = 5.0f;
+            private const uint DEFAULT_UPSAMPLING_SAMPLE_COUNT = 2;
+
+            // Stored for runtime cache recreation when resolution or cascade count changes
+            private readonly Rendering.SurfaceCacheResourceSet _coreResources;
+            private uint _defragCount;
 
             public SurfaceCachePass(
                 RayTracingContext rtContext,
@@ -351,14 +371,8 @@ namespace UnityEngine.Rendering.Universal
                 bool debugEnabled,
                 DebugViewMode_ debugViewMode,
                 bool debugShowSamplePosition,
-                uint lookupSampleCount,
-                float upsamplingKernelSize,
-                uint upsamplingSampleCount,
                 uint defragCount,
-                SurfaceCacheVolumeParameterSet volParams,
-                SurfaceCacheEstimationParameterSet estimationParams,
-                SurfaceCachePatchFilteringParameterSet patchFilteringParams,
-                bool cascadeMovement)
+                SurfaceCacheVolumeParameterSet volParams)
             {
                 Debug.Assert(volParams.CascadeCount != 0);
                 Debug.Assert(volParams.CascadeCount <= SurfaceCache.CascadeMax);
@@ -376,8 +390,6 @@ namespace UnityEngine.Rendering.Universal
                 _debugKernel = _debugShader.FindKernel("Visualize");
                 _flatNormalResolutionKernel = _flatNormalResolutionShader.FindKernel("ResolveFlatNormals");
 
-                _cascadeMovement = cascadeMovement;
-
                 _screenResolveLookupShader.GetKernelThreadGroupSizes(_screenResolveLookupKernel, out _screenResolveLookupKernelGroupSize.x, out _screenResolveLookupKernelGroupSize.y, out _screenResolveLookupKernelGroupSize.z);
                 _screenResolveUpsamplingShader.GetKernelThreadGroupSizes(_screenResolveUpsamplingKernel, out _screenResolveUpsamplingKernelGroupSize.x, out _screenResolveUpsamplingKernelGroupSize.y, out _screenResolveUpsamplingKernelGroupSize.z);
                 _patchAllocationShader.GetKernelThreadGroupSizes(_patchAllocationKernel, out _patchAllocationKernelGroupSize.x, out _patchAllocationKernelGroupSize.y, out _patchAllocationKernelGroupSize.z);
@@ -390,11 +402,10 @@ namespace UnityEngine.Rendering.Universal
                 _debugViewMode = debugViewMode;
                 _debugShowSamplePosition = debugShowSamplePosition;
 
-                _upsamplingKernelSize = upsamplingKernelSize;
-                _upsamplingSampleCount = upsamplingSampleCount;
-                _lookupSampleCount = lookupSampleCount;
+                _coreResources = resourceSet;
+                _defragCount = defragCount;
 
-                _cache = new SurfaceCache(resourceSet, defragCount, volParams, estimationParams, patchFilteringParams);
+                _cache = new SurfaceCache(resourceSet, defragCount, volParams);
                 _sceneTracker = new SceneUpdatesTracker();
 
                 _world = new SurfaceCacheWorld();
@@ -419,7 +430,71 @@ namespace UnityEngine.Rendering.Universal
                 _worldUpdateScratch?.Dispose();
             }
 
-            const int k_UpscaleFactor = 4;
+            private static VolumeParameterSet GetVolumeParametersOrDefaults(SurfaceCacheGIVolumeOverride volume)
+            {
+                if (volume != null && volume.IsActive())
+                {
+                    // Use volume parameters
+                    return new VolumeParameterSet
+                    {
+                        EstimationParams = new SurfaceCacheEstimationParameterSet
+                        {
+                            MultiBounce = volume.multiBounce,
+                            SampleCount = (uint)volume.sampleCount,
+                        },
+                        PatchFilteringParams = new SurfaceCachePatchFilteringParameterSet
+                        {
+                            TemporalSmoothing = volume.temporalSmoothing,
+                            SpatialFilterEnabled = volume.spatialFilterEnabled,
+                            SpatialFilterSampleCount = (uint)volume.spatialSampleCount,
+                            SpatialFilterRadius = volume.spatialRadius,
+                            TemporalPostFilterEnabled = volume.temporalPostFilter
+                        },
+                        ScreenFilteringParams = new SurfaceCacheScreenFilteringParameterSet
+                        {
+                            LookupSampleCount = (uint)volume.lookupSampleCount,
+                            UpsamplingKernelSize = volume.upsamplingKernelSize,
+                            UpsamplingSampleCount = (uint)volume.upsamplingSampleCount,
+                        },
+                        CascadeMovement = volume.cascadeMovement,
+                        VolumeSize = volume.volumeSize,
+                        VolumeResolution = (uint)volume.volumeResolution,
+                        VolumeCascadeCount = (uint)volume.volumeCascadeCount,
+                        DefragCount = (uint)volume.defragCount
+                    };
+                }
+                else
+                {
+                    // Fallback to defaults.
+                    return new VolumeParameterSet
+                    {
+                        EstimationParams = new SurfaceCacheEstimationParameterSet
+                        {
+                            MultiBounce = true,
+                            SampleCount = DEFAULT_ESTIMATION_SAMPLE_COUNT,
+                        },
+                        PatchFilteringParams = new SurfaceCachePatchFilteringParameterSet
+                        {
+                            TemporalSmoothing = DEFAULT_TEMPORAL_SMOOTHING,
+                            SpatialFilterEnabled = true,
+                            SpatialFilterSampleCount = DEFAULT_SPATIAL_FILTER_SAMPLE_COUNT,
+                            SpatialFilterRadius = DEFAULT_SPATIAL_FILTER_RADIUS,
+                            TemporalPostFilterEnabled = true
+                        },
+                        ScreenFilteringParams = new SurfaceCacheScreenFilteringParameterSet
+                        {
+                            LookupSampleCount = DEFAULT_LOOKUP_SAMPLE_COUNT,
+                            UpsamplingKernelSize = DEFAULT_UPSAMPLING_KERNEL_SIZE,
+                            UpsamplingSampleCount = DEFAULT_UPSAMPLING_SAMPLE_COUNT,
+                        },
+                        CascadeMovement = true,
+                        VolumeSize = DEFAULT_VOLUME_SIZE,
+                        VolumeResolution = DEFAULT_VOLUME_RESOLUTION,
+                        VolumeCascadeCount = DEFAULT_VOLUME_CASCADE_COUNT,
+                        DefragCount = DEFAULT_DEFRAG_COUNT
+                    };
+                }
+            }
 
             public override void RecordRenderGraph(RenderGraph renderGraph, ContextContainer frameData)
             {
@@ -439,6 +514,34 @@ namespace UnityEngine.Rendering.Universal
                 // This avoids applying surface cache to e.g. preview cameras.
                 if (cameraData.cameraType != CameraType.Game && cameraData.cameraType != CameraType.SceneView)
                     return;
+
+                // Get volume parameters that can change per-frame.
+                var stack = VolumeManager.instance.stack;
+                var volume = stack.GetComponent<SurfaceCacheGIVolumeOverride>();
+                var volumeParams = GetVolumeParametersOrDefaults(volume);
+                _defragCount = volumeParams.DefragCount;
+
+                // Detect structural changes that require buffer reallocation.
+                if (volumeParams.VolumeResolution != _cache.Volume.SpatialResolution || volumeParams.VolumeCascadeCount != _cache.Volume.CascadeCount)
+                {
+                    uint newResolution = volumeParams.VolumeResolution;
+                    uint newCascadeCount = volumeParams.VolumeCascadeCount;
+                    Debug.Assert(newCascadeCount != 0 && newCascadeCount <= SurfaceCache.CascadeMax);
+
+                    _cache.Dispose();
+                    var newVolParams = new SurfaceCacheVolumeParameterSet
+                    {
+                        Resolution = newResolution,
+                        Size = volumeParams.VolumeSize,
+                        CascadeCount = newCascadeCount
+                    };
+                    _cache = new SurfaceCache(_coreResources, _defragCount, newVolParams);
+                    _frameIdx = 0;
+                }
+
+                _cache.SetEstimationParams(volumeParams.EstimationParams);
+                _cache.SetPatchFilteringParams(volumeParams.PatchFilteringParams);
+                _cache.UpdateVolumeSize(volumeParams.VolumeSize);
 
                 bool useMotionVectorPatchSeeding = UseMotionVectorPatchSeeding(cameraData.cameraType);
 
@@ -467,7 +570,7 @@ namespace UnityEngine.Rendering.Universal
                     _lowResScreenNdcDepths = RTHandles.Alloc(lowResWidth, lowResHeight, 1, DepthBits.None, GraphicsFormat.R16_UNorm, FilterMode.Point, TextureWrapMode.Clamp, TextureDimension.Tex2D, true, name: "_lowResScreenNdcDepths");
                 }
 
-                if (_cascadeMovement || _frameIdx == 0)
+                if (volumeParams.CascadeMovement || _frameIdx == 0)
                 {
                     _cache.Volume.TargetPos = cameraData.camera.transform.position;
                 }
@@ -594,7 +697,7 @@ namespace UnityEngine.Rendering.Universal
                     data.VolumeSpatialResolution = _cache.Volume.SpatialResolution;
                     data.VolumeVoxelMinSize = _cache.Volume.VoxelMinSize;
                     data.VolumeCascadeCount = _cache.Volume.CascadeCount;
-                    data.SampleCount = _lookupSampleCount;
+                    data.SampleCount = volumeParams.ScreenFilteringParams.LookupSampleCount;
                     data.FrameIndex = _frameIdx;
 
                     builder.UseBuffer(cellAllocationMarkHandle, AccessFlags.Read);
@@ -664,8 +767,8 @@ namespace UnityEngine.Rendering.Universal
                         data.LowResScreenIrradiancesL11 = lowResScreenIrradiancesL11Handle;
                         data.LowResScreenIrradiancesL12 = lowResScreenIrradiancesL12Handle;
                         data.FullResIrradiances = fullResScreenIrradiancesHandle;
-                        data.FilterRadius = _upsamplingKernelSize;
-                        data.SampleCount = _upsamplingSampleCount;
+                        data.FilterRadius = volumeParams.ScreenFilteringParams.UpsamplingKernelSize;
+                        data.SampleCount = volumeParams.ScreenFilteringParams.UpsamplingSampleCount;
 
                         builder.UseTexture(data.FullResIrradiances, AccessFlags.Write);
                         builder.UseTexture(resourceData.cameraDepthTexture, AccessFlags.Read);
@@ -838,56 +941,11 @@ namespace UnityEngine.Rendering.Universal
         private RayTracingContext _rtContext;
         [SerializeField] private ParameterSet _parameterSet = new ParameterSet();
 
-        [Serializable]
-        class EstimationParameterSet
-        {
-            public uint SampleCount = 2;
-        }
-
-        [Serializable]
-        class PatchFilteringParameterSet
-        {
-            public float TemporalSmoothing = 0.8f;
-            public bool SpatialFilterEnabled = true;
-            public uint SpatialFilterSampleCount = 4;
-            public float SpatialFilterRadius = 1.0f;
-            public bool TemporalPostFilterEnabled = true;
-        }
-
-        [Serializable]
-        class ScreenFilteringParameterSet
-        {
-            public uint LookupSampleCount = 8;
-            public float UpsamplingKernelSize = 5.0f;
-            public uint UpsamplingSampleCount = 3;
-        }
-
-        [Serializable]
-        class VolumeParameterSet
-        {
-            public uint Resolution = 32;
-            public float Size = 128.0f;
-            public uint CascadeCount = 4;
-            public bool Movement = true;
-        }
-
-        [Serializable]
-        class AdvancedParameterSet
-        {
-            public uint DefragCount = 2;
-        }
-
+        // Main parameter set containing advanced and debug settings.
         [Serializable]
         class ParameterSet
         {
-            public bool MultiBounce = true;
-
-            public EstimationParameterSet EstimationParams = new EstimationParameterSet();
-            public PatchFilteringParameterSet PatchFilteringParams = new PatchFilteringParameterSet();
-            public ScreenFilteringParameterSet ScreenFilteringParams = new ScreenFilteringParameterSet();
-            public VolumeParameterSet VolumeParams = new VolumeParameterSet();
-            public AdvancedParameterSet AdvancedParams = new AdvancedParameterSet();
-
+            // Debug settings (will be moved to rendering debugger in the future)
             public bool DebugEnabled = false;
             public DebugViewMode_ DebugViewMode = DebugViewMode_.CellIndex;
             public bool DebugShowSamplePosition = false;
@@ -899,6 +957,19 @@ namespace UnityEngine.Rendering.Universal
             _pass = null;
             _rtContext?.Dispose();
             _rtContext = null;
+        }
+
+        // Parameters extracted from Volume override each frame
+        private struct VolumeParameterSet
+        {
+            public SurfaceCacheEstimationParameterSet EstimationParams;
+            public SurfaceCachePatchFilteringParameterSet PatchFilteringParams;
+            public SurfaceCacheScreenFilteringParameterSet ScreenFilteringParams;
+            public bool CascadeMovement;
+            public float VolumeSize;
+            public uint VolumeResolution;
+            public uint VolumeCascadeCount;
+            public uint DefragCount;
         }
 
         bool ResourcesCreated()
@@ -943,26 +1014,12 @@ namespace UnityEngine.Rendering.Universal
             var coreResourceLoadResult = coreResources.LoadFromRenderPipelineResources(_rtContext);
             Debug.Assert(coreResourceLoadResult);
 
+            // Use defaults for initial volume configuration; runtime values come from the Volume override per-frame
             var volParams = new SurfaceCacheVolumeParameterSet
             {
-                Resolution = _parameterSet.VolumeParams.Resolution,
-                Size = _parameterSet.VolumeParams.Size,
-                CascadeCount = _parameterSet.VolumeParams.CascadeCount
-            };
-
-            var estimationParams = new SurfaceCacheEstimationParameterSet
-            {
-                MultiBounce = _parameterSet.MultiBounce,
-                SampleCount = _parameterSet.EstimationParams.SampleCount,
-            };
-
-            var patchFilteringParams = new SurfaceCachePatchFilteringParameterSet
-            {
-                TemporalSmoothing = _parameterSet.PatchFilteringParams.TemporalSmoothing,
-                SpatialFilterEnabled = _parameterSet.PatchFilteringParams.SpatialFilterEnabled,
-                SpatialFilterSampleCount = _parameterSet.PatchFilteringParams.SpatialFilterSampleCount,
-                SpatialFilterRadius = _parameterSet.PatchFilteringParams.SpatialFilterRadius,
-                TemporalPostFilterEnabled = _parameterSet.PatchFilteringParams.TemporalPostFilterEnabled
+                Resolution = DEFAULT_VOLUME_RESOLUTION,
+                Size = DEFAULT_VOLUME_SIZE,
+                CascadeCount = DEFAULT_VOLUME_CASCADE_COUNT
             };
 
             _pass = new SurfaceCachePass(
@@ -978,14 +1035,8 @@ namespace UnityEngine.Rendering.Universal
                 _parameterSet.DebugEnabled,
                 _parameterSet.DebugViewMode,
                 _parameterSet.DebugShowSamplePosition,
-                _parameterSet.ScreenFilteringParams.LookupSampleCount,
-                _parameterSet.ScreenFilteringParams.UpsamplingKernelSize,
-                _parameterSet.ScreenFilteringParams.UpsamplingSampleCount,
-                _parameterSet.AdvancedParams.DefragCount,
-                volParams,
-                estimationParams,
-                patchFilteringParams,
-                _parameterSet.VolumeParams.Movement);
+                defragCount: DEFAULT_DEFRAG_COUNT,
+                volParams);
 
             _pass.renderPassEvent = RenderPassEvent.AfterRenderingPrePasses + 1;
         }
