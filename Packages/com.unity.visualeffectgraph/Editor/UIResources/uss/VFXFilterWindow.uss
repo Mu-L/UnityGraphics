@@ -297,18 +297,16 @@ Label {
     background-image: url("project:///Packages/com.unity.visualeffectgraph/Editor/UIResources/VFX/Folder.png");
 }
 
-.dark Label.category {
+.dark .unity-collection-view__item .treenode Label.category {
     -unity-background-image-tint-color: #C2C2C2;
 }
 
-.favorite Label.category {
-    background-position-x: left;
-    background-size: contain;
+.unity-collection-view__item .treenode.favorite Label.category {
     -unity-background-image-tint-color: white;
     background-image: resource("Icons/Favorite_colored.png");
 }
 
-.dark .favorite Label.category {
+.dark .unity-collection-view__item .treenode.favorite Label.category {
     background-image: resource("Icons/d_Favorite_colored.png");
 }
 

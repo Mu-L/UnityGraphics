@@ -7,7 +7,6 @@ using Unity.Profiling;
 using Unity.UI.Builder;
 using UnityEditor.UIElements;
 using UnityEngine;
-using UnityEngine.Rendering;
 using UnityEngine.UIElements;
 
 namespace UnityEditor.VFX.UI
