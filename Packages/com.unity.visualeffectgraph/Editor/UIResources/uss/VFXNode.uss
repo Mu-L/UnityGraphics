@@ -122,7 +122,13 @@ VFXBlockUI.node #node-border > #title > Label.first {
 }
 
 #title Label {
+    text-overflow: ellipsis;
+    overflow: hidden;
     align-self: center;
+}
+
+#title Label.first {
+    flex-shrink: 1;
 }
 
 .setting {

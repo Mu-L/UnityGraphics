@@ -124,9 +124,11 @@ VFXContextUI #inside
 
 VFXContextUI .extremity
 {
+    max-width: 280px;
+    overflow: hidden;
     border-radius: 2px;
     justify-content:center;
-    align-items:center;
+    align-self: center;
     flex-direction:row;
 }
 
@@ -162,6 +164,7 @@ VFXContextUI #node-border > #inside > #title > #title-label
 
 VFXContextUI #title #icon
 {
+    flex-shrink: 0;
     --unity-image: url("project:///Packages/com.unity.visualeffectgraph/Editor/UIResources/VFX/Execution.png");
     margin-right: 6px;
 }
