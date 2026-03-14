@@ -2767,5 +2767,101 @@ namespace UnityEngine.Rendering.Tests
 
             m_RenderGraph.Cleanup();
         }
+
+        class DepthInputAttachmentPassData
+        {
+            public TextureHandle depthTexture;
+            public TextureHandle colorTexture;
+        }
+
+        [Test]
+        public void SetInputAttachment_WithDepthTarget_Works()
+        {
+            const int kWidth = 4;
+            const int kHeight = 4;
+
+            m_RenderGraphTestPipeline.recordRenderGraphBody = (context, camera, cmd) =>
+            {
+                if (!SystemInfo.supportsDepthAttachmentAsInputAttachment)
+                {
+                    return; // Skip the test if the platform does not support multisampled shader resolve
+                }
+
+                TextureHandle depthTexture = m_RenderGraph.CreateTexture(new TextureDesc(kWidth, kHeight) { colorFormat = GraphicsFormat.D24_UNorm });
+                TextureHandle colorTexture = m_RenderGraph.CreateTexture(new TextureDesc(kWidth, kHeight) { colorFormat = GraphicsFormat.R8G8B8A8_UNorm });
+
+                // First pass: Write to depth buffer
+                using (var builder = m_RenderGraph.AddRasterRenderPass<DepthInputAttachmentPassData>("DepthWritePass", out var passData))
+                {
+                    builder.SetRenderAttachment(colorTexture, 0, AccessFlags.Write);
+                    builder.SetRenderAttachmentDepth(depthTexture, AccessFlags.Write);
+                    builder.AllowPassCulling(false);
+                    builder.SetRenderFunc((DepthInputAttachmentPassData data, RasterGraphContext context) => { });
+                }
+
+                // Second pass: Read depth buffer as input attachment
+                using (var builder = m_RenderGraph.AddRasterRenderPass<DepthInputAttachmentPassData>("DepthInputAttachmentPass", out var passData))
+                {
+                    passData.depthTexture = depthTexture;
+                    passData.colorTexture = colorTexture;
+
+                    builder.SetRenderAttachment(colorTexture, 0, AccessFlags.Write);
+                    // Set extended feature flag for depth input attachment
+                    builder.SetExtendedFeatureFlags(ExtendedFeatureFlags.DepthAttachmentAsInputAttachment);
+                    builder.SetInputAttachment(depthTexture, 0, AccessFlags.Read);
+
+                    builder.AllowPassCulling(false);
+                    builder.SetRenderFunc((DepthInputAttachmentPassData data, RasterGraphContext context) =>
+                    {
+                        // Depth texture is used as input attachment here
+                        Assert.IsTrue(data.depthTexture.IsValid());
+                    });
+                }
+            };
+
+            m_Camera.Render();
+        }
+
+        [Test]
+        public void SetInputAttachment_WithDepthTarget_ThrowsException_WhenExtendedFeatureFlagNotSet()
+        {
+            const int kWidth = 4;
+            const int kHeight = 4;
+
+            m_RenderGraphTestPipeline.recordRenderGraphBody = (context, camera, cmd) =>
+            {
+                if (!SystemInfo.supportsDepthAttachmentAsInputAttachment)
+                {
+                    return; // Skip the test if the platform does not support multisampled shader resolve
+                }
+
+                TextureHandle depthTexture = m_RenderGraph.CreateTexture(new TextureDesc(kWidth, kHeight) { colorFormat = GraphicsFormat.D24_UNorm });
+                TextureHandle colorTexture = m_RenderGraph.CreateTexture(new TextureDesc(kWidth, kHeight) { colorFormat = GraphicsFormat.R8G8B8A8_UNorm });
+
+                // First pass: Write to depth buffer
+                using (var builder = m_RenderGraph.AddRasterRenderPass<DepthInputAttachmentPassData>("DepthWritePass", out var passData))
+                {
+                    builder.SetRenderAttachment(colorTexture, 0, AccessFlags.Write);
+                    builder.SetRenderAttachmentDepth(depthTexture, AccessFlags.Write);
+                    builder.AllowPassCulling(false);
+                    builder.SetRenderFunc((DepthInputAttachmentPassData data, RasterGraphContext context) => { });
+                }
+
+                // Second pass: Using depth buffer as input attachment without setting the feature flag (not allowed and should throw)
+                Assert.Throws<System.InvalidOperationException>(() =>
+                {
+                    using (var builder = m_RenderGraph.AddRasterRenderPass<DepthInputAttachmentPassData>("DepthInputAttachmentPass", out var passData))
+                    {
+                        // NOT calling builder.SetExtendedFeatureFlags(ExtendedFeatureFlags.DepthAttachmentAsInputAttachment)
+                        builder.SetRenderAttachment(colorTexture, 0, AccessFlags.Write);
+                        builder.SetInputAttachment(depthTexture, 0, AccessFlags.Read); // This should throw
+                        builder.AllowPassCulling(false);
+                        builder.SetRenderFunc((DepthInputAttachmentPassData data, RasterGraphContext context) => { });
+                    }
+                });
+            };
+
+            m_Camera.Render();
+        }
     }
 }

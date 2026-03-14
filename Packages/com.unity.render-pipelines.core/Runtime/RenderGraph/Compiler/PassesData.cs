@@ -1176,6 +1176,20 @@ namespace UnityEngine.Rendering.RenderGraphModule.NativeRenderPassCompiler
                 // Check if we're handling the depth attachment
                 if (currRenderGraphPassHasDepth && fragmentIdx == 0)
                 {
+#if DEVELOPMENT_BUILD || UNITY_EDITOR
+                    // If depth input attachment flag is set, depth must be read-only
+                    if (passToMerge.extendedFeatureFlags.HasFlag(ExtendedFeatureFlags.DepthAttachmentAsInputAttachment))
+                    {
+                        if (graphPassFragment.accessFlags.HasFlag(AccessFlags.Write))
+                        {
+                            // Depth input attachments cannot have write access
+                            throw new InvalidOperationException(
+                                RenderGraph.RenderGraphExceptionMessages.DepthInputAttachmentWithWriteAccess(
+                                    passToMerge.GetName(contextData).name));
+                        }
+                    }
+#endif
+
                     flags = (graphPassFragment.accessFlags.HasFlag(AccessFlags.Write))
                         ? SubPassFlags.None
                         : SubPassFlags.ReadOnlyDepth;
@@ -1225,6 +1239,13 @@ namespace UnityEngine.Rendering.RenderGraphModule.NativeRenderPassCompiler
                 }
 
                 inputIndex++;
+            }
+
+            // Check if depth is used as input attachment
+            if (passToMerge.extendedFeatureFlags.HasFlag(ExtendedFeatureFlags.DepthAttachmentAsInputAttachment) && nativePass.hasDepth)
+            {
+                // Depth input attachments are read-only
+                flags = SubPassFlags.ReadOnlyDepth;
             }
 
             // last check for flags
@@ -1278,6 +1299,20 @@ namespace UnityEngine.Rendering.RenderGraphModule.NativeRenderPassCompiler
                     // Check if we're handling the depth attachment
                     if (passToMerge.fragmentInfoHasDepth && fragmentIdx == 0)
                     {
+#if DEVELOPMENT_BUILD || UNITY_EDITOR
+                        // If depth input attachment flag is set, depth must be read-only
+                        if (passToMerge.extendedFeatureFlags.HasFlag(ExtendedFeatureFlags.DepthAttachmentAsInputAttachment))
+                        {
+                            if (graphPassFragment.accessFlags.HasFlag(AccessFlags.Write))
+                            {
+                                // Depth input attachments cannot have write access
+                                throw new InvalidOperationException(
+                                    RenderGraph.RenderGraphExceptionMessages.DepthInputAttachmentWithWriteAccess(
+                                        passToMerge.GetName(contextData).name));
+                            }
+                        }
+#endif
+
                         desc.flags = (graphPassFragment.accessFlags.HasFlag(AccessFlags.Write))
                             ? SubPassFlags.None
                             : SubPassFlags.ReadOnlyDepth;
@@ -1329,6 +1364,13 @@ namespace UnityEngine.Rendering.RenderGraphModule.NativeRenderPassCompiler
 
                     inputIndex++;
                 }
+            }
+
+            // Check if depth is used as input attachment
+            if (passToMerge.extendedFeatureFlags.HasFlag(ExtendedFeatureFlags.DepthAttachmentAsInputAttachment) && nativePass.hasDepth)
+            {
+                // Depth input attachments are read-only
+                desc.flags = SubPassFlags.ReadOnlyDepth;
             }
 
             // Shading rate images
