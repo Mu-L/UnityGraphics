@@ -922,24 +922,26 @@ namespace UnityEngine.PathTracing.Core
             }
         }
 
-        public void Build(Bounds sceneBounds, CommandBuffer cmdBuf, ref GraphicsBuffer scratchBuffer, Rendering.Sampling.SamplingResources samplingResources, bool emissiveSampling, int envCubemapResolution)
+        public void Build(Bounds sceneBounds, CommandBuffer cmdBuf, ref GraphicsBuffer scratchBuffer, Rendering.Sampling.SamplingResources samplingResources, bool emissiveSampling, int envCubemapResolution, int maxLightGridCellCount)
         {
             Debug.Assert(_rayTracingAccelerationStructure != null);
             _lightState.Build(sceneBounds, cmdBuf, emissiveSampling && _cubemapRender.GetMaterial() != null);
 
             if (_lightState.lightPickingMethod == LightPickingMethod.Regir)
             {
+                _reservoirGrid.LightGridCellCount = maxLightGridCellCount;
                 _reservoirGrid.Build(cmdBuf, _lightState, sceneBounds, samplingResources);
             }
             else if (_lightState.lightPickingMethod == LightPickingMethod.LightGrid)
             {
+                _conservativeLightGrid.LightGridCellCount = maxLightGridCellCount;
                 _conservativeLightGrid.Build(cmdBuf, _lightState, sceneBounds, samplingResources);
             }
 
             _materialPool.Build(cmdBuf);
             _rayTracingAccelerationStructure.Build(cmdBuf, ref scratchBuffer);
 
-            _cubemapRender.Update(cmdBuf, RenderSettings.sun, envCubemapResolution);
+            _cubemapRender.Update(cmdBuf, RenderSettings.sun, envCubemapResolution, out _);
         }
 
         public UInt64 GetInstanceHandles(InstanceHandle handle)

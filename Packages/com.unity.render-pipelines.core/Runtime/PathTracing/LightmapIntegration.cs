@@ -117,6 +117,12 @@ namespace UnityEngine.PathTracing.Integration
         {
         }
 
+        public void SetupLightSamplingKeywords(CommandBuffer cmd, LightSamplingMode lightSamplingMode, EmissiveSamplingMode emissiveSamplingMode)
+        {
+            Util.SetLightSamplingKeyword(cmd, _accumulationShader, lightSamplingMode);
+            Util.SetEmissiveSamplingKeyword(cmd, _accumulationShader, emissiveSamplingMode);
+        }
+
         public void Prepare(IRayTracingShader accumulationShader, ComputeShader normalizationShader, ComputeShader expansionHelpers, SamplingResources samplingResources, RTHandle emptyExposureTexture)
         {
             _accumulationShader = accumulationShader;
@@ -155,6 +161,7 @@ namespace UnityEngine.PathTracing.Integration
             bool receiveShadows,
             float pushOff,
             uint risCandidateCount,
+            LightSamplingMode lightSamplingMode,
             uint maxLightsInAnyCell,
             bool newChunkStarted)
         {
@@ -169,7 +176,7 @@ namespace UnityEngine.PathTracing.Integration
             // path tracing inputs
             bool preExpose = false;
             float environmentIntensityMultiplier = 1.0f;
-            Util.BindPathTracingInputs(cmd, _accumulationShader, false, risCandidateCount, preExpose, 0, environmentIntensityMultiplier, RenderedGameObjectsFilter.OnlyStatic, _samplingResources, _emptyTexture);
+            Util.BindPathTracingInputs(cmd, _accumulationShader, risCandidateCount, preExpose, 0, environmentIntensityMultiplier, RenderedGameObjectsFilter.OnlyStatic, _samplingResources, _emptyTexture);
             Util.BindWorld(cmd, _accumulationShader, world);
 
             var requiredSizeInBytes = _accumulationShader.GetTraceScratchBufferRequiredSizeInBytes((uint)expandedOutput.count, 1, 1);
@@ -208,7 +215,7 @@ namespace UnityEngine.PathTracing.Integration
                 _accumulationShader.SetIntParam(cmd, LightmapIntegratorShaderIDs.SampleOffset, (int)currentSampleCountPerTexel);
                 _accumulationShader.SetIntParam(cmd, LightmapIntegratorShaderIDs.MaxLocalSampleCount, (int)sampleCountToTakePerTexel);
 
-                uint loopCount = maxLightsInAnyCell;
+                uint loopCount = lightSamplingMode == LightSamplingMode.RoundRobin ? maxLightsInAnyCell : 1;
                 for (int lightIndexInCell = 0; lightIndexInCell < loopCount; ++lightIndexInCell)
                 {
                     _accumulationShader.SetIntParam(cmd, LightmapIntegratorShaderIDs.LightIndexInCell, lightIndexInCell);
@@ -249,7 +256,6 @@ namespace UnityEngine.PathTracing.Integration
         private int _directionalNormalizationKernel;
         private SamplingResources _samplingResources;
         private RTHandle _emptyTexture;
-        private bool _countNEERayAsPathSegment;
         private GraphicsBuffer _accumulationDispatchBuffer;
         private ComputeShader _expansionHelpers;
         private int _populateAccumulationDispatchKernel;
@@ -259,9 +265,12 @@ namespace UnityEngine.PathTracing.Integration
             _accumulationDispatchBuffer?.Dispose();
         }
 
-        public LightmapIndirectIntegrator(bool countNEERayAsPathSegment)
+
+
+        public void SetupLightSamplingKeywords(CommandBuffer cmd, LightSamplingMode lightSamplingMode, EmissiveSamplingMode emissiveSamplingMode)
         {
-            _countNEERayAsPathSegment = countNEERayAsPathSegment;
+            Util.SetLightSamplingKeyword(cmd, _accumulationShader, lightSamplingMode);
+            Util.SetEmissiveSamplingKeyword(cmd, _accumulationShader, emissiveSamplingMode);
         }
 
         public void Prepare(IRayTracingShader accumulationShader, ComputeShader normalizationShader, ComputeShader expansionHelpers, SamplingResources samplingResources, RTHandle emptyExposureTexture)
@@ -315,7 +324,7 @@ namespace UnityEngine.PathTracing.Integration
             // path tracing inputs
             bool preExpose = false;
             float environmentIntensityMultiplier = 1.0f;
-            Util.BindPathTracingInputs(cmd, _accumulationShader, _countNEERayAsPathSegment, risCandidateCount, preExpose, (int)bounceCount, environmentIntensityMultiplier, RenderedGameObjectsFilter.OnlyStatic, _samplingResources, _emptyTexture);
+            Util.BindPathTracingInputs(cmd, _accumulationShader, risCandidateCount, preExpose, (int)bounceCount, environmentIntensityMultiplier, RenderedGameObjectsFilter.OnlyStatic, _samplingResources, _emptyTexture);
             Util.BindWorld(cmd, _accumulationShader, world);
 
             var requiredSizeInBytes = _accumulationShader.GetTraceScratchBufferRequiredSizeInBytes((uint)expandedOutput.count, 1, 1);
@@ -444,7 +453,7 @@ namespace UnityEngine.PathTracing.Integration
             uint lightEvaluationsPerBounce = 1;
             bool preExpose = false;
             float environmentIntensityMultipler = 1.0f;
-            Util.BindPathTracingInputs(cmd, _accumulationShader, false, lightEvaluationsPerBounce, preExpose, 0, environmentIntensityMultipler, RenderedGameObjectsFilter.OnlyStatic, _samplingResources, _emptyTexture);
+            Util.BindPathTracingInputs(cmd, _accumulationShader, lightEvaluationsPerBounce, preExpose, 0, environmentIntensityMultipler, RenderedGameObjectsFilter.OnlyStatic, _samplingResources, _emptyTexture);
             Util.BindWorld(cmd, _accumulationShader, world);
 
             var requiredSizeInBytes = _accumulationShader.GetTraceScratchBufferRequiredSizeInBytes((uint)expandedOutput.count, 1, 1);
@@ -558,7 +567,7 @@ namespace UnityEngine.PathTracing.Integration
             uint lightEvaluationsPerBounce = 1;
             bool preExpose = false;
             float environmentIntensityMultiplier = 1.0f;
-            Util.BindPathTracingInputs(cmd, _accumulationShader, false, lightEvaluationsPerBounce, preExpose, 0, environmentIntensityMultiplier, RenderedGameObjectsFilter.OnlyStatic, _samplingResources, _emptyTexture);
+            Util.BindPathTracingInputs(cmd, _accumulationShader, lightEvaluationsPerBounce, preExpose, 0, environmentIntensityMultiplier, RenderedGameObjectsFilter.OnlyStatic, _samplingResources, _emptyTexture);
             Util.BindWorld(cmd, _accumulationShader, world);
 
             var requiredSizeInBytes = _accumulationShader.GetTraceScratchBufferRequiredSizeInBytes((uint)expandedOutput.count, 1, 1);
@@ -672,7 +681,7 @@ namespace UnityEngine.PathTracing.Integration
             // path tracing inputs
             bool preExpose = false;
             float environmentIntensityMultiplier = 1.0f;
-            Util.BindPathTracingInputs(cmd, _accumulationShader, false, 1, preExpose, 0, environmentIntensityMultiplier, RenderedGameObjectsFilter.OnlyStatic, _samplingResources, _emptyTexture);
+            Util.BindPathTracingInputs(cmd, _accumulationShader, 1, preExpose, 0, environmentIntensityMultiplier, RenderedGameObjectsFilter.OnlyStatic, _samplingResources, _emptyTexture);
             Util.BindWorld(cmd, _accumulationShader, world);
 
             var requiredSizeInBytes = _accumulationShader.GetTraceScratchBufferRequiredSizeInBytes((uint)expandedOutput.count, 1, 1);

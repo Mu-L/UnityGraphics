@@ -29,6 +29,7 @@ namespace ShaderStrippingAndPrefiltering
             internal bool containsSurfaceCache;
 #endif
             internal bool everyRendererHasSSAO;
+            internal bool everyRendererHasSSR;
 
             internal ShaderFeatures defaultURPAssetFeatures
             {
@@ -108,7 +109,7 @@ namespace ShaderStrippingAndPrefiltering
 #if SURFACE_CACHE
                 return ShaderBuildPreprocessor.GetSupportedShaderFeaturesFromAsset(ref urpAsset, ref rendererShaderFeatures, ref ssaoRendererFeatures, stripUnusedVariants, out containsForwardRenderer, out containsSurfaceCache, out everyRendererHasSSAO);
 #else
-                return ShaderBuildPreprocessor.GetSupportedShaderFeaturesFromAsset(ref urpAsset, ref rendererShaderFeatures, ref ssaoRendererFeatures, stripUnusedVariants, out containsForwardRenderer, out everyRendererHasSSAO);
+                return ShaderBuildPreprocessor.GetSupportedShaderFeaturesFromAsset(ref urpAsset, ref rendererShaderFeatures, ref ssaoRendererFeatures, stripUnusedVariants, out containsForwardRenderer, out everyRendererHasSSAO, out everyRendererHasSSR);
 #endif
             }
 
@@ -937,6 +938,32 @@ namespace ShaderStrippingAndPrefiltering
             m_TestHelper.AssertShaderFeaturesAndReset(expected, actual);
 
             Object.DestroyImmediate(surfaceCacheFeature);
+        }
+#endif
+
+#if URP_SCREEN_SPACE_REFLECTION
+        [Test]
+        public void TestGetSupportedShaderFeaturesFromRendererFeatures_ScreenSpaceReflection()
+        {
+            ScreenSpaceReflectionRendererFeature ssrFeature = ScriptableObject.CreateInstance<ScreenSpaceReflectionRendererFeature>();
+            m_TestHelper.rendererFeatures.Add(ssrFeature);
+
+            // Enabled feature
+            m_TestHelper.rendererFeatures[0].SetActive(true);
+
+            RendererRequirements rendererRequirements = m_TestHelper.defaultRendererRequirements;
+            ShaderFeatures actual = m_TestHelper.GetSupportedShaderFeaturesFromRendererFeatures(rendererRequirements);
+            ShaderFeatures expected = ShaderFeatures.ScreenSpaceReflection;
+            m_TestHelper.AssertShaderFeaturesAndReset(expected, actual);
+
+            // Disabled feature
+            m_TestHelper.rendererFeatures[0].SetActive(false);
+            rendererRequirements = m_TestHelper.defaultRendererRequirements;
+            actual = m_TestHelper.GetSupportedShaderFeaturesFromRendererFeatures(rendererRequirements);
+            expected = ShaderFeatures.None;
+            m_TestHelper.AssertShaderFeaturesAndReset(expected, actual);
+
+            Object.DestroyImmediate(ssrFeature);
         }
 #endif
 

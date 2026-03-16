@@ -7,7 +7,7 @@
 #define RAND_DIM_JITTERED_SHADOW    4    // Used for jittered shadows, ideally should be removed and the jitter handled in the SampleLightShape code instead but that's a refactor for another day
 #define RAND_DIM_LIGHT_SELECTION    5    // used for light selection (arbitrarily many dimensions after this point)
 
-#define RUSSIAN_ROULETTE_MIN_BOUNCES 2 // Min bounces for russian roulette. Matches PLM_DEFAULT_MIN_BOUNCES
+#define RUSSIAN_ROULETTE_MIN_BOUNCES 1 // Min bounces for russian roulette. Matches PLM_DEFAULT_MIN_BOUNCES - 1
 
 // Currently we use maximum 5 random numbers per light:
 // 1 number to select a (mesh) light,

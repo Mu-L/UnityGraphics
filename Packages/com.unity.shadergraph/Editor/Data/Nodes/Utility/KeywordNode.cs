@@ -77,26 +77,25 @@ namespace UnityEditor.ShaderGraph
                 case KeywordType.Boolean:
                 {
                     // Boolean type has preset slots
-                    PooledList<MaterialSlot> temp = PooledList<MaterialSlot>.Get();
-                    GetInputSlots(temp);
-                    if (temp.Any())
+                    using (UnityEngine.Pool.ListPool<MaterialSlot>.Get(out var temp))
                     {
-                        temp.Dispose();
-                        break;
+                        GetInputSlots(temp);
+                        if (temp.Count > 0)
+                        {
+                            break;
+                        }
                     }
-                    else
-                    {
-                        temp.Dispose();
-                    }
+
                     AddSlot(new DynamicVectorMaterialSlot(OutputSlotId, "Out", "Out", SlotType.Output, Vector4.zero));
                     AddSlot(new DynamicVectorMaterialSlot(1, "On", "On", SlotType.Input, Vector4.zero));
                     AddSlot(new DynamicVectorMaterialSlot(2, "Off", "Off", SlotType.Input, Vector4.zero));
                     RemoveSlotsNameNotMatching(new int[] { 0, 1, 2 });
                     break;
+
                 }
                 case KeywordType.Enum:
-                    using (var inputSlots = PooledList<MaterialSlot>.Get())
-                    using (var slotIDs = PooledList<int>.Get())
+                    using (UnityEngine.Pool.ListPool<MaterialSlot>.Get(out var inputSlots))
+                    using (UnityEngine.Pool.ListPool<int>.Get(out var slotIDs))
                     {
                         // Get slots
                         GetInputSlots(inputSlots);

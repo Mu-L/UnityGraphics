@@ -89,6 +89,15 @@ namespace UnityEditor.Rendering.Universal.ShaderGUI
                 EditorGUIUtility.TrTextContent("Environment Reflections",
                     "When enabled, the Material samples reflections from the nearest Reflection Probes or Lighting Probe.");
 
+#if URP_SCREEN_SPACE_REFLECTION
+            /// <summary>
+            /// The text and tooltip for the screen space reflections GUI.
+            /// </summary>
+            public static GUIContent screenSpaceReflectionsText =
+                EditorGUIUtility.TrTextContent("Screen Space Reflections",
+                    "When enabled, the Material samples screen space reflections.");
+#endif
+
             /// <summary>
             /// The text and tooltip for the height map GUI.
             /// </summary>
@@ -222,6 +231,13 @@ namespace UnityEditor.Rendering.Universal.ShaderGUI
             /// </summary>
             public MaterialProperty reflections;
 
+#if URP_SCREEN_SPACE_REFLECTION
+            /// <summary>
+            /// The MaterialProperty for screen space reflections.
+            /// </summary>
+            public MaterialProperty screenSpaceReflections;
+#endif
+
             /// <summary>
             /// The MaterialProperty for enabling/disabling clear coat.
             /// </summary>
@@ -266,6 +282,9 @@ namespace UnityEditor.Rendering.Universal.ShaderGUI
                 // Advanced Props
                 highlights = BaseShaderGUI.FindProperty("_SpecularHighlights", properties, false);
                 reflections = BaseShaderGUI.FindProperty("_EnvironmentReflections", properties, false);
+#if URP_SCREEN_SPACE_REFLECTION
+                screenSpaceReflections = BaseShaderGUI.FindProperty("_ScreenSpaceReflections", properties, false);
+#endif
 
                 clearCoat = BaseShaderGUI.FindProperty("_ClearCoat", properties, false);
                 clearCoatMap = BaseShaderGUI.FindProperty("_ClearCoatMap", properties, false);
@@ -470,6 +489,11 @@ namespace UnityEditor.Rendering.Universal.ShaderGUI
             if (material.HasProperty("_EnvironmentReflections"))
                 CoreUtils.SetKeyword(material, "_ENVIRONMENTREFLECTIONS_OFF",
                     material.GetFloat("_EnvironmentReflections") == 0.0f);
+#if URP_SCREEN_SPACE_REFLECTION
+            if (material.HasProperty("_ScreenSpaceReflections"))
+                CoreUtils.SetKeyword(material, "_SCREENSPACEREFLECTIONS_OFF",
+                    material.GetFloat("_ScreenSpaceReflections") == 0.0f);
+#endif
             if (material.HasProperty("_OcclusionMap"))
                 CoreUtils.SetKeyword(material, "_OCCLUSIONMAP", material.GetTexture("_OcclusionMap"));
 

@@ -27,20 +27,20 @@ namespace UnityEditor.ShaderGraph
             // so per permutation we gather variables contribution to feedback and we generate
             // feedback gathering for each permutation individually.
 
-            var feedbackVariablesPerPermutation = PooledList<PooledList<string>>.Get();
+            var feedbackVariablesPerPermutation = UnityEngine.Pool.ListPool<List<string>>.Get();
             try
             {
                 if (shaderKeywords.permutations.Count >= 1)
                 {
                     for (int i = 0; i < shaderKeywords.permutations.Count; i++)
                     {
-                        feedbackVariablesPerPermutation.Add(PooledList<string>.Get());
+                        feedbackVariablesPerPermutation.Add(UnityEngine.Pool.ListPool<string>.Get());
                     }
                 }
                 else
                 {
                     // Create a dummy single permutation
-                    feedbackVariablesPerPermutation.Add(PooledList<string>.Get());
+                    feedbackVariablesPerPermutation.Add(UnityEngine.Pool.ListPool<string>.Get());
                 }
 
                 int index = 0; //for keywordPermutationsPerNode
@@ -138,9 +138,9 @@ namespace UnityEditor.ShaderGraph
             {
                 foreach (var list in feedbackVariablesPerPermutation)
                 {
-                    list.Dispose();
+                    UnityEngine.Pool.ListPool<string>.Release(list);
                 }
-                feedbackVariablesPerPermutation.Dispose();
+                UnityEngine.Pool.ListPool<List<string>>.Release(feedbackVariablesPerPermutation);
             }
         }
 

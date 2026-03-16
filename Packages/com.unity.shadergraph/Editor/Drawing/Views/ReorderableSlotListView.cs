@@ -134,7 +134,7 @@ namespace UnityEditor.ShaderGraph.Drawing
 
                     if (displayName != oldSlot.RawDisplayName())
                     {
-                        using (var tempSlots = PooledList<MaterialSlot>.Get())
+                        using (UnityEngine.Pool.ListPool<MaterialSlot>.Get(out var tempSlots))
                         {
                             m_Node.GetSlots(tempSlots);
 
@@ -178,6 +178,8 @@ namespace UnityEditor.ShaderGraph.Drawing
                     m_Node.SetSlotOrder(orderedSlotIds);
 
                     RecreateList();
+                    // Editing a node's slots doesn't automatically re-concretize them, so we must explicitly do so
+                    m_Node.Concretize();
                     m_Node.ValidateNode();
                 }
             };

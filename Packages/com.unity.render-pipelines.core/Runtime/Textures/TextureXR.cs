@@ -177,50 +177,57 @@ namespace UnityEngine.Rendering
             s_WhiteTextureRTH = RTHandles.Alloc(Texture2D.whiteTexture);
             s_WhiteTexture2DArray = CreateTexture2DArrayFromTexture2D(Texture2D.whiteTexture, "White Texture2DArray");
             s_WhiteTexture2DArrayRTH = RTHandles.Alloc(s_WhiteTexture2DArray);
-
-            //Auto cleanup if pipeline type is changed as all pipelines may not rely on TextureXR
-            //By time PipelineChange is raised though, it may be too late. So do it at each pipeline disposal instead.
-            RenderPipelineManager.activeRenderPipelineDisposed += Cleanup; 
         }
 
-        static void Cleanup()
+        /// <summary>
+        /// Release XR textures. Must be called at when destroying a RenderPipeline using TextureXR
+        /// </summary>
+        public static void Cleanup()
         {
             if (!initialized)
                 return;
             
             // Black UINT
             RTHandles.Release(s_BlackUIntTexture2DArrayRTH);
+            s_BlackUIntTexture2DArrayRTH = null;
             s_BlackUIntTexture2DArray = null;
             RTHandles.Release(s_BlackUIntTextureRTH);
+            s_BlackUIntTextureRTH = null;
             s_BlackUIntTexture = null;
             
             // Clear
             RTHandles.Release(s_ClearTextureRTH);
+            s_ClearTextureRTH = null;
             s_ClearTexture = null;
             RTHandles.Release(s_ClearTexture2DArrayRTH);
+            s_ClearTexture2DArrayRTH = null;
             s_ClearTexture2DArray = null;
             
             // Magenta
             RTHandles.Release(s_MagentaTextureRTH);
+            s_MagentaTextureRTH = null;
             s_MagentaTexture = null;
             RTHandles.Release(s_MagentaTexture2DArrayRTH);
+            s_MagentaTexture2DArrayRTH = null;
             s_MagentaTexture2DArray = null;
             
             // Black
             RTHandles.Release(s_BlackTextureRTH);
+            s_BlackTextureRTH = null;
             s_BlackTexture = null;
             RTHandles.Release(s_BlackTexture2DArrayRTH);
+            s_BlackTexture2DArrayRTH = null;
             s_BlackTexture2DArray = null;
             RTHandles.Release(s_BlackTexture3DRTH);
+            s_BlackTexture3DRTH = null;
             s_BlackTexture3D = null;
             
             // White
             RTHandles.Release(s_WhiteTextureRTH);
             s_WhiteTextureRTH = null;
             RTHandles.Release(s_WhiteTexture2DArrayRTH);
+            s_WhiteTexture2DArrayRTH = null;
             s_WhiteTexture2DArray = null;
-
-            RenderPipelineManager.activeRenderPipelineDisposed -= Cleanup;
         }
 
         static Texture2DArray CreateTexture2DArrayFromTexture2D(Texture2D source, string name)

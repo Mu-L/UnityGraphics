@@ -43,6 +43,8 @@ namespace UnityEditor.ShaderGraph
 
         internal virtual bool ExposeToSearcher => true;
 
+        internal virtual bool UsePreviewPref => true;
+
         protected virtual bool CanPropagateFloatLiteral => false;
 
         OnNodeModified m_OnModified;
@@ -673,6 +675,7 @@ namespace UnityEditor.ShaderGraph
 
         }
 
+        internal int lastKnownDynamicVectorLength = 1;
         public virtual void EvaluateDynamicMaterialSlots(List<MaterialSlot> inputSlots, List<MaterialSlot> outputSlots)
         {
             var dynamicInputSlotsToCompare = DictionaryPool<DynamicVectorMaterialSlot, ConcreteSlotValueType>.Get();
@@ -732,6 +735,8 @@ namespace UnityEditor.ShaderGraph
                 // we can now figure out the dynamic slotType
                 // from here set all the
                 var dynamicType = ConvertDynamicVectorInputTypeToConcrete(dynamicInputSlotsToCompare.Values);
+                lastKnownDynamicVectorLength = dynamicType.GetChannelCount();
+
                 foreach (var dynamicKvP in dynamicInputSlotsToCompare)
                     dynamicKvP.Key.SetConcreteType(dynamicType);
                 foreach (var skippedSlot in skippedDynamicSlots)
@@ -797,8 +802,8 @@ namespace UnityEditor.ShaderGraph
             hasError = false;
             owner?.ClearErrorsForNode(this);
 
-            using (var inputSlots = PooledList<MaterialSlot>.Get())
-            using (var outputSlots = PooledList<MaterialSlot>.Get())
+            using (ListPool<MaterialSlot>.Get(out var inputSlots))
+            using (ListPool<MaterialSlot>.Get(out var outputSlots))
             {
                 GetInputSlots(inputSlots);
                 GetOutputSlots(outputSlots);
@@ -847,9 +852,9 @@ namespace UnityEditor.ShaderGraph
 
         public virtual void CollectPreviewMaterialProperties(List<PreviewProperty> properties)
         {
-            using (var tempSlots = PooledList<MaterialSlot>.Get())
-            using (var tempPreviewProperties = PooledList<PreviewProperty>.Get())
-            using (var tempEdges = PooledList<IEdge>.Get())
+            using (ListPool<MaterialSlot>.Get(out var tempSlots))
+            using (ListPool<PreviewProperty>.Get(out var tempPreviewProperties))
+            using (ListPool<IEdge>.Get(out var tempEdges))
             {
                 GetInputSlots(tempSlots);
                 foreach (var s in tempSlots)
@@ -893,7 +898,7 @@ namespace UnityEditor.ShaderGraph
             return defaultVariableName;
         }
 
-        public MaterialSlot AddSlot(MaterialSlot slot, bool attemptToModifyExistingInstance = true)
+        public MaterialSlot AddSlot(MaterialSlot slot, bool attemptToModifyExistingInstance = true, bool copyExistingValue = true)
         {
             if (slot == null)
             {
@@ -956,7 +961,8 @@ namespace UnityEditor.ShaderGraph
 
             // foundSlot is of a different type; try to copy values
             // I think this is to support casting if implemented in CopyValuesFrom ?
-            slot.CopyValuesFrom(foundSlot);
+            if (copyExistingValue)
+                slot.CopyValuesFrom(foundSlot);
             foundSlot.owner = null;
 
 

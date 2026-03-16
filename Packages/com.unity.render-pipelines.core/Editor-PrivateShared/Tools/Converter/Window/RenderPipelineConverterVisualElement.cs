@@ -37,6 +37,18 @@ namespace UnityEditor.Rendering.Converter
 
         public Action converterSelected;
 
+        private bool m_IsEnabled;
+
+        private void SetEnabled(bool value, bool force = false)
+        {
+            if (m_IsEnabled != value || force)
+            {
+                m_IsEnabled = value;
+                m_HeaderFoldout.tooltip = (m_IsEnabled) ? description : converter.isDisabledMessage;
+                m_HeaderFoldout.SetEnabled(m_IsEnabled);
+            }
+        }
+
         public RenderPipelineConverterVisualElement(Node<ConverterInfo> converterInfo)
         {
             m_ConverterInfo = converterInfo;
@@ -47,8 +59,10 @@ namespace UnityEditor.Rendering.Converter
 
             m_HeaderFoldout = m_RootVisualElement.Q<HeaderFoldout>("conveterFoldout");
             m_HeaderFoldout.text = displayName;
-            m_HeaderFoldout.tooltip = (converter.isEnabled) ? description : converter.isDisabledMessage;
-            m_HeaderFoldout.SetEnabled(converter.isEnabled);
+
+            SetEnabled(converter.isEnabled, true);
+            m_HeaderFoldout.schedule.Execute(() => SetEnabled(converter.isEnabled)).Every(500);
+
             m_HeaderFoldout.value = state.isExpanded;
             m_HeaderFoldout.RegisterCallback<ChangeEvent<bool>>((evt) =>
             {

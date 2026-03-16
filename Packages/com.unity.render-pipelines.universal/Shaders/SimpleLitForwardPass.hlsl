@@ -1,6 +1,7 @@
 #ifndef UNIVERSAL_SIMPLE_LIT_PASS_INCLUDED
 #define UNIVERSAL_SIMPLE_LIT_PASS_INCLUDED
 
+#include "SimpleLitInput.hlsl"
 #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Lighting.hlsl"
 #if defined(LOD_FADE_CROSSFADE)
     #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/LODCrossFade.hlsl"
@@ -115,7 +116,7 @@ void InitializeInputData(Varyings input, half3 normalTS, out InputData inputData
 void InitializeBakedGIData(Varyings input, inout InputData inputData)
 {
 #if defined(_SCREEN_SPACE_IRRADIANCE)
-    inputData.bakedGI = SAMPLE_GI(_ScreenSpaceIrradiance, input.positionCS.xy);
+    inputData.bakedGI = SAMPLE_GI(_ScreenSpaceIrradiance, input.positionCS.xy, inputData.normalWS);
 #elif defined(DYNAMICLIGHTMAP_ON)
     inputData.bakedGI = SAMPLE_GI(input.staticLightmapUV, input.dynamicLightmapUV, input.vertexSH, inputData.normalWS);
     inputData.shadowMask = SAMPLE_SHADOWMASK(input.staticLightmapUV);
@@ -219,7 +220,7 @@ void LitPassFragmentSimple(
 
     half4 color = UniversalFragmentBlinnPhong(inputData, surfaceData);
     color.rgb = MixFog(color.rgb, inputData.fogCoord);
-    color.a = OutputAlpha(color.a, IsSurfaceTypeTransparent(_Surface));
+    color.a = OutputAlpha(color.a, IsSurfaceTypeTransparent());
 
     outColor = color;
 

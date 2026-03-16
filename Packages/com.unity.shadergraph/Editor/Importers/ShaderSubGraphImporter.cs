@@ -194,8 +194,7 @@ namespace UnityEditor.ShaderGraph
             asset.documentationPath = documentationPath;
 
             var outputNode = graph.outputNode;
-
-            var outputSlots = PooledList<MaterialSlot>.Get();
+            var outputSlots = UnityEngine.Pool.ListPool<MaterialSlot>.Get();
             outputNode.GetInputSlots(outputSlots);
 
             List<AbstractMaterialNode> nodes = new List<AbstractMaterialNode>();
@@ -287,7 +286,7 @@ namespace UnityEditor.ShaderGraph
             {
                 asset.isValid = false;
                 registry.ProvideFunction(asset.functionName, sb => { });
-                outputSlots.Dispose();
+                UnityEngine.Pool.ListPool<MaterialSlot>.Release(outputSlots);
                 return;
             }
 
@@ -446,7 +445,7 @@ namespace UnityEditor.ShaderGraph
             }
 
             asset.WriteData(orderedProperties, keywordCollector.keywords, graph.dropdowns, collector.properties, outputSlots, graph.unsupportedTargets);
-            outputSlots.Dispose();
+            UnityEngine.Pool.ListPool<MaterialSlot>.Release(outputSlots);
         }
 
         static void GatherDescendentsFromGraph(GUID rootAssetGuid, out bool containsCircularDependency, out HashSet<GUID> descendentGuids)

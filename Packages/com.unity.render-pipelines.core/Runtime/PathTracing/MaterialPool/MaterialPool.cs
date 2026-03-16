@@ -38,6 +38,8 @@ namespace UnityEngine.PathTracing.Core
             public bool DoubleSidedGI;
 
             public bool PointSampleTransmission;
+            public bool PointSampleAlbedo;
+            public bool PointSampleEmission;
         }
 
         [Flags]
@@ -47,6 +49,8 @@ namespace UnityEngine.PathTracing.Core
             IsTransmissive = 1 << 0,
             DoubleSidedGI = 1 << 1,
             PointSampleTransmission = 1 << 2,
+            PointSampleAlbedo = 1 << 3,
+            PointSampleEmission = 1 << 4,
         }
 
         private struct GpuMaterialEntry
@@ -83,6 +87,8 @@ namespace UnityEngine.PathTracing.Core
             public bool DoubleSidedGI;
             public bool IsTransmissive;
             public bool PointSampleTransmission;
+            public bool PointSampleAlbedo;
+            public bool PointSampleEmission;
         };
 
         private readonly Dictionary<UInt64, MaterialEntry> _materialMap = new();
@@ -275,6 +281,8 @@ namespace UnityEngine.PathTracing.Core
             materialEntry.DoubleSidedGI = material.DoubleSidedGI;
             materialEntry.IsTransmissive = material.TransmissionChannels != TransmissionChannels.None;
             materialEntry.PointSampleTransmission = material.PointSampleTransmission;
+            materialEntry.PointSampleAlbedo = material.PointSampleAlbedo;
+            materialEntry.PointSampleEmission = material.PointSampleEmission;
 
             var emissionType = material.EmissionType;
             if (emissionType == MaterialPropertyType.Texture)
@@ -326,7 +334,9 @@ namespace UnityEngine.PathTracing.Core
                 AlbedoAndEmissionUVChannel = entry.AlbedoAndEmissionUVChannel,
                 Flags = (entry.IsTransmissive ? MaterialFlags.IsTransmissive : MaterialFlags.None) |
                         (entry.DoubleSidedGI ? MaterialFlags.DoubleSidedGI : MaterialFlags.None) |
-                        (entry.PointSampleTransmission ? MaterialFlags.PointSampleTransmission : MaterialFlags.None),
+                        (entry.PointSampleTransmission ? MaterialFlags.PointSampleTransmission : MaterialFlags.None) |
+                        (entry.PointSampleAlbedo ? MaterialFlags.PointSampleAlbedo : MaterialFlags.None) |
+                        (entry.PointSampleEmission ? MaterialFlags.PointSampleEmission : MaterialFlags.None),
             };
 
             if (entry.AlbedoTextureLocation.IsValid)
@@ -601,7 +611,7 @@ namespace UnityEngine.PathTracing.Core
         }
 
         // Render out an albedo/emission texture using the meta pass
-        private static Texture RenderGITexture(Material material, TextureType textureType)
+        private static Texture EvaluateMetaPass(Material material, TextureType textureType)
         {
             if (textureType == TextureType.Transmission)
             {
@@ -643,23 +653,23 @@ namespace UnityEngine.PathTracing.Core
         }
 
         // The textures referenced by the material descriptor are owned by the material descriptor.
-        public static MaterialPool.MaterialDescriptor ConvertUnityMaterialToMaterialDescriptor(Material material)
+        public static MaterialPool.MaterialDescriptor ConvertUnityMaterialToMaterialDescriptor(Material material, EmissionMode emissionMode)
         {
             MaterialPool.MaterialDescriptor descriptor = new();
 
             // Emission
-            var emission = MaterialAspectOracle.GetEmission(material);
+            var emission = MaterialAspectOracle.GetEmission(material, emissionMode);
             descriptor.EmissionType = emission.Type;
             descriptor.EmissionColor = emission.Color;
             if (emission.Type == MaterialPropertyType.Texture)
             {
-                descriptor.Emission = RenderGITexture(material, TextureType.Emission);
+                descriptor.Emission = EvaluateMetaPass(material, TextureType.Emission);
                 descriptor.EmissionScale = Vector2.one; // Scale and offset handled by meta pass
                 descriptor.EmissionOffset = Vector2.zero;
             }
 
             // Albedo
-            descriptor.Albedo = RenderGITexture(material, TextureType.Albedo);
+            descriptor.Albedo = EvaluateMetaPass(material, TextureType.Albedo);
             descriptor.AlbedoScale = Vector2.one; // Scale and offset handled by meta pass
             descriptor.AlbedoOffset = Vector2.zero;
 

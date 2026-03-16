@@ -60,6 +60,11 @@ namespace UnityEditor.Rendering.Universal.ShaderGUI
                 materialEditor.ShaderProperty(litProperties.reflections, LitGUI.Styles.reflectionsText);
             }
 
+#if URP_SCREEN_SPACE_REFLECTION
+            if (litProperties.screenSpaceReflections != null)
+                materialEditor.ShaderProperty(litProperties.screenSpaceReflections, LitGUI.Styles.screenSpaceReflectionsText);
+#endif
+
             base.DrawAdvancedOptions(material);
         }
 

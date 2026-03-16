@@ -11,7 +11,6 @@
 
 int     g_BounceCount;
 uint    g_LightEvaluations;
-int     g_CountNEERayAsPathSegment; // This flag must be enabled for MIS to work properly.
 int     g_RenderedInstances;
 int     g_PathtracerAsGiPreviewMode;
 uint    g_PathTermination;
@@ -140,13 +139,11 @@ void InitPathIterator(out PathIterator iter, UnifiedRT::Ray primaryRay)
     iter.ray = primaryRay;
 }
 
-uint TraceBounceRay(inout PathIterator iterator, int bounceIndex, uint rayMask, UnifiedRT::DispatchInfo dispatchInfo, UnifiedRT::RayTracingAccelStruct accelStruct, inout PathTracingSampler rngState)
+uint TraceBounceRay(inout PathIterator iterator, uint rayMask, UnifiedRT::DispatchInfo dispatchInfo, UnifiedRT::RayTracingAccelStruct accelStruct, inout PathTracingSampler rngState)
 {
-    bool isFirstRay = (bounceIndex == 0);
     uint traceResult = TRACE_MISS;
 
-    // Trace the ray. For primary rays in LiveGI we want to respect the backfacing culling properties of the material. Bounce rays follow the culling behavior of the baker.
-    int rayFlags = (bounceIndex == 0) ? UnifiedRT::kRayFlagCullBackFacingTriangles : UnifiedRT::kRayFlagNone;
+    int rayFlags = UnifiedRT::kRayFlagNone;
     iterator.hitResult = TraceRayClosestHit(dispatchInfo, accelStruct, rayMask, iterator.ray, rayFlags);
 
     iterator.hitGeo = (PTHitGeom) 0;
@@ -159,7 +156,7 @@ uint TraceBounceRay(inout PathIterator iterator, int bounceIndex, uint rayMask, 
         iterator.hitGeo.FixNormals(iterator.ray.direction);
 
         // Evaluate material properties at hit location
-        iterator.material = LoadMaterialProperties(instanceInfo, g_PathtracerAsGiPreviewMode && isFirstRay, iterator.hitGeo.uv0, iterator.hitGeo.uv1);
+        iterator.material = LoadMaterialProperties(instanceInfo, iterator.hitGeo.uv0, iterator.hitGeo.uv1);
         traceResult = TRACE_HIT;
     }
     else
@@ -206,7 +203,7 @@ void AddEmissionRadiance(inout PathIterator iterator, UnifiedRT::RayTracingAccel
     float lightDensity = ComputeEmissiveTriangleDensity(instanceList, iterator.hitGeo, iterator.hitResult.instanceID, iterator.ray.origin);
     lightDensity /= GetNumLights(iterator.ray.origin);
 
-    float3 emission = iterator.material.emissive;
+    float3 emission = iterator.material.emission;
     if (applyIndirectScale)
         emission *= g_IndirectScale;
     AddRadiance(iterator.radianceSample, iterator.throughput, emission * EmissiveMISWeightForBrdfRay(lightDensity, iterator.lastScatterProbabilityDensity));
@@ -239,7 +236,7 @@ void AddRadianceFromEmissionAndDirectIllumination(inout PathIterator iterator, i
     }
 
     // Check if we should do NEE, respecting the max bounce count
-    if (!g_CountNEERayAsPathSegment || bounceIndex < g_BounceCount)
+    if (bounceIndex < g_BounceCount)
     {
         AddRadianceFromDirectIllumination(iterator, shadowRayMask, dispatchInfo, accelStruct, instanceList, rngState, g_PathtracerAsGiPreviewMode && isFirstRay);
     }
@@ -248,7 +245,7 @@ void AddRadianceFromEmissionAndDirectIllumination(inout PathIterator iterator, i
 // Trace the next path segment and accumulate radiance due to directly sampled lights, randomly hit emissive surfaces, and missed rays which sample the environment.
 uint TraceBounceRayAndAddRadiance(inout PathIterator iterator, int bounceIndex, uint rayMask, uint shadowRayMask, UnifiedRT::DispatchInfo dispatchInfo, UnifiedRT::RayTracingAccelStruct accelStruct, StructuredBuffer<UnifiedRT::InstanceData> instanceList, inout PathTracingSampler rngState)
 {
-    uint traceResult = TraceBounceRay(iterator, bounceIndex, rayMask, dispatchInfo, accelStruct, rngState);
+    uint traceResult = TraceBounceRay(iterator, rayMask, dispatchInfo, accelStruct, rngState);
 
     if (traceResult == TRACE_HIT)
     {

@@ -57,6 +57,9 @@ namespace Unity.Rendering.Universal.Tests
         [UnityOneTimeSetUp]
         public IEnumerator OneTimeSetup()
         {
+            // Necessary because of inconsistencies on some platforms
+            yield return GlobalResolutionSetter.SetResolutionWithRetry(1920, 1080, true);
+
             yield return TestContentLoader.WaitForContentLoadAsync(TimeSpan.FromSeconds(240));
         }
 

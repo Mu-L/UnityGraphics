@@ -37,7 +37,6 @@ namespace UnityEngine.PathTracing.Integration
         ProbeIntegratorResources _resourceLibrary;
         GraphicsBuffer _traceScratchBuffer;
         RTHandle _emptyExposureTexture;
-        bool _countNEERayAsPathSegment;
         private BakeProgressState _progressState;
 
         // This is a magic number, chosen to be a decent balance between performance and memory usage.
@@ -61,11 +60,6 @@ namespace UnityEngine.PathTracing.Integration
             public static readonly int PerProbeLightIndicesOffset = Shader.PropertyToID("g_PerProbeLightIndicesOffset");
             public static readonly int MaxLightsPerProbe = Shader.PropertyToID("g_MaxLightsPerProbe");
             public static readonly int LightIndexInCell = Shader.PropertyToID("g_LightIndexInCell");
-        }
-
-        public ProbeIntegrator(bool countNEERayAsPathSegment)
-        {
-            _countNEERayAsPathSegment = countNEERayAsPathSegment;
         }
 
         internal void Prepare(GraphicsBuffer positionsBuffer, ProbeIntegratorResources integrationResources, SamplingResources samplingResources)
@@ -105,9 +99,9 @@ namespace UnityEngine.PathTracing.Integration
             uint bounceCount,
             uint sampleOffset,
             uint sampleCount,
+            LightSamplingMode lightSamplingMode,
             uint risCandidateCount,
             uint maxLightsInAnyCell,
-            bool roundRobin,
             float environmentIntensityMultiplier,
             GraphicsBuffer radianceShl2,
             uint radianceOffset,
@@ -117,8 +111,9 @@ namespace UnityEngine.PathTracing.Integration
             Debug.Assert(world.GetAccelerationStructure() != null);
 
             // General path tracing parameters
+            Util.SetLightSamplingKeyword(cmd, shader, lightSamplingMode);
             bool preExpose = false;
-            Util.BindPathTracingInputs(cmd, shader, _countNEERayAsPathSegment, risCandidateCount, preExpose, (int)bounceCount, environmentIntensityMultiplier, RenderedGameObjectsFilter.OnlyStatic, _samplingResources, _emptyExposureTexture);
+            Util.BindPathTracingInputs(cmd, shader, risCandidateCount, preExpose, (int)bounceCount, environmentIntensityMultiplier, RenderedGameObjectsFilter.OnlyStatic, _samplingResources, _emptyExposureTexture);
             Util.BindWorld(cmd, shader, world);
 
             // Zero initialize the output buffer
@@ -126,7 +121,7 @@ namespace UnityEngine.PathTracing.Integration
             cmd.SetBufferData(radianceShl2, new float[positionCount * floatsPerSH]);
 
             DispatchProbeKernel(cmd, shader, positionOffset, positionCount, sampleOffset, sampleCount, floatsPerSH, ShaderProperties.RadianceShl2, radianceShl2, radianceOffset, expansionBuffer, reductionBuffer,
-                bounceCount, roundRobin, maxLightsInAnyCell);
+                bounceCount, lightSamplingMode == LightSamplingMode.RoundRobin, maxLightsInAnyCell);
         }
 
         private void DispatchProbeKernel(
@@ -212,8 +207,10 @@ namespace UnityEngine.PathTracing.Integration
             uint bounceCount,
             uint sampleOffset,
             uint sampleCount,
+            LightSamplingMode lightSamplingMode,
             uint risCandidateCount,
             uint maxLightsInAnyCell,
+            EmissiveSamplingMode emissiveSamplingMode,
             bool ignoreEnvironment,
             GraphicsBuffer radianceShl2,
             uint radianceOffset,
@@ -221,7 +218,8 @@ namespace UnityEngine.PathTracing.Integration
             GraphicsBuffer reductionBuffer)
         {
             float environmentIntensityMultiplier = ignoreEnvironment ? 0.0f : 1.0f;
-            DispatchRadianceEstimationKernel(cmd, _resourceLibrary.IndirectShader, world, positionOffset, positionCount, bounceCount, sampleOffset, sampleCount, risCandidateCount, maxLightsInAnyCell, false, environmentIntensityMultiplier, radianceShl2, radianceOffset, expansionBuffer, reductionBuffer);
+            Util.SetEmissiveSamplingKeyword(cmd, _resourceLibrary.IndirectShader, emissiveSamplingMode);
+            DispatchRadianceEstimationKernel(cmd, _resourceLibrary.IndirectShader, world, positionOffset, positionCount, bounceCount, sampleOffset, sampleCount, lightSamplingMode, risCandidateCount, maxLightsInAnyCell, environmentIntensityMultiplier, radianceShl2, radianceOffset, expansionBuffer, reductionBuffer);
         }
 
         internal void EstimateDirectRadianceShl2(
@@ -231,6 +229,7 @@ namespace UnityEngine.PathTracing.Integration
             uint positionCount,
             uint sampleOffset,
             uint sampleCount,
+            LightSamplingMode lightSamplingMode,
             uint risCandidateCount,
             uint maxLightsInAnyCell,
             bool ignoreEnvironment,
@@ -240,7 +239,7 @@ namespace UnityEngine.PathTracing.Integration
             GraphicsBuffer reductionBuffer)
         {
             float environmentIntensityMultiplier = ignoreEnvironment ? 0.0f : 1.0f;
-            DispatchRadianceEstimationKernel(cmd, _resourceLibrary.DirectShader, world, positionOffset, positionCount, 0, sampleOffset, sampleCount, risCandidateCount, maxLightsInAnyCell, true, environmentIntensityMultiplier, radianceShl2, radianceOffset, expansionBuffer, reductionBuffer);
+            DispatchRadianceEstimationKernel(cmd, _resourceLibrary.DirectShader, world, positionOffset, positionCount, 0, sampleOffset, sampleCount, lightSamplingMode, risCandidateCount, maxLightsInAnyCell, environmentIntensityMultiplier, radianceShl2, radianceOffset, expansionBuffer, reductionBuffer);
         }
 
         internal void EstimateValidity(

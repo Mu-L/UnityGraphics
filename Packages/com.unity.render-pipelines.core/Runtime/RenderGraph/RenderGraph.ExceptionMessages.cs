@@ -121,6 +121,22 @@ namespace UnityEngine.Rendering.RenderGraphModule
             internal static string IncompatibleTextureUVOriginUseTexture(TextureUVOriginSelection origin) =>
                 $"UseTexture() of a resource with `{origin}` is not compatible with Unity's standard UV origin for texture reading {TextureUVOrigin.BottomLeft}. Are you trying to UseTexture() on a backbuffer?";
 
+            internal static string DepthInputAttachmentNotEnabled(string passName) =>
+                $"In pass '{passName}' when trying to call SetInputAttachment() with a depth texture - " +
+                $"This requires calling builder.SetExtendedFeatureFlags(ExtendedFeatureFlags.DepthAttachmentAsInputAttachment) first. " +
+                $"The extended feature flag was not set before using depth as input attachment.";
+
+            internal static string DepthInputAttachmentNotSupported(string passName) =>
+                $"In pass '{passName}' - " +
+                $"Read-Only depth attachment as input attachment is not supported on the current platform. " +
+                $"Platform: {SystemInfo.graphicsDeviceType}. " +
+                $"Use SystemInfo.supportsDepthAttachmentAsInputAttachment to check support at runtime.";
+
+            internal static string DepthInputAttachmentWithWriteAccess(string passName) =>
+                $"In pass '{passName}' - " +
+                $"Depth attachment has Write access but ExtendedFeatureFlags.DepthAttachmentAsInputAttachment is set. " +
+                $"Depth input attachments must be read-only. Remove write access from the depth attachment.";
+
             // RenderGraphPass
             internal const string k_MoreThanOneResourceForMRTIndex =
                 "You can only bind a single texture to a single index in a multiple render texture (MRT). Verify your indexes are correct.";

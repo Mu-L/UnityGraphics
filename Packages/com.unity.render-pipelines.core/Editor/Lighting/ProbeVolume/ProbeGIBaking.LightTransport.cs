@@ -241,11 +241,13 @@ namespace UnityEngine.Rendering
                 skyOcclusionBakingSamples = bakingSet != null ? bakingSet.skyOcclusionBakingSamples : 0;
                 skyOcclusionBakingBounces = bakingSet != null ? bakingSet.skyOcclusionBakingBounces : 0;
 
-#if UNIFIED_BAKER
-                int indirectSampleCount = lightingSettings.indirectSampleCount;
-#else
-                int indirectSampleCount = Math.Max(lightingSettings.indirectSampleCount, lightingSettings.environmentSampleCount);
-#endif
+                var usingComputeLightBaker = UnityEditor.Rendering.EditorGraphicsSettings.defaultLightBaker == UnityEditor.Rendering.LightBaker.UnityComputeLightBaker;
+                int indirectSampleCount = 0;
+                if (usingComputeLightBaker)
+                    indirectSampleCount = lightingSettings.indirectSampleCount;
+                else
+                    indirectSampleCount = Math.Max(lightingSettings.indirectSampleCount, lightingSettings.environmentSampleCount);
+
                 Create(lightingSettings, ignoreEnvironement, lightingSettings.directSampleCount, indirectSampleCount, lightingSettings.environmentSampleCount,
                     (int)lightingSettings.lightProbeSampleCountMultiplier, lightingSettings.maxBounces);
             }
@@ -670,7 +672,7 @@ namespace UnityEngine.Rendering
                     failed |= !layerMaskJob.Step();
 
                 // Bake probe SH
-                s_BakeData.InitLightingJob(m_BakingSet, uniquePositions, BakeType.ApvOnly);
+                s_BakeData.InitLightingJob(bakingSet, touchup, uniquePositions, BakeType.ApvOnly);
                 LightingBaker lightingJob = s_BakeData.lightingJob;
                 while (!failed && lightingJob.currentStep < lightingJob.stepCount)
                     failed |= !lightingJob.Step();
@@ -680,7 +682,7 @@ namespace UnityEngine.Rendering
                 foreach ((int uniqueProbeIndex, int cellIndex, int i) in bakedProbes)
                 {
                     ref var cell = ref bakingCells[cellIndex];
-                    cell.SetBakedData(m_BakingSet, m_BakingBatch, cellVolumes[cellIndex], i, uniqueProbeIndex,
+                    cell.SetBakedData(bakingSet, m_BakingBatch, cellVolumes[cellIndex], i, uniqueProbeIndex,
                         lightingJob.irradiance[uniqueProbeIndex], lightingJob.validity[uniqueProbeIndex],
                         layerMaskJob.renderingLayerMasks, virtualOffsetJob.offsets,
                         skyOcclusionJob.occlusion, skyOcclusionJob.encodedDirections, lightingJob.occlusion);
@@ -696,8 +698,8 @@ namespace UnityEngine.Rendering
                 {
                     // Validate baking cells size before any global state modifications
                     var chunkSizeInProbes = ProbeBrickPool.GetChunkSizeInProbeCount();
-                    var hasVirtualOffsets = m_BakingSet.settings.virtualOffsetSettings.useVirtualOffset;
-                    var hasRenderingLayers = m_BakingSet.useRenderingLayers;
+                    var hasVirtualOffsets = bakingSet.settings.virtualOffsetSettings.useVirtualOffset;
+                    var hasRenderingLayers = bakingSet.useRenderingLayers;
 
                     if (ValidateBakingCellsSize(bakingCells, chunkSizeInProbes, hasVirtualOffsets, hasRenderingLayers))
                     {
@@ -707,8 +709,8 @@ namespace UnityEngine.Rendering
                             ComputeValidityMasks(cell);
                         }
 
-                        // Attempt to write the result to disk
-                        if (WriteBakingCells(bakingCells))
+                        // Attempt to write the result to disk.
+                        if (WriteBakingCells(bakingSet, bakingCells))
                         {
                             // Reload everything
                             AssetDatabase.SaveAssets();

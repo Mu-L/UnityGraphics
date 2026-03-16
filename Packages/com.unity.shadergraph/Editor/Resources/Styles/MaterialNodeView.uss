@@ -1,5 +1,6 @@
 MaterialNodeView {
     overflow: visible;
+    --preview-width: 200px;
 }
 
 MaterialNodeView.graphElement.node.MaterialNode {
@@ -10,11 +11,11 @@ MaterialNodeView.graphElement.node.MaterialNode {
 }
 
 MaterialNodeView.master {
-    min-width: 200px;
+    min-width: var(--preview-width);
 }
 
 MaterialNodeView.blockData {
-    width: 200px;
+    width: var(--preview-width);
 }
 
 MaterialNodeView.blockData > #portInputContainer {
@@ -27,8 +28,8 @@ MaterialNodeView #collapsible-area {
 }
 
 MaterialNodeView #previewFiller.expanded {
-    width: 200px;
-    padding-bottom: 200px;
+    width: var(--preview-width);
+    padding-bottom: var(--preview-width);
 }
 
 MaterialNodeView #previewFiller,
@@ -41,9 +42,18 @@ MaterialNodeView #controls > #items {
     padding-bottom: 4px;
 }
 
-/* Stop dropdown properties from overflowing the node's container */
+MaterialNodeView PropertyRow > #container {
+    max-width: var(--preview-width);
+}
+
 MaterialNodeView PropertyRow > #container > #label {
-    min-width: 92px;
+    min-width: auto;
+    flex-basis: auto;
+}
+
+MaterialNodeView PropertyRow > #container > #content {
+    min-width: auto;
+    flex-basis: auto;
 }
 
 MaterialNodeView #title {
@@ -60,8 +70,8 @@ MaterialNodeView > #previewContainer {
 }
 
 MaterialNodeView > #previewContainer > #preview  {
-    width: 200px;
-    height: 200px;
+    width: var(--preview-width);
+    height: var(--preview-width);
     align-items:center;
 }
 

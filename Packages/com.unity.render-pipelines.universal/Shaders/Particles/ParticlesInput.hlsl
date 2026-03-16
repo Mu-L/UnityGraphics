@@ -129,7 +129,7 @@ struct VaryingsDepthNormalsParticle
         half4 color                     : COLOR;
     #endif
 
-    #if defined(_ALPHATEST_ON) || defined(_NORMALMAP)
+    #if defined(_ALPHATEST_ON) || defined(_NORMALMAP) || defined(_WRITE_SMOOTHNESS)
         float2 texcoord                 : TEXCOORD0;
 
         #if defined(_FLIPBOOKBLENDING_ON)

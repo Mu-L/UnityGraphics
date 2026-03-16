@@ -95,7 +95,9 @@ namespace UnityEditor.Rendering.Universal.ShaderGraph
             material.SetFloat(Property.QueueControl, (float)BaseShaderGUI.QueueControl.Auto);
 
             if (IsSpacewarpSupported())
+            {
                 material.SetFloat(Property.XrMotionVectorsPass, 1.0f);
+            }
 
             // call the full unlit material setup function
             ShaderGraphUnlitGUI.UpdateMaterial(material, MaterialUpdateType.CreatedNewMaterial);
@@ -142,7 +144,9 @@ namespace UnityEditor.Rendering.Universal.ShaderGraph
             collector.AddFloatProperty(Property.QueueControl, -1.0f);
 
             if (IsSpacewarpSupported())
+            {
                 collector.AddFloatProperty(Property.XrMotionVectorsPass, 1.0f);
+            }
         }
 
         public override void GetPropertiesGUI(ref TargetPropertyGUIContext context, Action onChange, Action<String> registerUndo)
@@ -262,8 +266,8 @@ namespace UnityEditor.Rendering.Universal.ShaderGraph
 
                 // Currently neither of these passes (selection/picking) can be last for the game view for
                 // UI shaders to render correctly. Verify [1352225] before changing this order.
-                result.passes.Add(PassVariant(CorePasses.SceneSelection(target), CorePragmas.Default));
-                result.passes.Add(PassVariant(CorePasses.ScenePicking(target), CorePragmas.Default));
+                result.passes.Add(PassVariant(CorePasses.SceneSelection(target), CorePragmas.Instanced));
+                result.passes.Add(PassVariant(CorePasses.ScenePicking(target), CorePragmas.Instanced));
 
                 return result;
             }

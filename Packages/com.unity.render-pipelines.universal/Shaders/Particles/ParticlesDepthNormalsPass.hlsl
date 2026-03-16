@@ -51,7 +51,7 @@ half4 DepthNormalsFragment(VaryingsDepthNormalsParticle input) : SV_TARGET
     UNITY_SETUP_STEREO_EYE_INDEX_POST_VERTEX(input);
 
     // Inputs...
-    #if defined(_ALPHATEST_ON) || defined(_NORMALMAP)
+    #if defined(_ALPHATEST_ON) || defined(_NORMALMAP) || defined(_WRITE_SMOOTHNESS)
         float2 uv = input.texcoord;
 
         #if defined(_FLIPBOOKBLENDING_ON)
@@ -84,14 +84,23 @@ half4 DepthNormalsFragment(VaryingsDepthNormalsParticle input) : SV_TARGET
         float3 normalWS = input.normalWS;
     #endif
 
+    half outputAlpha = 0;
+    #if defined(_WRITE_SMOOTHNESS)
+        #if defined(_METALLICSPECGLOSSMAP)
+            outputAlpha = BlendTexture(TEXTURE2D_ARGS(_MetallicGlossMap, sampler_MetallicGlossMap), uv, blendUv).a * _Smoothness;
+        #else
+            outputAlpha = _Smoothness;
+        #endif
+    #endif
+
     // Output...
     #if defined(_GBUFFER_NORMALS_OCT)
         float2 octNormalWS = PackNormalOctQuadEncode(normalWS);           // values between [-1, +1], must use fp32 on some platforms
         float2 remappedOctNormalWS = saturate(octNormalWS * 0.5 + 0.5);   // values between [ 0,  1]
         half3 packedNormalWS = PackFloat2To888(remappedOctNormalWS);      // values between [ 0,  1]
-        return half4(packedNormalWS, 0.0);
+        return half4(packedNormalWS, outputAlpha);
     #else
-        return half4(NormalizeNormalPerPixel(normalWS), 0.0);
+        return half4(NormalizeNormalPerPixel(normalWS), outputAlpha);
     #endif
 }
 

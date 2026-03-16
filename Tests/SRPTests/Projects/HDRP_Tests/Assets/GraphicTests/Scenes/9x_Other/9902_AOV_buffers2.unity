@@ -1655,7 +1655,7 @@ GameObject:
   - component: {fileID: 881541623}
   m_Layer: 0
   m_Name: Render Fresnel0
-  m_TagString: MainCamera
+  m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
@@ -2113,7 +2113,7 @@ GameObject:
   - component: {fileID: 1051300738}
   m_Layer: 0
   m_Name: Render Alpha
-  m_TagString: MainCamera
+  m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
@@ -2815,7 +2815,7 @@ GameObject:
   - component: {fileID: 1219562933}
   m_Layer: 0
   m_Name: Render WSP
-  m_TagString: MainCamera
+  m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
@@ -3340,7 +3340,7 @@ GameObject:
   - component: {fileID: 1478861854}
   m_Layer: 0
   m_Name: Render Albedo
-  m_TagString: MainCamera
+  m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
@@ -3782,7 +3782,7 @@ GameObject:
   - component: {fileID: 1576881642}
   m_Layer: 0
   m_Name: Render CustomPass
-  m_TagString: MainCamera
+  m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0

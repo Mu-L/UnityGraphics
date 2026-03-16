@@ -34,13 +34,15 @@ namespace UnityEditor.ShaderGraph.ProviderSystem
 
         internal FunctionHeader Header { get; private set; }
 
+        internal Dictionary<string, ParameterHeader> ParamHeaders { get; private set; }
+
         internal IProvider<IShaderFunction> Provider => m_provider;
 
         const int kReservedOutputSlot = 0;
 
         public override bool hasPreview => true;
 
-        public override bool canSetPrecision => false;
+        public override bool canSetPrecision => Header?.allowPrecision ?? false;
 
         internal override bool ExposeToSearcher => false;
 
@@ -49,6 +51,7 @@ namespace UnityEditor.ShaderGraph.ProviderSystem
         public ProviderNode()
         {
             name = "Provider Based Node";
+            Header = new();
         }
 
         internal void InitializeFromProvider(IProvider<IShaderFunction> provider)
@@ -89,10 +92,11 @@ namespace UnityEditor.ShaderGraph.ProviderSystem
 
         internal void UpdateModel()
         {
-            if (Provider == null || Provider.Definition == null)
+            if (Provider == null || Provider.Definition == null || !Provider.IsValid)
                 return;
 
-            Header = new FunctionHeader(Provider);
+            Header.Process(Provider.Definition, Provider);
+
             var header = Header;
             this.name = header.displayName;
             this.synonyms = header.searchTerms;
@@ -116,33 +120,37 @@ namespace UnityEditor.ShaderGraph.ProviderSystem
                 oldSlotMap[oldSlot.shaderOutputName] = idTuple;
             }
 
-            List<ParameterHeader> paramHeaders = new();
+            ParamHeaders = new();
+            List<ParameterHeader> paramOrder = new();
             List<int> desiredSlotOrder = new();
 
             // return type is a special case, because it has no parameter but still needs a slot
             // we reserve the 0 slotId for this and always make sure it's added first/at the top.
-            if (header.hasReturnType)
+            if (header.hasReturnValueType)
             {
-                var returnParam = new ParameterHeader(header.returnDisplayName, header.returnType, header.tooltip);
                 usedSlotIds.Add(kReservedOutputSlot);
                 desiredSlotOrder.Add(kReservedOutputSlot);
-                AddSlotFromParameter(returnParam, kReservedOutputSlot, SlotType.Output);
+                AddSlotFromParameter(header.returnHeader, kReservedOutputSlot, SlotType.Output);
             }
 
             // build the header data for our parameters and mark which slot ids are being reused.
             foreach(var param in parameters)
             {
-                paramHeaders.Add(new ParameterHeader(param, Provider.Definition));
+                var paramHeader = new ParameterHeader(param, Provider);
+                ParamHeaders.Add(param.Name, paramHeader);
+                paramOrder.Add(paramHeader);
                 if (oldSlotMap.TryGetValue(param.Name, out var idTuple))
                 {
-                    if (idTuple.inputId > -1) usedSlotIds.Add(idTuple.inputId);
-                    if (idTuple.outputId > -1) usedSlotIds.Add(idTuple.outputId);
+                    if (idTuple.inputId > -1 && param.IsInput)
+                        usedSlotIds.Add(idTuple.inputId);
+                    if (idTuple.outputId > -1 && param.IsOutput)
+                        usedSlotIds.Add(idTuple.outputId);
                 }
             }
 
             // walk through our header data and build the actual slots.
             int nextSlot = kReservedOutputSlot;
-            foreach (var paramHeader in paramHeaders)
+            foreach (var paramHeader in paramOrder)
             {
                 if (!oldSlotMap.TryGetValue(paramHeader.referenceName, out var idTuple))
                     idTuple = (-1, -1);
@@ -172,7 +180,11 @@ namespace UnityEditor.ShaderGraph.ProviderSystem
         {
             var slot = HeaderUtils.MakeSlotFromParameter(header, slotId, dir);
             if (slot != null)
-                AddSlot(slot);
+                // Slots that use label control have no indication in the Model that they use them.
+                // However, the only _existing_ case where they'd meaningfully change are SpaceMaterialSlots,
+                // which also don't handle default values well either. In this case, we go nuclear and completely
+                // rebuild the slot.
+                AddSlot(slot, slot is not SpaceMaterialSlot, slot is not SpaceMaterialSlot);
         }
 
         public void GenerateNodeCode(ShaderStringBuilder sb, GenerationMode generationMode)
@@ -180,7 +192,10 @@ namespace UnityEditor.ShaderGraph.ProviderSystem
             if (this.Provider == null || this.Provider.Definition == null)
                 return;
 
-            using (var slots = PooledList<MaterialSlot>.Get())
+            // Apply legacy precision/dynamic only before code generation/usage.
+            HeaderUtils.TryApplyLegacy(Provider.Definition, this.Header, this.ParamHeaders, PrecisionUtil.Token, lastKnownDynamicVectorLength, out var func);
+
+            using (UnityEngine.Pool.ListPool<MaterialSlot>.Get(out var slots))
             {
                 GetSlots<MaterialSlot>(slots);
                 Dictionary<string, (MaterialSlot input, MaterialSlot output)> paramSlotMap = new();
@@ -212,7 +227,7 @@ namespace UnityEditor.ShaderGraph.ProviderSystem
                 }
 
                 bool first = true;
-                foreach (var param in Provider.Definition.Parameters)
+                foreach (var param in func.Parameters)
                 {
                     var inputSlot = paramSlotMap[param.Name].input;
                     var outputSlot = paramSlotMap[param.Name].output;
@@ -226,6 +241,21 @@ namespace UnityEditor.ShaderGraph.ProviderSystem
                         valueString += inputSlot is SamplerStateMaterialSlot ? ".samplerstate" : ".tex";
 
                     var argument = valueString; // assume it's an input, in which case the arg will be the upstream value/connection.
+
+                    // apply linkage override
+                    if (ParamHeaders.TryGetValue(param.Name, out var ph) && ph.isLinkage)
+                    {
+                        var targetSlots = paramSlotMap[ph.linkTarget];
+
+                        // this concept is awkward for inout slots, but that could be improved in the future.
+                        // ie. add support for int and set it to 0 = none, 1 = in, 2 = out, 3 = both.
+                        if (targetSlots.input != null && targetSlots.input.isConnected
+                        || targetSlots.output != null && targetSlots.output.isConnected)
+                        {
+                            argument = "true";
+                        }
+                        else argument = "false";
+                    }
 
                     if (outputSlot != null)
                     {
@@ -242,30 +272,25 @@ namespace UnityEditor.ShaderGraph.ProviderSystem
                     args.Append(argument);
                 }
 
-                foreach (var name in Provider.Definition.Namespace)
-                    call.Append($"{name}::");
-                call.Append(Provider.Definition.Name);
-                call.Append("(");
-                call.Append(args.ToString());
-                call.Append(");");
-
-
+                call.Append(ShaderObjectUtils.GenerateCall(func, args.ToString()));
                 sb.AddLine(call.ToString());
             }
         }
 
         public void GenerateNodeFunction(FunctionRegistry registry, GenerationMode generationMode)
         {
+            if (Provider == null || !Provider.IsValid || Provider.Definition == null)
+                return;
+
             if (Provider.AssetID != default)
             {
                 var includePath = AssetDatabase.GUIDToAssetPath(Provider.AssetID);
                 registry.RequiresIncludePath(includePath, false);
             }
 
-            if (requiresGeneration)
+            if (HeaderUtils.TryApplyLegacy(Provider.Definition, Header, ParamHeaders, PrecisionUtil.Token, lastKnownDynamicVectorLength, out var func) || requiresGeneration)
             {
-                var func = Provider.Definition;
-                string code = ShaderObjectUtils.GenerateCode(func, false, false);
+                string code = ShaderObjectUtils.GenerateCode(func, false, false, true);
                 registry.ProvideFunction(func.Name, s => s.AppendLine(code));
             }
         }
@@ -275,24 +300,26 @@ namespace UnityEditor.ShaderGraph.ProviderSystem
             base.ValidateNode();
             if (Provider == null)
             {
-                owner.AddSetupError(this.objectId, "Node is in an invalid state and cannot recover.");
+                owner?.AddSetupError(this.objectId, "Node is in an invalid state and cannot recover.");
                 return;
             }
             else if (Provider.AssetID != default && (Provider.Definition == null || !Provider.Definition.IsValid))
             {
                 var path = AssetDatabase.GUIDToAssetPath(Provider.AssetID);
-                owner.AddSetupError(this.objectId, $"Data for '{Provider.ProviderKey}' expected in '{path}'.");
+                owner?.AddSetupError(this.objectId, $"Data for '{Provider.ProviderKey}' expected in '{path}'.");
                 return;
             }
             else
             {
-                foreach(var param in Provider.Definition.Parameters)
+                foreach(var msg in Header.Messages)
                 {
-                    var header = new ParameterHeader(param, Provider.Definition);
-                    if (!string.IsNullOrWhiteSpace(header.knownIssue))
+                    owner?.AddValidationError(this.objectId, msg, Rendering.ShaderCompilerMessageSeverity.Warning);
+                }
+                foreach(var param in ParamHeaders.Values)
+                {
+                    foreach(var msg in param.Messages)
                     {
-                        owner.AddValidationError(this.objectId, header.knownIssue, Rendering.ShaderCompilerMessageSeverity.Warning);
-                        break; // We can only show one error badge at a time.
+                        owner?.AddValidationError(this.objectId, msg, Rendering.ShaderCompilerMessageSeverity.Warning);
                     }
                 }
             }

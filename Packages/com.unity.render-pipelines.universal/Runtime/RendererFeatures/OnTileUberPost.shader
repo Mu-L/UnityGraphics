@@ -4,6 +4,8 @@ Shader "OnTileUberPost"
     #pragma multi_compile_local_fragment _ _HDR_GRADING _TONEMAP_ACES _TONEMAP_NEUTRAL
     #pragma multi_compile_local_fragment _ _FILM_GRAIN
     #pragma multi_compile_local_fragment _ _DITHERING
+    #pragma multi_compile_local_fragment _ _GAMMA_20 _LINEAR_TO_SRGB_CONVERSION
+    #pragma multi_compile_local_fragment _ _USE_FAST_SRGB_LINEAR_CONVERSION
     #pragma multi_compile_local_fragment _ _ENABLE_ALPHA_OUTPUT
     #include_with_pragmas "Packages/com.unity.render-pipelines.core/ShaderLibrary/FoveatedRenderingKeywords.hlsl"
 
@@ -73,6 +75,14 @@ Shader "OnTileUberPost"
     {
         half3 color = inputColor.rgb;
 
+        // Gamma space... Just do the rest of Uber in linear and convert back to sRGB at the end
+        #if UNITY_COLORSPACE_GAMMA
+        {
+            color = GetSRGBToLinear(color);
+            inputColor = GetSRGBToLinear(inputColor);
+        }
+        #endif
+
         // To save on variants we use an uniform branch for vignette. This may have performance impact on lower end platforms
         UNITY_BRANCH
         if (VignetteIntensity > 0)
@@ -97,12 +107,26 @@ Shader "OnTileUberPost"
         }
         #endif
 
+        // When Unity is configured to use gamma color encoding, we ignore the request to convert to gamma 2.0 and instead fall back to sRGB encoding
+        #if _GAMMA_20 && !UNITY_COLORSPACE_GAMMA
+        {
+            color = LinearToGamma20(color);
+            inputColor = LinearToGamma20(inputColor);
+        }
+        // Back to sRGB
+        #elif UNITY_COLORSPACE_GAMMA || _LINEAR_TO_SRGB_CONVERSION
+        {
+            color = GetLinearToSRGB(color);
+            inputColor = LinearToSRGB(inputColor);
+        }
+        #endif
+
         #if _DITHERING
         {
             color = ApplyDithering(color, uv, TEXTURE2D_ARGS(_BlueNoise_Texture, sampler_PointRepeat), DitheringScale, DitheringOffset, PaperWhite, OneOverPaperWhite);
         }
         #endif
-       
+
 #if _ENABLE_ALPHA_OUTPUT
         // Saturate is necessary to avoid issues when additive blending pushes the alpha over 1.
         return half4(color, saturate(inputColor.a));
@@ -110,6 +134,20 @@ Shader "OnTileUberPost"
         return half4(color, 1);
 #endif
     }
+
+    // Fallback shader to use when we can't keep things on tile, so usually in the editor when dealing with
+    // MSAA source targets to a non MSAA destination we can't perform a software resolve in the shader and
+    // so have to fall back to resolving the color target and reading it in as a texture.
+    // Where we have a MSAA destination we can avoid this.
+    half4 FragUberPostTextureSample(Varyings input) : SV_Target0
+    {
+        UNITY_SETUP_STEREO_EYE_INDEX_POST_VERTEX(input);
+
+        float2 uv = SCREEN_COORD_APPLY_SCALEBIAS(UnityStereoTransformScreenSpaceTex(input.texcoord));
+        half4 inputColor = SAMPLE_TEXTURE2D_X(_BlitTexture, sampler_LinearClamp, uv);
+        return UberPost(inputColor, uv);
+    }   
+
     ENDHLSL
 
     SubShader
@@ -199,29 +237,13 @@ Shader "OnTileUberPost"
 
         Pass
         {
-            Name "OnTileUberPostTextureReadVersion"
+            Name "OnTileUberPostTextureSample"
             LOD 100
             ZTest Always ZWrite Off Cull Off
 
             HLSLPROGRAM
                 #pragma vertex Vert
-                #pragma fragment FragUberPostTextureReadVersion
-                #pragma target 5.0
-                #pragma enable_debug_symbols
-                #pragma debug
-
-                // Fallback shader to use when we can't keep things on tile, so usually in the editor when dealing with
-                // MSAA source targets to a non MSAA destination we can't perform a software resolve in the shader and
-                // so have to fall back to resolving the color target and reading it in as a texture.
-                // Where we have a MSAA destination we can avoid this.
-                half4 FragUberPostTextureReadVersion(Varyings input) : SV_Target0
-                {
-                    UNITY_SETUP_STEREO_EYE_INDEX_POST_VERTEX(input);
-
-                    float2 uv = SCREEN_COORD_APPLY_SCALEBIAS(UnityStereoTransformScreenSpaceTex(input.texcoord));
-                    half4 inputColor = SAMPLE_TEXTURE2D_X(_BlitTexture, sampler_LinearClamp, uv);
-                    return UberPost(inputColor, uv);
-                }
+                #pragma fragment FragUberPostTextureSample
             ENDHLSL
         }
 
@@ -311,29 +333,33 @@ Shader "OnTileUberPost"
 
         Pass
         {
-            Name "OnTileUberPostTextureReadVersionVisMesh"
+            Name "OnTileUberPostTextureSampleVisMesh"
             LOD 100
             ZTest Always ZWrite Off Cull Off
 
             HLSLPROGRAM
                 #include "Packages/com.unity.render-pipelines.universal/Shaders/XR/XRVisibilityMeshHelper.hlsl"
                 #pragma vertex VertVisibilityMeshXR
-                #pragma fragment FragUberPostTextureReadVersion
+                #pragma fragment FragUberPostTextureSample
                 #pragma target 5.0
-                #pragma debug
+            ENDHLSL
+        }
+    }
 
-                // Fallback shader to use when we can't keep things on tile, so usually in the editor when dealing with
-                // MSAA source targets to a non MSAA destination we can't perform a software resolve in the shader and
-                // so have to fall back to resolving the color target and reading it in as a texture.
-                // Where we have a MSAA destination we can avoid this.
-                half4 FragUberPostTextureReadVersion(Varyings input) : SV_Target0
-                {
-                    UNITY_SETUP_STEREO_EYE_INDEX_POST_VERTEX(input);
+    //Supported subshader for WebGL
+    SubShader
+    {
+        Tags { "RenderType" = "Opaque" "RenderPipeline" = "UniversalPipeline"}
 
-                    float2 uv = SCREEN_COORD_APPLY_SCALEBIAS(UnityStereoTransformScreenSpaceTex(input.texcoord));
-                    half4 inputColor = SAMPLE_TEXTURE2D_X(_BlitTexture, sampler_LinearClamp, uv);
-                    return UberPost(inputColor, uv);
-                }
+        Pass
+        {
+            Name "OnTileUberPostTextureSample"
+            LOD 100
+            ZTest Always ZWrite Off Cull Off
+
+            HLSLPROGRAM
+                #pragma vertex Vert
+                #pragma fragment FragUberPostTextureSample
             ENDHLSL
         }
     }

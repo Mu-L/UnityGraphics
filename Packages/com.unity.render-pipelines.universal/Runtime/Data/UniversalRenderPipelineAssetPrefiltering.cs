@@ -104,6 +104,16 @@ namespace UnityEngine.Rendering.Universal
         [ShaderKeywordFilter.SelectIf(PrefilteringMode.SelectOnly, keywordNames: ShaderKeywordStrings.ScreenSpaceOcclusion)]
         [SerializeField] private PrefilteringMode m_PrefilteringModeScreenSpaceOcclusion = PrefilteringMode.Select;
 
+        // Screen Space Reflection
+        [ShaderKeywordFilter.RemoveIf(PrefilteringMode.Remove,     keywordNames: ShaderKeywordStrings.ScreenSpaceReflection)]
+        [ShaderKeywordFilter.SelectIf(PrefilteringMode.Select,     keywordNames: new [] {"", ShaderKeywordStrings.ScreenSpaceReflection})]
+        [ShaderKeywordFilter.SelectIf(PrefilteringMode.SelectOnly, keywordNames: ShaderKeywordStrings.ScreenSpaceReflection)]
+        [SerializeField] private PrefilteringMode m_PrefilteringModeScreenSpaceReflection = PrefilteringMode.Select;
+
+        // Keyword used by the DepthNormalOnly pass to write smoothness into alpha channel for screen space reflections.
+        [ShaderKeywordFilter.RemoveIf(true, keywordNames: ShaderKeywordStrings.WriteSmoothness)]
+        [SerializeField] private bool m_PrefilterWriteSmoothness = true;
+
         // Rendering Debugger
         [ShaderKeywordFilter.RemoveIf(true, keywordNames:ShaderKeywordStrings.DEBUG_DISPLAY)]
         [SerializeField] private bool m_PrefilterDebugKeywords = false;
@@ -221,6 +231,7 @@ namespace UnityEngine.Rendering.Universal
             public PrefilteringModeAdditionalLights additionalLightsPrefilteringMode;
             public PrefilteringMode additionalLightsShadowsPrefilteringMode;
             public PrefilteringMode screenSpaceOcclusionPrefilteringMode;
+            public PrefilteringMode screenSpaceReflectionPrefilteringMode;
             public bool useLegacyLightmaps;
 
             public bool stripXRKeywords;
@@ -255,6 +266,9 @@ namespace UnityEngine.Rendering.Universal
 
             public bool stripScreenSpaceIrradiance;
 
+            // Keyword used by the DepthNormalOnly pass to write smoothness into alpha channel for screen space reflections.
+            public bool stripWriteSmoothness;
+
             public static ShaderPrefilteringData GetDefault()
             {
                 return new ShaderPrefilteringData()
@@ -265,6 +279,7 @@ namespace UnityEngine.Rendering.Universal
                     additionalLightsPrefilteringMode = PrefilteringModeAdditionalLights.SelectAll,
                     additionalLightsShadowsPrefilteringMode = PrefilteringMode.Select,
                     screenSpaceOcclusionPrefilteringMode = PrefilteringMode.Select,
+                    screenSpaceReflectionPrefilteringMode = PrefilteringMode.Select,
                 };
             }
         }
@@ -281,6 +296,7 @@ namespace UnityEngine.Rendering.Universal
             m_PrefilteringModeAdditionalLight        = prefilteringData.additionalLightsPrefilteringMode;
             m_PrefilteringModeAdditionalLightShadows = prefilteringData.additionalLightsShadowsPrefilteringMode;
             m_PrefilteringModeScreenSpaceOcclusion   = prefilteringData.screenSpaceOcclusionPrefilteringMode;
+            m_PrefilteringModeScreenSpaceReflection  = prefilteringData.screenSpaceReflectionPrefilteringMode;
             m_PrefilterUseLegacyLightmaps            = prefilteringData.useLegacyLightmaps;
 
             m_PrefilterXRKeywords                    = prefilteringData.stripXRKeywords;
@@ -316,6 +332,8 @@ namespace UnityEngine.Rendering.Universal
             m_PrefilterReflectionProbeAtlas          = prefilteringData.stripReflectionProbeAtlas;
 
             m_PrefilterScreenSpaceIrradiance         = prefilteringData.stripScreenSpaceIrradiance;
+
+            m_PrefilterWriteSmoothness               = prefilteringData.stripWriteSmoothness;
         }
     }
 }

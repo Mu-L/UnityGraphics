@@ -76,8 +76,10 @@ namespace UnityEngine.PathTracing.Core
             return cct * filter * light.intensity;
         }
 
-        public void Update(CommandBuffer cmd, Light sun, int resolution)
+        public void Update(CommandBuffer cmd, Light sun, int resolution, out bool viewAndProjectionMatricesChanged)
         {
+            viewAndProjectionMatricesChanged = false;
+
             int newHash = ((int)_mode) + 1;
             if (_mode == Mode.Color)
             {
@@ -100,7 +102,7 @@ namespace UnityEngine.PathTracing.Core
                     }
 
                     if (newHash != _hash)
-                        RenderWithMaterial(cmd, sun, resolution);
+                        RenderWithMaterial(cmd, sun, resolution, out viewAndProjectionMatricesChanged);
                 }
                 else
                 {
@@ -138,7 +140,7 @@ namespace UnityEngine.PathTracing.Core
             }
         }
 
-        private void RenderWithMaterial(CommandBuffer cmd, Light sun, int cubemapResolution)
+        private void RenderWithMaterial(CommandBuffer cmd, Light sun, int cubemapResolution, out bool viewAndProjectionMatricesChanged)
         {
             EnsureCubemapExistsWithParticularResolution(cubemapResolution);
 
@@ -192,6 +194,8 @@ namespace UnityEngine.PathTracing.Core
                 ShaderUtil.RestoreAsyncCompilation(cmd);
 #endif
             }
+
+            viewAndProjectionMatricesChanged = true;
 
             if (_noSunKeyword.HasValue)
                 cmd.DisableKeyword(_material, _noSunKeyword.Value);

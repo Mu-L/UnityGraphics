@@ -17,12 +17,11 @@ StructuredBuffer<uint> _CellPatchIndices;
 StructuredBuffer<int3> _CascadeOffsets;
 StructuredBuffer<MaterialPool::MaterialEntry> _MaterialEntries;
 StructuredBuffer<PunctualLightSample> _PunctualLightSamples;
+StructuredBuffer<PunctualLight> _PunctualLights;
 Texture2DArray _AlbedoTextures;
-Texture2DArray _TransmissionTextures;
 Texture2DArray _EmissionTextures;
 SamplerState sampler_EmissionTextures;
 SamplerState sampler_AlbedoTextures;
-SamplerState sampler_TransmissionTextures;
 TextureCube<float3> _EnvironmentCubemap;
 SamplerState sampler_EnvironmentCubemap;
 UNIFIED_RT_DECLARE_ACCEL_STRUCT(_RayTracingAccelerationStructure);
@@ -83,10 +82,24 @@ void ProjectAndAccumulate(inout SphericalHarmonics::RGBL1 accumulator, float3 sa
     accumulator.l1s[2] += sampleRadiance * SphericalHarmonics::y1Constant * sampleDirection.x;
 }
 
+float GetAdditionalRayOffset(float volumeVoxelMinSize)
+{
+    // We currently use the OffsetRayOrigin() heuristic to offset ray origins to avoid self-intersections. While this
+    // helps for Surface Cache it is not enough since the ray origins are relatively imprecise because they are derived
+    // from output of the rasterizer (as opposed to being reconstructed via barycentrics).
+    // We fix this by adding an additional offset. This offset is a percentage of the min voxel size to keep it
+    // somewhat proportional to the scene scale.
+    return volumeVoxelMinSize * 0.001;
+}
+
 void SamplePunctualLightBounceRadiance(
     inout QrngKronecker2D rng,
     UnifiedRT::RayTracingAccelStruct accelStruct,
     UnifiedRT::DispatchInfo dispatchInfo,
+    StructuredBuffer<PunctualLight> lights,
+    StructuredBuffer<PunctualLightSample> punctualLightSamples,
+    uint punctualLightSampleCount,
+    float volumeVoxelMinSize,
     PatchUtil::PatchGeometry patchGeo,
     inout SphericalHarmonics::RGBL1 accumulator,
     inout bool gotValidSamples)
@@ -100,11 +113,13 @@ void SamplePunctualLightBounceRadiance(
         PunctualLightBounceRadianceSample sample_ = SamplePunctualLightBounceRadiance(
             dispatchInfo,
             accelStruct,
-            _PunctualLightSamples,
-            _PunctualLightSampleCount,
+            lights,
+            punctualLightSamples,
+            punctualLightSampleCount,
             rng.GetSample(0).x,
             patchGeo.position,
-            patchGeo.normal);
+            patchGeo.normal,
+            GetAdditionalRayOffset(volumeVoxelMinSize));
 
         if (!sample_.IsValid())
             continue;
@@ -129,11 +144,12 @@ void SampleEnvironmentAndDirectionalBounceAndMultiBounceRadiance(
     UnifiedRT::DispatchInfo dispatchInfo,
     MaterialPoolParamSet matPoolParams,
     PatchUtil::PatchGeometry patchGeo,
+    float volumeVoxelMinSize,
     inout SphericalHarmonics::RGBL1 accumulator,
     inout bool gotValidSamples)
 {
     UnifiedRT::Ray ray;
-    ray.origin = OffsetRayOrigin(patchGeo.position, patchGeo.normal);
+    ray.origin = OffsetRayOrigin(patchGeo.position, patchGeo.normal, GetAdditionalRayOffset(volumeVoxelMinSize));
     ray.tMin = 0;
     ray.tMax = FLT_MAX;
 
@@ -194,11 +210,9 @@ void Estimate(UnifiedRT::DispatchInfo dispatchInfo)
     MaterialPoolParamSet matPoolParams;
     matPoolParams.materialEntries = _MaterialEntries;
     matPoolParams.albedoTextures = _AlbedoTextures;
-    matPoolParams.transmissionTextures = _TransmissionTextures;
     matPoolParams.emissionTextures = _EmissionTextures;
     matPoolParams.emissionSampler = sampler_EmissionTextures;
     matPoolParams.albedoSampler = sampler_AlbedoTextures;
-    matPoolParams.transmissionSampler = sampler_TransmissionTextures;
     matPoolParams.atlasTexelSize = _MaterialAtlasTexelSize;
     matPoolParams.albedoBoost = _AlbedoBoost;
 
@@ -215,6 +229,7 @@ void Estimate(UnifiedRT::DispatchInfo dispatchInfo)
         dispatchInfo,
         matPoolParams,
         patchGeo,
+        _VolumeVoxelMinSize,
         radianceSampleMean,
         gotValidSamples);
 
@@ -225,6 +240,10 @@ void Estimate(UnifiedRT::DispatchInfo dispatchInfo)
             rng,
             accelStruct,
             dispatchInfo,
+            _PunctualLights,
+            _PunctualLightSamples,
+            _PunctualLightSampleCount,
+            _VolumeVoxelMinSize,
             patchGeo,
             radianceSampleMean,
             gotValidSamples);

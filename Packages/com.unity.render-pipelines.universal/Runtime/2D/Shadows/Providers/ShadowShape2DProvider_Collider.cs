@@ -3,13 +3,11 @@ using System;
 using System.Collections.Generic;
 using System.Runtime.CompilerServices;
 using Unity.Collections;
-using UnityEngine.Scripting.APIUpdating;
 
 namespace UnityEngine.Rendering.Universal
 {
     [Serializable]
-    [MovedFrom(true, "UnityEngine.Rendering.Universal", "Unity.RenderPipelines.Universal.2D.Runtime", "ShadowShape2DProvider_Collider2D")]
-    class ShadowCaster2DProvider_Collider2D : ShadowCaster2DProvider
+    class ShadowShape2DProvider_Collider2D : ShadowShape2DProvider
     {
         const float k_InitialTrim = 0.05f;
 

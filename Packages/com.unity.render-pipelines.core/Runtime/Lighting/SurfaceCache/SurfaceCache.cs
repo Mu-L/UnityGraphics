@@ -101,7 +101,7 @@ namespace UnityEngine.Rendering
 
         public readonly uint SpatialResolution;
         public readonly uint CascadeCount;
-        public readonly float VoxelMinSize;
+        public float VoxelMinSize;
         public readonly int3[] CascadeOffsets;
         public readonly GraphicsBuffer CascadeOffsetBuffer;
         public readonly GraphicsBuffer CellAllocationMarks;
@@ -434,14 +434,10 @@ namespace UnityEngine.Rendering
         public SurfaceCache(
             SurfaceCacheResourceSet resources,
             uint defragCount,
-            SurfaceCacheVolumeParameterSet volParams,
-            SurfaceCacheEstimationParameterSet estimationParams,
-            SurfaceCachePatchFilteringParameterSet patchFilteringParams)
+            SurfaceCacheVolumeParameterSet volParams)
         {
             Debug.Assert(volParams.CascadeCount != 0);
             Debug.Assert(volParams.CascadeCount <= CascadeMax);
-            Debug.Assert(0.0f <= patchFilteringParams.TemporalSmoothing);
-            Debug.Assert(patchFilteringParams.TemporalSmoothing <= 1.0f);
 
             const uint punctualLightSampleCount = 128;
             const uint patchCapacity = 65536; // Must match HLSL side constant.
@@ -451,15 +447,26 @@ namespace UnityEngine.Rendering
             _volume = new SurfaceCacheVolume(volParams.Resolution, volParams.CascadeCount, volParams.Size);
             _ringConfig = new SurfaceCacheRingConfig();
             _patches = new SurfaceCachePatchList(patchCapacity);
-            _punctualLightSamples = new GraphicsBuffer(GraphicsBuffer.Target.Structured, (int)punctualLightSampleCount, sizeof(float) * 19);
-
-            _estimationParams = estimationParams;
-            _patchFilteringParams = patchFilteringParams;
-
-            Debug.Assert(0.0f <= patchFilteringParams.TemporalSmoothing && patchFilteringParams.TemporalSmoothing <= 1.0f);
-            _shortHysteresis = Mathf.Lerp(0.75f, 0.95f, patchFilteringParams.TemporalSmoothing);
+            _punctualLightSamples = new GraphicsBuffer(GraphicsBuffer.Target.Structured, (int)punctualLightSampleCount, sizeof(float) * 17);
 
             _defragCount = defragCount;
+        }
+
+        public void SetEstimationParams(SurfaceCacheEstimationParameterSet estimationParams)
+        {
+            _estimationParams = estimationParams;
+        }
+
+        public void SetPatchFilteringParams(SurfaceCachePatchFilteringParameterSet patchFilteringParams)
+        {
+            Debug.Assert(0.0f <= patchFilteringParams.TemporalSmoothing && patchFilteringParams.TemporalSmoothing <= 1.0f);
+            _patchFilteringParams = patchFilteringParams;
+            _shortHysteresis = Mathf.Lerp(0.75f, 0.95f, patchFilteringParams.TemporalSmoothing);
+        }
+
+        public void UpdateVolumeSize(float size)
+        {
+            _volume.VoxelMinSize = size / (_volume.SpatialResolution * (float)(1u << (int)(_volume.CascadeCount - 1u)));
         }
 
         public void RecordPreparation(RenderGraph renderGraph, uint frameIdx)
@@ -673,8 +680,6 @@ namespace UnityEngine.Rendering
                 shader.SetBufferParam(cmd, ShaderIDs._Samples, data.PunctualLightSamples);
                 shader.SetBufferParam(cmd, ShaderIDs._MaterialEntries, data.World.GetMaterialListBuffer());
                 shader.SetTextureParam(cmd, ShaderIDs._AlbedoTextures, data.World.GetMaterialAlbedoTextures());
-                shader.SetTextureParam(cmd, ShaderIDs._EmissionTextures, data.World.GetMaterialEmissionTextures());
-                shader.SetTextureParam(cmd, ShaderIDs._TransmissionTextures, data.World.GetMaterialTransmissionTextures());
                 shader.SetFloatParam(cmd, ShaderIDs._AlbedoBoost, data.AlbedoBoost);
                 shader.SetFloatParam(cmd, ShaderIDs._MaterialAtlasTexelSize, GetMaterialAtlasTexelSize(data.World.GetMaterialAlbedoTextures()));
                 shader.Dispatch(cmd, data.TraceScratchBuffer, data.PunctualLightSampleCount, 1, 1);
@@ -682,6 +687,7 @@ namespace UnityEngine.Rendering
 
             {
                 var shader = data.EstimationShader;
+                shader.SetBufferParam(cmd, ShaderIDs._PunctualLights, punctualLightBuffer);
                 shader.SetBufferParam(cmd, ShaderIDs._RingConfigBuffer, data.RingConfigBuffer);
                 shader.SetBufferParam(cmd, ShaderIDs._PunctualLightSamples, data.PunctualLightSamples);
                 shader.SetBufferParam(cmd, ShaderIDs._PatchIrradiances, data.PatchIrradiances);
@@ -703,7 +709,6 @@ namespace UnityEngine.Rendering
                 shader.SetBufferParam(cmd, ShaderIDs._MaterialEntries, data.World.GetMaterialListBuffer());
                 shader.SetTextureParam(cmd, ShaderIDs._AlbedoTextures, data.World.GetMaterialAlbedoTextures());
                 shader.SetTextureParam(cmd, ShaderIDs._EmissionTextures, data.World.GetMaterialEmissionTextures());
-                shader.SetTextureParam(cmd, ShaderIDs._TransmissionTextures, data.World.GetMaterialTransmissionTextures());
                 shader.SetFloatParam(cmd, ShaderIDs._AlbedoBoost, data.AlbedoBoost);
                 shader.SetFloatParam(cmd, ShaderIDs._MaterialAtlasTexelSize, GetMaterialAtlasTexelSize(data.World.GetMaterialAlbedoTextures()));
                 shader.SetIntParam(cmd, ShaderIDs._PunctualLightCount, punctualLightCount);

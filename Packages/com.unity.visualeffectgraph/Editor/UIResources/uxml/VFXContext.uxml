@@ -4,8 +4,8 @@
         <ui:VisualElement name="title" pickingMode="Ignore" class="extremity">
           <ui:Image name="icon" text=""/>
           <ui:Label name="title-label" text="" />
-          <ui:Label name="header-space" text="" />
         </ui:VisualElement>
+        <ui:Label name="header-space" text="" />
         <ui:Label name="subtitle" pickingMode="Ignore" text="" class="subtitle" />
         <ui:VisualElement name="user-title" pickingMode="Ignore">
             <ui:Label name="user-label" text="" tooltip="Double click to edit"/>

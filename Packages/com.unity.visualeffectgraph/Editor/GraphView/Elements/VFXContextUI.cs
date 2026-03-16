@@ -284,7 +284,7 @@ namespace UnityEditor.VFX.UI
             m_FlowOutputConnectorContainer = this.Q("flow-outputs");
 
             m_HeaderIcon = titleContainer.Q<Image>("icon");
-            m_HeaderSpace = titleContainer.Q<Label>("header-space");
+            m_HeaderSpace = mainContainer.Q<Label>("header-space");
             m_HeaderSpace.AddManipulator(new Clickable(OnSpace));
             m_Subtitle = this.Q<Label>("subtitle");
 

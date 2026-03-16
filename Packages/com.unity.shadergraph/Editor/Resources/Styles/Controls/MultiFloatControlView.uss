@@ -14,7 +14,7 @@ MultiFloatControlView > #dummy > Label {
 
 
 .unity-base-field {
-    width: 30px;
+    width: 46px; /* Width is chosen such that if the field's value is "Infinity" it isn't clipped */
     margin-top: 1px;
     margin-bottom: 1px;
     margin-left: 0;

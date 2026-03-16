@@ -1,12 +1,12 @@
 #pragma only_renderers d3d11 vulkan metal glcore
+
+#pragma multi_compile _ LIGHT_SAMPLING_UNIFORM LIGHT_SAMPLING_RIS LIGHT_SAMPLING_ROUND_ROBIN
+
 #define UNIFIED_RT_GROUP_SIZE_X 128
 #define UNIFIED_RT_GROUP_SIZE_Y 1
 #define UNIFIED_RT_RAYGEN_FUNC IntegrateDirectRadiance
 
 #include "Packages/com.unity.render-pipelines.core/Runtime/UnifiedRayTracing/FetchGeometry.hlsl"
-
-#define RESAMPLED_IMPORTANCE_SAMPLING
-#define LIGHT_SAMPLING_ROUND_ROBIN
 
 #include "PathTracing.hlsl"
 #include "SphericalHarmonicsUtils.hlsl"
@@ -80,11 +80,20 @@ void IntegrateDirectRadiance(UnifiedRT::DispatchInfo dispatchInfo)
     #else
     const float monteCarloNormalization = 1.0f / (float)g_SampleCount;
     #endif
+
     for (uint channel = 0; channel < SH_COLOR_CHANNELS; ++channel)
     {
         for (uint i = 0; i < SH_COEFFICIENTS_PER_CHANNEL; ++i)
         {
-            g_RadianceShl2[SHIndex(outProbeIdx, channel, i)] += accumulatedRadianceSH[i][channel] * monteCarloNormalization;
+            #ifdef LIGHT_SAMPLING_ROUND_ROBIN
+            float result = accumulatedRadianceSH[i][channel] * monteCarloNormalization;
+            // If we are past the first iteration, we want to accumulate into the buffer rather than overwriting the current value.
+            if (g_LightIndexInCell > 0)
+                result += g_RadianceShl2[SHIndex(outProbeIdx, channel, i)];
+            g_RadianceShl2[SHIndex(outProbeIdx, channel, i)] = result;
+            #else
+            g_RadianceShl2[SHIndex(outProbeIdx, channel, i)] = accumulatedRadianceSH[i][channel] * monteCarloNormalization;
+            #endif
         }
     }
 }

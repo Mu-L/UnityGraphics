@@ -237,15 +237,10 @@ namespace UnityEngine.Rendering.Universal
 
         internal UniversalRenderPipelineRuntimeTextures runtimeTextures { get; private set; }
 
-        internal static RenderTextureUVOriginStrategy renderTextureUVOriginStrategy { private get; set; }
-
         /// <summary>
         /// The default Render Pipeline Global Settings.
         /// </summary>
         public override RenderPipelineGlobalSettings defaultSettings => m_GlobalSettings;
-
-        // flag to keep track of depth buffer requirements by any of the overlay cameras in the stack
-        internal static bool stackedOverlayCamerasRequireDepthForPostProcessing = false;
 
         internal static RenderGraph s_RenderGraph;
         internal static RTHandleResourcePool s_RTHandlePool;
@@ -495,7 +490,7 @@ namespace UnityEngine.Rendering.Universal
 
             public CameraRenderingScope(ScriptableRenderContext context, Camera camera)
             {
-                using (new ProfilingScope(beginCameraRenderingSampler))
+                using (new ProfilingScope(beginCameraRenderingSampler, camera))
                 {
                     m_Context = context;
                     m_Camera = camera;
@@ -506,7 +501,7 @@ namespace UnityEngine.Rendering.Universal
 
             public void Dispose()
             {
-                using (new ProfilingScope(endCameraRenderingSampler))
+                using (new ProfilingScope(endCameraRenderingSampler, m_Camera))
                 {
                     EndCameraRendering(m_Context, m_Camera);
                 }
@@ -669,8 +664,10 @@ namespace UnityEngine.Rendering.Universal
                 int mipLevel = standardRequest != null ? standardRequest.mipLevel : singleRequest.mipLevel;
                 int slice = standardRequest != null ? standardRequest.slice : singleRequest.slice;
                 int face = standardRequest != null ? (int)standardRequest.face : (int)singleRequest.face;
+                bool isPreview = standardRequest != null ? standardRequest.isPreview : false;
 
                 //store data that will be changed
+                var originalCameraType = camera.cameraType;
                 var originalTarget = camera.targetTexture;
 
                 //set data
@@ -695,6 +692,8 @@ namespace UnityEngine.Rendering.Universal
                     temporaryRT = RenderTexture.GetTemporary(RTDesc);
                 }
 
+                if (isPreview)
+                    camera.cameraType = CameraType.Preview;
                 camera.targetTexture = temporaryRT ? temporaryRT : destination;
 
                 if (standardRequest != null)
@@ -766,6 +765,7 @@ namespace UnityEngine.Rendering.Universal
                 }
 
                 //restore data
+                camera.cameraType = originalCameraType;
                 camera.targetTexture = originalTarget;
                 Graphics.SetRenderTarget(originalTarget);
                 RenderTexture.ReleaseTemporary(temporaryRT);
@@ -792,9 +792,17 @@ namespace UnityEngine.Rendering.Universal
         internal static void RenderSingleCameraInternal(ScriptableRenderContext context, Camera camera, bool isLastBaseCamera = true)
         {
             UniversalAdditionalCameraData additionalCameraData = null;
+            #if URP_SCREEN_SPACE_REFLECTION
+            camera.gameObject.TryGetComponent(out additionalCameraData);
+
+            // We need this to support screen space reflections in the scene view, as it requires color history,
+            // which in turn requires a UniversalAdditionalCameraData component to be present on the scene view camera.
+            if (camera.cameraType == CameraType.SceneView && additionalCameraData == null)
+                additionalCameraData = camera.gameObject.AddComponent<UniversalAdditionalCameraData>();
+            #else
             if (IsGameCamera(camera))
                 camera.gameObject.TryGetComponent(out additionalCameraData);
-
+            #endif
             RenderSingleCameraInternal(context, camera, ref additionalCameraData, isLastBaseCamera);
         }
 
@@ -890,9 +898,9 @@ namespace UnityEngine.Rendering.Universal
             CommandBuffer cmdScope = cameraData.xr.enabled ? null : cmd;
 
             var cameraMetadata = CameraMetadataCache.GetCached(camera);
-            using (new ProfilingScope(cmdScope, cameraMetadata.sampler)) // Enqueues a "BeginSample" command into the CommandBuffer cmd
+            using (new ProfilingScope(cmdScope, cameraMetadata.sampler, camera)) // Enqueues a "BeginSample" command into the CommandBuffer cmd
             {
-                using (new ProfilingScope(Profiling.Pipeline.Renderer.setupCullingParameters))
+                using (new ProfilingScope(Profiling.Pipeline.Renderer.setupCullingParameters, camera))
                 {
                     var legacyCameraData = new CameraData(frameData);
 
@@ -970,7 +978,7 @@ namespace UnityEngine.Rendering.Universal
                 UniversalShadowData shadowData;
                 CullContextData cullData;
 
-                using (new ProfilingScope(Profiling.Pipeline.initializeRenderingData))
+                using (new ProfilingScope(Profiling.Pipeline.initializeRenderingData, camera))
                 {
                     CreateUniversalResourceData(frameData);
                     lightData = CreateLightData(frameData, asset, data.cullResults.visibleLights, renderingMode);
@@ -987,20 +995,18 @@ namespace UnityEngine.Rendering.Universal
                 if (asset?.useAdaptivePerformance == true)
                     ApplyAdaptivePerformance(frameData);
 #endif
-                UniversalRenderPipeline.renderTextureUVOriginStrategy = RenderTextureUVOriginStrategy.BottomLeft;
 
                 CreateShadowAtlasAndCullShadowCasters(lightData, shadowData, cameraData, ref data.cullResults, ref context);
 
                 renderer.AddRenderPasses(ref legacyRenderingData);
-                    RenderTextureUVOriginStrategy uvOriginStrategy = UniversalRenderPipeline.renderTextureUVOriginStrategy;
-                    RecordAndExecuteRenderGraph(s_RenderGraph, context, renderer, cmd, cameraData.camera, uvOriginStrategy);
-                    renderer.FinishRenderGraphRendering(cmd);
+                RecordAndExecuteRenderGraph(s_RenderGraph, context, renderer, cmd, cameraData.camera);
+                renderer.FinishRenderGraphRendering(cmd);
             } // When ProfilingSample goes out of scope, an "EndSample" command is enqueued into CommandBuffer cmd
 
             context.ExecuteCommandBuffer(cmd); // Sends to ScriptableRenderContext all the commands enqueued since cmd.Clear, i.e the "EndSample" command
             CommandBufferPool.Release(cmd);
 
-            using (new ProfilingScope(Profiling.Pipeline.Context.submit))
+            using (new ProfilingScope(Profiling.Pipeline.Context.submit, cameraData.camera))
             {
                 context.Submit(); // Actually execute the commands that we previously sent to the ScriptableRenderContext context
             }
@@ -1031,7 +1037,7 @@ namespace UnityEngine.Rendering.Universal
         /// <param name="isLastBaseCamera">True if this is the last base camera.</param>
         static void RenderCameraStack(ScriptableRenderContext context, Camera baseCamera, bool isLastBaseCamera)
         {
-            using var profScope = new ProfilingScope(ProfilingSampler.Get(URPProfileId.RenderCameraStack));
+            using var profScope = new ProfilingScope(ProfilingSampler.Get(URPProfileId.RenderCameraStack), baseCamera);
 
             baseCamera.TryGetComponent<UniversalAdditionalCameraData>(out var baseCameraAdditionalData);
 
@@ -1057,8 +1063,6 @@ namespace UnityEngine.Rendering.Universal
             {
                 var baseCameraRendererType = renderer.GetType();
                 bool shouldUpdateCameraStack = false;
-
-                stackedOverlayCamerasRequireDepthForPostProcessing = false;
 
                 for (int i = 0; i < stackedOverlayCameras.Count; ++i)
                 {
@@ -1098,8 +1102,6 @@ namespace UnityEngine.Rendering.Universal
                             continue;
                         }
 
-                        stackedOverlayCamerasRequireDepthForPostProcessing |= CheckPostProcessForDepth();
-
                         stackAnyPostProcessingEnabled |= data.renderPostProcessing;
                         lastActiveOverlayCameraIndex = i;
                     }
@@ -1111,8 +1113,9 @@ namespace UnityEngine.Rendering.Universal
             }
 
             bool isStackedRendering = lastActiveOverlayCameraIndex != -1;
-            if (isStackedRendering && renderer is UniversalRenderer {onTileValidation: true})
-                throw new ArgumentException("The active URP Renderer has 'On Tile Validation' on. This currently does not allow Camera Stacking usage. Check your scene and remove all overlay Cameras.");
+
+            // The camera data is set based on the supported features.
+            renderer.UpdateSupportedRenderingFeatures();
 
             // Prepare XR rendering
             var xrActive = false;
@@ -1177,8 +1180,6 @@ namespace UnityEngine.Rendering.Universal
                     if (asset?.useAdaptivePerformance == true)
                         ApplyAdaptivePerformance(baseCameraData);
 #endif
-                    // update the base camera flag so that the scene depth is stored if needed by overlay cameras later in the frame
-                    baseCameraData.postProcessingRequiresDepthTexture |= stackedOverlayCamerasRequireDepthForPostProcessing;
 
                     // Check whether the camera stack final output is HDR
                     // This is equivalent of UniversalCameraData.isHDROutputActive but without necessiting the base camera to be the last camera in the stack.
@@ -1189,12 +1190,11 @@ namespace UnityEngine.Rendering.Universal
                         hdrDisplayOutputActive = xrPass.isHDRDisplayOutputActive;
 #endif
                     finalOutputHDR =
-                        asset.supportsHDR &&
                         hdrDisplayOutputActive // Check whether any HDR display is active and the render pipeline asset allows HDR rendering
                         && baseCamera.targetTexture == null &&
                         (baseCamera.cameraType == CameraType.Game ||
                          baseCamera.cameraType == CameraType.VR) // Check whether the stack outputs to a screen
-                        && baseCameraData.allowHDROutput; // Check whether the base camera allows HDR output
+                        && baseCameraData.isHdrEnabled; // Check whether the base camera has HDR enabled (this includes a check if the renderer supports it)
 
                     // Update stack-related parameters
                     baseCameraData.stackAnyPostProcessingEnabled = stackAnyPostProcessingEnabled;
@@ -1408,6 +1408,11 @@ namespace UnityEngine.Rendering.Universal
             if (stack.GetComponent<MotionBlur>().IsActive())
                 return true;
 
+            if (LensFlareCommonSRP.IsOcclusionRTCompatible()
+                && !LensFlareCommonSRP.Instance.IsEmpty()
+                && UniversalRenderPipeline.asset.supportDataDrivenLensFlare)
+                return true;
+
             return false;
         }
 
@@ -1462,6 +1467,8 @@ namespace UnityEngine.Rendering.Universal
 
             var renderer = GetRenderer(camera, additionalCameraData);
             UniversalCameraData cameraData = frameData.Create<UniversalCameraData>();
+            cameraData.renderer = renderer;
+
             InitializeStackedCameraData(camera, additionalCameraData, cameraData);
 
             cameraData.camera = camera;
@@ -1497,10 +1504,7 @@ namespace UnityEngine.Rendering.Universal
             // Multiple cameras could render into the same XR display and they should share the same MSAA level.
             // However it should still respect the sample count of the target texture camera is rendering to.
             if (cameraData.xrRendering && rendererSupportsMSAA && camera.targetTexture == null)
-                msaaSamples = (int)XRSystem.GetDisplayMSAASamples();
-
-            if (renderer is UniversalRenderer { onTileValidation: true } && UniversalRenderer.PlatformRequiresExplicitMsaaResolve())
-                msaaSamples = 1;
+                msaaSamples = (int)XRSystem.GetDisplayMSAASamples();                
 
 #if ENABLE_MULTI_WINDOWING && PLATFORM_SUPPORTS_PER_WINDOW_TRANSPARENCY && !UNITY_EDITOR
             bool needsAlphaChannel = GameWindowManager.IsGameWindowTransparent(cameraData.camera.targetDisplay);
@@ -1573,11 +1577,16 @@ namespace UnityEngine.Rendering.Universal
                 cameraData.allowHDROutput = true;
             }
 
+            var supportedRenderingFeatures = cameraData.renderer.supportedRenderingFeatures;
+
             ///////////////////////////////////////////////////////////////////
             // Settings that control output of the camera                     /
             ///////////////////////////////////////////////////////////////////
 
-            cameraData.isHdrEnabled = baseCamera.allowHDR && settings.supportsHDR;
+            if (!supportedRenderingFeatures.antiAliasing)
+                cameraData.antialiasing = AntialiasingMode.None;
+
+            cameraData.isHdrEnabled = baseCamera.allowHDR && settings.supportsHDR && supportedRenderingFeatures.supportsHDR;
             cameraData.allowHDROutput &= settings.supportsHDR;
 
             Rect cameraRect = baseCamera.rect;
@@ -1594,8 +1603,8 @@ namespace UnityEngine.Rendering.Universal
             // Discard variations lesser than kRenderScaleThreshold.
             // Scale is only enabled for gameview.
             const float kRenderScaleThreshold = 0.05f;
-            bool disableRenderScale = ((Mathf.Abs(1.0f - settings.renderScale) < kRenderScaleThreshold) || isScenePreviewOrReflectionCamera);
-            cameraData.renderScale = disableRenderScale ? 1.0f : settings.renderScale;
+            bool disableRenderScale = (Mathf.Abs(1.0f - settings.renderScale) < kRenderScaleThreshold) || isScenePreviewOrReflectionCamera || !supportedRenderingFeatures.upscaling;
+            cameraData.renderScale = disableRenderScale? 1.0f : settings.renderScale;
 
 #if ENABLE_UPSCALER_FRAMEWORK
             // ImageUpscalingFilter is deprecated, we now track by upscaler name
@@ -1608,8 +1617,10 @@ namespace UnityEngine.Rendering.Universal
             bool upscalerSupportsSharpening = activeUpscaler != null && activeUpscaler.supportsSharpening;
 #else
             // Convert the upscaling filter selection from the pipeline asset into an image upscaling filter
-            cameraData.upscalingFilter = ResolveUpscalingFilterSelection(new Vector2(cameraData.pixelWidth, cameraData.pixelHeight), cameraData.renderScale, settings.upscalingFilter);
-            
+            cameraData.upscalingFilter = supportedRenderingFeatures.upscaling? 
+                ResolveUpscalingFilterSelection(new Vector2(cameraData.pixelWidth, cameraData.pixelHeight), cameraData.renderScale, settings.upscalingFilter)
+                : ImageUpscalingFilter.Point;
+
             bool upscalerSupportsTemporalAntiAliasing = cameraData.upscalingFilter == ImageUpscalingFilter.STP;
             bool upscalerSupportsSharpening = cameraData.upscalingFilter == ImageUpscalingFilter.FSR;
 #endif
@@ -1675,7 +1686,7 @@ namespace UnityEngine.Rendering.Universal
             using var profScope = new ProfilingScope(Profiling.Pipeline.initializeAdditionalCameraData);
 
             var renderer = GetRenderer(camera, additionalCameraData);
-            var settings = asset;
+            var settings = asset;            
 
             bool anyShadowsEnabled = settings.supportsMainLightShadows || settings.supportsAdditionalLightShadows;
             cameraData.maxShadowDistance = Mathf.Min(settings.shadowDistance, camera.farClipPlane);
@@ -1716,6 +1727,14 @@ namespace UnityEngine.Rendering.Universal
                 cameraData.screenSizeOverride = cameraData.pixelRect.size;
                 cameraData.screenCoordScaleBias = Vector2.one;
             }
+            
+            var supportedRenderingFeatures = renderer.supportedRenderingFeatures;
+
+            if (!supportedRenderingFeatures.cameraOpaqueTexture)
+                cameraData.requiresOpaqueTexture = false;
+
+            if (!supportedRenderingFeatures.cameraDepthTexture)
+                cameraData.requiresDepthTexture = false;  
 
             cameraData.renderer = renderer;
             cameraData.postProcessingRequiresDepthTexture = CheckPostProcessForDepth(cameraData);
@@ -1995,7 +2014,7 @@ namespace UnityEngine.Rendering.Universal
             UniversalPostProcessingData postProcessingData = frameData.Create<UniversalPostProcessingData>();
             UniversalCameraData cameraData = frameData.Get<UniversalCameraData>();
 
-            postProcessingData.isEnabled = cameraData.stackAnyPostProcessingEnabled;
+            postProcessingData.isEnabled = cameraData.postProcessEnabled;
 
             postProcessingData.gradingMode = settings.supportsHDR
                 ? settings.colorGradingMode

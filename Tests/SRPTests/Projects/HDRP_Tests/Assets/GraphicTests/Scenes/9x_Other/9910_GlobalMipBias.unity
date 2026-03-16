@@ -841,29 +841,15 @@ PrefabInstance:
     - target: {fileID: 9156684625621168517, guid: 9dc108d07c97a174aa48fe8f4a6a641d,
         type: 3}
       propertyPath: m_Materials.Array.data[0]
-      value: 
+      value:
       objectReference: {fileID: 2100000, guid: 82abfb4871a5b8942adf6b029ee89fa3, type: 2}
+    - target: {fileID: 3565543780733839701, guid: 9dc108d07c97a174aa48fe8f4a6a641d,
+        type: 3}
+      propertyPath: MipBias
+      value: 2.8
+      objectReference: {fileID: 0}
     m_RemovedComponents: []
   m_SourcePrefab: {fileID: 100100000, guid: 9dc108d07c97a174aa48fe8f4a6a641d, type: 3}
---- !u!1 &2062117969 stripped
-GameObject:
-  m_CorrespondingSourceObject: {fileID: 3855751611528768086, guid: 9dc108d07c97a174aa48fe8f4a6a641d,
-    type: 3}
-  m_PrefabInstance: {fileID: 2062117968}
-  m_PrefabAsset: {fileID: 0}
---- !u!114 &2062117970
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 2062117969}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: c55790afc56b2e24dadcecb04218a1bf, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  MipBias: 2.8
 --- !u!1001 &2084379541
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -976,24 +962,10 @@ PrefabInstance:
       propertyPath: m_FontData.m_FontSize
       value: 10
       objectReference: {fileID: 0}
+    - target: {fileID: 3565543780733839701, guid: 9dc108d07c97a174aa48fe8f4a6a641d,
+        type: 3}
+      propertyPath: MipBias
+      value: 4
+      objectReference: {fileID: 0}
     m_RemovedComponents: []
   m_SourcePrefab: {fileID: 100100000, guid: 9dc108d07c97a174aa48fe8f4a6a641d, type: 3}
---- !u!1 &2084379542 stripped
-GameObject:
-  m_CorrespondingSourceObject: {fileID: 3855751611528768086, guid: 9dc108d07c97a174aa48fe8f4a6a641d,
-    type: 3}
-  m_PrefabInstance: {fileID: 2084379541}
-  m_PrefabAsset: {fileID: 0}
---- !u!114 &2084379543
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 2084379542}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: c55790afc56b2e24dadcecb04218a1bf, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  MipBias: 4

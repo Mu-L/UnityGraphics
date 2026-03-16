@@ -6,6 +6,7 @@ using JetBrains.Annotations;
 using UnityEngine;
 using UnityEditor.Graphing;
 using UnityEditor.ShaderGraph.Internal;
+using UnityEngine.Pool;
 
 namespace UnityEditor.ShaderGraph
 {
@@ -366,7 +367,7 @@ namespace UnityEditor.ShaderGraph
 
         public void GenerateNodeCode(ShaderStringBuilder sb, GenerationMode generationMode)
         {
-            using (var tempSlots = PooledList<MaterialSlot>.Get())
+            using (ListPool<MaterialSlot>.Get(out var tempSlots))
             {
                 GetOutputSlots(tempSlots);
                 foreach (var outSlot in tempSlots)
@@ -410,7 +411,7 @@ namespace UnityEditor.ShaderGraph
         {
             string header = "void " + GetFunctionName() + "(";
 
-            using (var tempSlots = PooledList<MaterialSlot>.Get())
+            using (ListPool<MaterialSlot>.Get(out var tempSlots))
             {
                 GetSlots(tempSlots);
                 tempSlots.Sort((slot1, slot2) => slot1.id.CompareTo(slot2.id));
@@ -454,7 +455,7 @@ namespace UnityEditor.ShaderGraph
             // stomp any newline differences that might try to sneak in via this path
             result = result.Replace("\r\n", "\n");
 
-            using (var tempSlots = PooledList<MaterialSlot>.Get())
+            using (ListPool<MaterialSlot>.Get(out var tempSlots))
             {
                 GetSlots(tempSlots);
                 foreach (var slot in tempSlots)
@@ -488,7 +489,7 @@ namespace UnityEditor.ShaderGraph
         public NeededCoordinateSpace RequiresNormal(ShaderStageCapability stageCapability)
         {
             var binding = NeededCoordinateSpace.None;
-            using (var tempSlots = PooledList<MaterialSlot>.Get())
+            using (ListPool<MaterialSlot>.Get(out var tempSlots))
             {
                 GetInputSlots(tempSlots);
                 foreach (var slot in tempSlots)
@@ -500,7 +501,7 @@ namespace UnityEditor.ShaderGraph
         public NeededCoordinateSpace RequiresViewDirection(ShaderStageCapability stageCapability)
         {
             var binding = NeededCoordinateSpace.None;
-            using (var tempSlots = PooledList<MaterialSlot>.Get())
+            using (ListPool<MaterialSlot>.Get(out var tempSlots))
             {
                 GetInputSlots(tempSlots);
                 foreach (var slot in tempSlots)
@@ -511,7 +512,7 @@ namespace UnityEditor.ShaderGraph
 
         public NeededCoordinateSpace RequiresPosition(ShaderStageCapability stageCapability)
         {
-            using (var tempSlots = PooledList<MaterialSlot>.Get())
+            using (ListPool<MaterialSlot>.Get(out var tempSlots))
             {
                 GetInputSlots(tempSlots);
                 var binding = NeededCoordinateSpace.None;
@@ -523,7 +524,7 @@ namespace UnityEditor.ShaderGraph
 
         public NeededCoordinateSpace RequiresPositionPredisplacement(ShaderStageCapability stageCapability)
         {
-            using (var tempSlots = PooledList<MaterialSlot>.Get())
+            using (ListPool<MaterialSlot>.Get(out var tempSlots))
             {
                 GetInputSlots(tempSlots);
                 var binding = NeededCoordinateSpace.None;
@@ -535,7 +536,7 @@ namespace UnityEditor.ShaderGraph
 
         public NeededCoordinateSpace RequiresTangent(ShaderStageCapability stageCapability)
         {
-            using (var tempSlots = PooledList<MaterialSlot>.Get())
+            using (ListPool<MaterialSlot>.Get(out var tempSlots))
             {
                 GetInputSlots(tempSlots);
                 var binding = NeededCoordinateSpace.None;
@@ -547,7 +548,7 @@ namespace UnityEditor.ShaderGraph
 
         public NeededCoordinateSpace RequiresBitangent(ShaderStageCapability stageCapability)
         {
-            using (var tempSlots = PooledList<MaterialSlot>.Get())
+            using (ListPool<MaterialSlot>.Get(out var tempSlots))
             {
                 GetInputSlots(tempSlots);
                 var binding = NeededCoordinateSpace.None;
@@ -559,7 +560,7 @@ namespace UnityEditor.ShaderGraph
 
         public bool RequiresMeshUV(UVChannel channel, ShaderStageCapability stageCapability)
         {
-            using (var tempSlots = PooledList<MaterialSlot>.Get())
+            using (ListPool<MaterialSlot>.Get(out var tempSlots))
             {
                 GetInputSlots(tempSlots);
                 foreach (var slot in tempSlots)
@@ -574,7 +575,7 @@ namespace UnityEditor.ShaderGraph
 
         public bool RequiresScreenPosition(ShaderStageCapability stageCapability)
         {
-            using (var tempSlots = PooledList<MaterialSlot>.Get())
+            using (ListPool<MaterialSlot>.Get(out var tempSlots))
             {
                 GetInputSlots(tempSlots);
                 foreach (var slot in tempSlots)
@@ -588,7 +589,7 @@ namespace UnityEditor.ShaderGraph
 
         public bool RequiresNDCPosition(ShaderStageCapability stageCapability)
         {
-            using (var tempSlots = PooledList<MaterialSlot>.Get())
+            using (ListPool<MaterialSlot>.Get(out var tempSlots))
             {
                 GetInputSlots(tempSlots);
                 foreach (var slot in tempSlots)
@@ -602,7 +603,7 @@ namespace UnityEditor.ShaderGraph
 
         public bool RequiresPixelPosition(ShaderStageCapability stageCapability)
         {
-            using (var tempSlots = PooledList<MaterialSlot>.Get())
+            using (ListPool<MaterialSlot>.Get(out var tempSlots))
             {
                 GetInputSlots(tempSlots);
                 foreach (var slot in tempSlots)
@@ -616,7 +617,7 @@ namespace UnityEditor.ShaderGraph
 
         public bool RequiresVertexColor(ShaderStageCapability stageCapability)
         {
-            using (var tempSlots = PooledList<MaterialSlot>.Get())
+            using (ListPool<MaterialSlot>.Get(out var tempSlots))
             {
                 GetInputSlots(tempSlots);
                 foreach (var slot in tempSlots)

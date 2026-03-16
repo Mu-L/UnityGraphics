@@ -191,15 +191,13 @@ MonoBehaviour:
     m_Owner: {fileID: 8926484042661614610}
     m_Value:
       m_Type:
-        m_SerializableType: System.Single, mscorlib, Version=4.0.0.0, Culture=neutral,
-          PublicKeyToken=b77a5c561934e089
+        m_SerializableType: System.Single, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089
       m_SerializableObject: 64
     m_Space: -1
   m_Property:
     name: Rate
     m_serializedType:
-      m_SerializableType: System.Single, mscorlib, Version=4.0.0.0, Culture=neutral,
-        PublicKeyToken=b77a5c561934e089
+      m_SerializableType: System.Single, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089
   m_Direction: 0
   m_LinkedSlots: []
 --- !u!114 &8926484042661614612
@@ -225,15 +223,13 @@ MonoBehaviour:
     m_Owner: {fileID: 8926484042661614610}
     m_Value:
       m_Type:
-        m_SerializableType: System.Boolean, mscorlib, Version=4.0.0.0, Culture=neutral,
-          PublicKeyToken=b77a5c561934e089
+        m_SerializableType: System.Boolean, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089
       m_SerializableObject: True
     m_Space: -1
   m_Property:
     name: _vfx_enabled
     m_serializedType:
-      m_SerializableType: System.Boolean, mscorlib, Version=4.0.0.0, Culture=neutral,
-        PublicKeyToken=b77a5c561934e089
+      m_SerializableType: System.Boolean, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089
   m_Direction: 0
   m_LinkedSlots: []
 --- !u!114 &8926484042661614613
@@ -353,15 +349,13 @@ MonoBehaviour:
     m_Owner: {fileID: 8926484042661614628}
     m_Value:
       m_Type:
-        m_SerializableType: System.Single, mscorlib, Version=4.0.0.0, Culture=neutral,
-          PublicKeyToken=b77a5c561934e089
+        m_SerializableType: System.Single, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089
       m_SerializableObject: 0.8
     m_Space: -1
   m_Property:
     name: A
     m_serializedType:
-      m_SerializableType: System.Single, mscorlib, Version=4.0.0.0, Culture=neutral,
-        PublicKeyToken=b77a5c561934e089
+      m_SerializableType: System.Single, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089
   m_Direction: 0
   m_LinkedSlots: []
 --- !u!114 &8926484042661614630
@@ -387,15 +381,13 @@ MonoBehaviour:
     m_Owner: {fileID: 8926484042661614628}
     m_Value:
       m_Type:
-        m_SerializableType: System.Single, mscorlib, Version=4.0.0.0, Culture=neutral,
-          PublicKeyToken=b77a5c561934e089
+        m_SerializableType: System.Single, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089
       m_SerializableObject: 1.2
     m_Space: -1
   m_Property:
     name: B
     m_serializedType:
-      m_SerializableType: System.Single, mscorlib, Version=4.0.0.0, Culture=neutral,
-        PublicKeyToken=b77a5c561934e089
+      m_SerializableType: System.Single, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089
   m_Direction: 0
   m_LinkedSlots: []
 --- !u!114 &8926484042661614631
@@ -421,15 +413,13 @@ MonoBehaviour:
     m_Owner: {fileID: 8926484042661614628}
     m_Value:
       m_Type:
-        m_SerializableType: System.Boolean, mscorlib, Version=4.0.0.0, Culture=neutral,
-          PublicKeyToken=b77a5c561934e089
+        m_SerializableType: System.Boolean, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089
       m_SerializableObject: True
     m_Space: -1
   m_Property:
     name: _vfx_enabled
     m_serializedType:
-      m_SerializableType: System.Boolean, mscorlib, Version=4.0.0.0, Culture=neutral,
-        PublicKeyToken=b77a5c561934e089
+      m_SerializableType: System.Boolean, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089
   m_Direction: 0
   m_LinkedSlots: []
 --- !u!114 &8926484042661614662
@@ -563,15 +553,13 @@ MonoBehaviour:
     m_Owner: {fileID: 8926484042661614681}
     m_Value:
       m_Type:
-        m_SerializableType: UnityEngine.Texture2D, UnityEngine.CoreModule, Version=0.0.0.0,
-          Culture=neutral, PublicKeyToken=null
+        m_SerializableType: UnityEngine.Texture2D, UnityEngine.CoreModule, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null
       m_SerializableObject: '{"obj":{"fileID":2800000,"guid":"8aafaa78fe944854997fef757ff4ba72","type":3}}'
     m_Space: -1
   m_Property:
     name: mainTexture
     m_serializedType:
-      m_SerializableType: UnityEngine.Texture2D, UnityEngine.CoreModule, Version=0.0.0.0,
-        Culture=neutral, PublicKeyToken=null
+      m_SerializableType: UnityEngine.Texture2D, UnityEngine.CoreModule, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null
   m_Direction: 0
   m_LinkedSlots: []
 --- !u!114 &8926484042661614685
@@ -622,15 +610,13 @@ MonoBehaviour:
     m_Owner: {fileID: 8926484042661614685}
     m_Value:
       m_Type:
-        m_SerializableType: System.Boolean, mscorlib, Version=4.0.0.0, Culture=neutral,
-          PublicKeyToken=b77a5c561934e089
+        m_SerializableType: System.Boolean, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089
       m_SerializableObject: True
     m_Space: -1
   m_Property:
     name: _vfx_enabled
     m_serializedType:
-      m_SerializableType: System.Boolean, mscorlib, Version=4.0.0.0, Culture=neutral,
-        PublicKeyToken=b77a5c561934e089
+      m_SerializableType: System.Boolean, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089
   m_Direction: 0
   m_LinkedSlots: []
 --- !u!114 &8926484042661614687
@@ -706,15 +692,13 @@ MonoBehaviour:
     m_Owner: {fileID: 8926484042661614722}
     m_Value:
       m_Type:
-        m_SerializableType: UnityEngine.Gradient, UnityEngine.CoreModule, Version=0.0.0.0,
-          Culture=neutral, PublicKeyToken=null
+        m_SerializableType: UnityEngine.Gradient, UnityEngine.CoreModule, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null
       m_SerializableObject: '{"colorKeys":[{"color":{"r":0.973445475101471,"g":0.5209956765174866,"b":0.0021246890537440778,"a":1.0},"time":0.5000076293945313},{"color":{"r":0.2158605307340622,"g":0.6866854429244995,"b":1.0,"a":1.0},"time":0.5020981431007385}],"alphaKeys":[{"alpha":1.0,"time":0.0},{"alpha":1.0,"time":0.800000011920929},{"alpha":0.0,"time":1.0}],"gradientMode":0}'
     m_Space: -1
   m_Property:
     name: Color
     m_serializedType:
-      m_SerializableType: UnityEngine.Gradient, UnityEngine.CoreModule, Version=0.0.0.0,
-        Culture=neutral, PublicKeyToken=null
+      m_SerializableType: UnityEngine.Gradient, UnityEngine.CoreModule, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null
   m_Direction: 0
   m_LinkedSlots: []
 --- !u!114 &8926484042661614724
@@ -740,15 +724,13 @@ MonoBehaviour:
     m_Owner: {fileID: 8926484042661614722}
     m_Value:
       m_Type:
-        m_SerializableType: System.Boolean, mscorlib, Version=4.0.0.0, Culture=neutral,
-          PublicKeyToken=b77a5c561934e089
+        m_SerializableType: System.Boolean, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089
       m_SerializableObject: True
     m_Space: -1
   m_Property:
     name: _vfx_enabled
     m_serializedType:
-      m_SerializableType: System.Boolean, mscorlib, Version=4.0.0.0, Culture=neutral,
-        PublicKeyToken=b77a5c561934e089
+      m_SerializableType: System.Boolean, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089
   m_Direction: 0
   m_LinkedSlots: []
 --- !u!114 &8926484042661614774
@@ -776,15 +758,13 @@ MonoBehaviour:
     m_Owner: {fileID: 8926484042661614613}
     m_Value:
       m_Type:
-        m_SerializableType: UnityEditor.VFX.AABox, Unity.VisualEffectGraph.Editor,
-          Version=0.0.0.0, Culture=neutral, PublicKeyToken=null
+        m_SerializableType: UnityEditor.VFX.AABox, Unity.VisualEffectGraph.Editor, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null
       m_SerializableObject: '{"center":{"x":0.0,"y":1.0,"z":0.0},"size":{"x":3.5,"y":4.0,"z":3.5}}'
     m_Space: 0
   m_Property:
     name: bounds
     m_serializedType:
-      m_SerializableType: UnityEditor.VFX.AABox, Unity.VisualEffectGraph.Editor,
-        Version=0.0.0.0, Culture=neutral, PublicKeyToken=null
+      m_SerializableType: UnityEditor.VFX.AABox, Unity.VisualEffectGraph.Editor, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null
   m_Direction: 0
   m_LinkedSlots: []
 --- !u!114 &8926484042661614775
@@ -819,8 +799,7 @@ MonoBehaviour:
   m_Property:
     name: center
     m_serializedType:
-      m_SerializableType: UnityEngine.Vector3, UnityEngine.CoreModule, Version=0.0.0.0,
-        Culture=neutral, PublicKeyToken=null
+      m_SerializableType: UnityEngine.Vector3, UnityEngine.CoreModule, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null
   m_Direction: 0
   m_LinkedSlots: []
 --- !u!114 &8926484042661614776
@@ -852,8 +831,7 @@ MonoBehaviour:
   m_Property:
     name: x
     m_serializedType:
-      m_SerializableType: System.Single, mscorlib, Version=4.0.0.0, Culture=neutral,
-        PublicKeyToken=b77a5c561934e089
+      m_SerializableType: System.Single, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089
   m_Direction: 0
   m_LinkedSlots: []
 --- !u!114 &8926484042661614777
@@ -885,8 +863,7 @@ MonoBehaviour:
   m_Property:
     name: y
     m_serializedType:
-      m_SerializableType: System.Single, mscorlib, Version=4.0.0.0, Culture=neutral,
-        PublicKeyToken=b77a5c561934e089
+      m_SerializableType: System.Single, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089
   m_Direction: 0
   m_LinkedSlots: []
 --- !u!114 &8926484042661614778
@@ -918,8 +895,7 @@ MonoBehaviour:
   m_Property:
     name: z
     m_serializedType:
-      m_SerializableType: System.Single, mscorlib, Version=4.0.0.0, Culture=neutral,
-        PublicKeyToken=b77a5c561934e089
+      m_SerializableType: System.Single, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089
   m_Direction: 0
   m_LinkedSlots: []
 --- !u!114 &8926484042661614779
@@ -954,8 +930,7 @@ MonoBehaviour:
   m_Property:
     name: size
     m_serializedType:
-      m_SerializableType: UnityEngine.Vector3, UnityEngine.CoreModule, Version=0.0.0.0,
-        Culture=neutral, PublicKeyToken=null
+      m_SerializableType: UnityEngine.Vector3, UnityEngine.CoreModule, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null
   m_Direction: 0
   m_LinkedSlots: []
 --- !u!114 &8926484042661614780
@@ -987,8 +962,7 @@ MonoBehaviour:
   m_Property:
     name: x
     m_serializedType:
-      m_SerializableType: System.Single, mscorlib, Version=4.0.0.0, Culture=neutral,
-        PublicKeyToken=b77a5c561934e089
+      m_SerializableType: System.Single, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089
   m_Direction: 0
   m_LinkedSlots: []
 --- !u!114 &8926484042661614781
@@ -1020,8 +994,7 @@ MonoBehaviour:
   m_Property:
     name: y
     m_serializedType:
-      m_SerializableType: System.Single, mscorlib, Version=4.0.0.0, Culture=neutral,
-        PublicKeyToken=b77a5c561934e089
+      m_SerializableType: System.Single, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089
   m_Direction: 0
   m_LinkedSlots: []
 --- !u!114 &8926484042661614782
@@ -1053,8 +1026,7 @@ MonoBehaviour:
   m_Property:
     name: z
     m_serializedType:
-      m_SerializableType: System.Single, mscorlib, Version=4.0.0.0, Culture=neutral,
-        PublicKeyToken=b77a5c561934e089
+      m_SerializableType: System.Single, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089
   m_Direction: 0
   m_LinkedSlots: []
 --- !u!114 &8926484042661614783
@@ -1083,15 +1055,13 @@ MonoBehaviour:
     m_Owner: {fileID: 8926484042661614613}
     m_Value:
       m_Type:
-        m_SerializableType: UnityEngine.Vector3, UnityEngine.CoreModule, Version=0.0.0.0,
-          Culture=neutral, PublicKeyToken=null
+        m_SerializableType: UnityEngine.Vector3, UnityEngine.CoreModule, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null
       m_SerializableObject: '{"x":0.5,"y":0.5,"z":0.5}'
     m_Space: -1
   m_Property:
     name: boundsPadding
     m_serializedType:
-      m_SerializableType: UnityEngine.Vector3, UnityEngine.CoreModule, Version=0.0.0.0,
-        Culture=neutral, PublicKeyToken=null
+      m_SerializableType: UnityEngine.Vector3, UnityEngine.CoreModule, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null
   m_Direction: 0
   m_LinkedSlots: []
 --- !u!114 &8926484042661614784
@@ -1123,8 +1093,7 @@ MonoBehaviour:
   m_Property:
     name: x
     m_serializedType:
-      m_SerializableType: System.Single, mscorlib, Version=4.0.0.0, Culture=neutral,
-        PublicKeyToken=b77a5c561934e089
+      m_SerializableType: System.Single, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089
   m_Direction: 0
   m_LinkedSlots: []
 --- !u!114 &8926484042661614785
@@ -1156,8 +1125,7 @@ MonoBehaviour:
   m_Property:
     name: y
     m_serializedType:
-      m_SerializableType: System.Single, mscorlib, Version=4.0.0.0, Culture=neutral,
-        PublicKeyToken=b77a5c561934e089
+      m_SerializableType: System.Single, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089
   m_Direction: 0
   m_LinkedSlots: []
 --- !u!114 &8926484042661614786
@@ -1189,8 +1157,7 @@ MonoBehaviour:
   m_Property:
     name: z
     m_serializedType:
-      m_SerializableType: System.Single, mscorlib, Version=4.0.0.0, Culture=neutral,
-        PublicKeyToken=b77a5c561934e089
+      m_SerializableType: System.Single, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089
   m_Direction: 0
   m_LinkedSlots: []
 --- !u!114 &8926484042661614806
@@ -1245,15 +1212,13 @@ MonoBehaviour:
     m_Owner: {fileID: 8926484042661614806}
     m_Value:
       m_Type:
-        m_SerializableType: UnityEditor.VFX.DirectionType, Unity.VisualEffectGraph.Editor,
-          Version=0.0.0.0, Culture=neutral, PublicKeyToken=null
+        m_SerializableType: UnityEditor.VFX.DirectionType, Unity.VisualEffectGraph.Editor, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null
       m_SerializableObject: '{"direction":{"x":0.0,"y":1.0,"z":0.0}}'
     m_Space: 0
   m_Property:
     name: Direction
     m_serializedType:
-      m_SerializableType: UnityEditor.VFX.DirectionType, Unity.VisualEffectGraph.Editor,
-        Version=0.0.0.0, Culture=neutral, PublicKeyToken=null
+      m_SerializableType: UnityEditor.VFX.DirectionType, Unity.VisualEffectGraph.Editor, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null
   m_Direction: 0
   m_LinkedSlots: []
 --- !u!114 &8926484042661614808
@@ -1288,8 +1253,7 @@ MonoBehaviour:
   m_Property:
     name: direction
     m_serializedType:
-      m_SerializableType: UnityEngine.Vector3, UnityEngine.CoreModule, Version=0.0.0.0,
-        Culture=neutral, PublicKeyToken=null
+      m_SerializableType: UnityEngine.Vector3, UnityEngine.CoreModule, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null
   m_Direction: 0
   m_LinkedSlots: []
 --- !u!114 &8926484042661614809
@@ -1321,8 +1285,7 @@ MonoBehaviour:
   m_Property:
     name: x
     m_serializedType:
-      m_SerializableType: System.Single, mscorlib, Version=4.0.0.0, Culture=neutral,
-        PublicKeyToken=b77a5c561934e089
+      m_SerializableType: System.Single, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089
   m_Direction: 0
   m_LinkedSlots: []
 --- !u!114 &8926484042661614810
@@ -1354,8 +1317,7 @@ MonoBehaviour:
   m_Property:
     name: y
     m_serializedType:
-      m_SerializableType: System.Single, mscorlib, Version=4.0.0.0, Culture=neutral,
-        PublicKeyToken=b77a5c561934e089
+      m_SerializableType: System.Single, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089
   m_Direction: 0
   m_LinkedSlots: []
 --- !u!114 &8926484042661614811
@@ -1387,8 +1349,7 @@ MonoBehaviour:
   m_Property:
     name: z
     m_serializedType:
-      m_SerializableType: System.Single, mscorlib, Version=4.0.0.0, Culture=neutral,
-        PublicKeyToken=b77a5c561934e089
+      m_SerializableType: System.Single, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089
   m_Direction: 0
   m_LinkedSlots: []
 --- !u!114 &8926484042661614813
@@ -1414,15 +1375,13 @@ MonoBehaviour:
     m_Owner: {fileID: 8926484042661614806}
     m_Value:
       m_Type:
-        m_SerializableType: System.Single, mscorlib, Version=4.0.0.0, Culture=neutral,
-          PublicKeyToken=b77a5c561934e089
+        m_SerializableType: System.Single, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089
       m_SerializableObject: 0.85
     m_Space: -1
   m_Property:
     name: DirectionBlend
     m_serializedType:
-      m_SerializableType: System.Single, mscorlib, Version=4.0.0.0, Culture=neutral,
-        PublicKeyToken=b77a5c561934e089
+      m_SerializableType: System.Single, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089
   m_Direction: 0
   m_LinkedSlots: []
 --- !u!114 &8926484042661614814
@@ -1448,15 +1407,13 @@ MonoBehaviour:
     m_Owner: {fileID: 8926484042661614806}
     m_Value:
       m_Type:
-        m_SerializableType: System.Boolean, mscorlib, Version=4.0.0.0, Culture=neutral,
-          PublicKeyToken=b77a5c561934e089
+        m_SerializableType: System.Boolean, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089
       m_SerializableObject: True
     m_Space: -1
   m_Property:
     name: _vfx_enabled
     m_serializedType:
-      m_SerializableType: System.Boolean, mscorlib, Version=4.0.0.0, Culture=neutral,
-        PublicKeyToken=b77a5c561934e089
+      m_SerializableType: System.Boolean, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089
   m_Direction: 0
   m_LinkedSlots: []
 --- !u!114 &8926484042661614818
@@ -1482,15 +1439,13 @@ MonoBehaviour:
     m_Owner: {fileID: 8926484042661614806}
     m_Value:
       m_Type:
-        m_SerializableType: System.Single, mscorlib, Version=4.0.0.0, Culture=neutral,
-          PublicKeyToken=b77a5c561934e089
+        m_SerializableType: System.Single, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089
       m_SerializableObject: 4.8
     m_Space: -1
   m_Property:
     name: MinSpeed
     m_serializedType:
-      m_SerializableType: System.Single, mscorlib, Version=4.0.0.0, Culture=neutral,
-        PublicKeyToken=b77a5c561934e089
+      m_SerializableType: System.Single, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089
   m_Direction: 0
   m_LinkedSlots: []
 --- !u!114 &8926484042661614819
@@ -1516,15 +1471,13 @@ MonoBehaviour:
     m_Owner: {fileID: 8926484042661614806}
     m_Value:
       m_Type:
-        m_SerializableType: System.Single, mscorlib, Version=4.0.0.0, Culture=neutral,
-          PublicKeyToken=b77a5c561934e089
+        m_SerializableType: System.Single, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089
       m_SerializableObject: 7.5
     m_Space: -1
   m_Property:
     name: MaxSpeed
     m_serializedType:
-      m_SerializableType: System.Single, mscorlib, Version=4.0.0.0, Culture=neutral,
-        PublicKeyToken=b77a5c561934e089
+      m_SerializableType: System.Single, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089
   m_Direction: 0
   m_LinkedSlots: []
 --- !u!114 &8926484042661614820
@@ -1574,15 +1527,13 @@ MonoBehaviour:
     m_Owner: {fileID: 8926484042661614820}
     m_Value:
       m_Type:
-        m_SerializableType: UnityEditor.VFX.Vector, Unity.VisualEffectGraph.Editor,
-          Version=0.0.0.0, Culture=neutral, PublicKeyToken=null
+        m_SerializableType: UnityEditor.VFX.Vector, Unity.VisualEffectGraph.Editor, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null
       m_SerializableObject: '{"vector":{"x":0.0,"y":-9.8100004196167,"z":0.0}}'
     m_Space: 1
   m_Property:
     name: Force
     m_serializedType:
-      m_SerializableType: UnityEditor.VFX.Vector, Unity.VisualEffectGraph.Editor,
-        Version=0.0.0.0, Culture=neutral, PublicKeyToken=null
+      m_SerializableType: UnityEditor.VFX.Vector, Unity.VisualEffectGraph.Editor, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null
   m_Direction: 0
   m_LinkedSlots: []
 --- !u!114 &8926484042661614822
@@ -1617,8 +1568,7 @@ MonoBehaviour:
   m_Property:
     name: vector
     m_serializedType:
-      m_SerializableType: UnityEngine.Vector3, UnityEngine.CoreModule, Version=0.0.0.0,
-        Culture=neutral, PublicKeyToken=null
+      m_SerializableType: UnityEngine.Vector3, UnityEngine.CoreModule, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null
   m_Direction: 0
   m_LinkedSlots: []
 --- !u!114 &8926484042661614823
@@ -1650,8 +1600,7 @@ MonoBehaviour:
   m_Property:
     name: x
     m_serializedType:
-      m_SerializableType: System.Single, mscorlib, Version=4.0.0.0, Culture=neutral,
-        PublicKeyToken=b77a5c561934e089
+      m_SerializableType: System.Single, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089
   m_Direction: 0
   m_LinkedSlots: []
 --- !u!114 &8926484042661614824
@@ -1683,8 +1632,7 @@ MonoBehaviour:
   m_Property:
     name: y
     m_serializedType:
-      m_SerializableType: System.Single, mscorlib, Version=4.0.0.0, Culture=neutral,
-        PublicKeyToken=b77a5c561934e089
+      m_SerializableType: System.Single, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089
   m_Direction: 0
   m_LinkedSlots: []
 --- !u!114 &8926484042661614825
@@ -1716,8 +1664,7 @@ MonoBehaviour:
   m_Property:
     name: z
     m_serializedType:
-      m_SerializableType: System.Single, mscorlib, Version=4.0.0.0, Culture=neutral,
-        PublicKeyToken=b77a5c561934e089
+      m_SerializableType: System.Single, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089
   m_Direction: 0
   m_LinkedSlots: []
 --- !u!114 &8926484042661614826
@@ -1743,15 +1690,13 @@ MonoBehaviour:
     m_Owner: {fileID: 8926484042661614820}
     m_Value:
       m_Type:
-        m_SerializableType: System.Boolean, mscorlib, Version=4.0.0.0, Culture=neutral,
-          PublicKeyToken=b77a5c561934e089
+        m_SerializableType: System.Boolean, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089
       m_SerializableObject: True
     m_Space: -1
   m_Property:
     name: _vfx_enabled
     m_serializedType:
-      m_SerializableType: System.Boolean, mscorlib, Version=4.0.0.0, Culture=neutral,
-        PublicKeyToken=b77a5c561934e089
+      m_SerializableType: System.Boolean, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089
   m_Direction: 0
   m_LinkedSlots: []
 --- !u!114 &8926484042661614827
@@ -1801,15 +1746,13 @@ MonoBehaviour:
     m_Owner: {fileID: 8926484042661614827}
     m_Value:
       m_Type:
-        m_SerializableType: System.Single, mscorlib, Version=4.0.0.0, Culture=neutral,
-          PublicKeyToken=b77a5c561934e089
+        m_SerializableType: System.Single, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089
       m_SerializableObject: 0.5
     m_Space: -1
   m_Property:
     name: dragCoefficient
     m_serializedType:
-      m_SerializableType: System.Single, mscorlib, Version=4.0.0.0, Culture=neutral,
-        PublicKeyToken=b77a5c561934e089
+      m_SerializableType: System.Single, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089
   m_Direction: 0
   m_LinkedSlots: []
 --- !u!114 &8926484042661614829
@@ -1835,15 +1778,13 @@ MonoBehaviour:
     m_Owner: {fileID: 8926484042661614827}
     m_Value:
       m_Type:
-        m_SerializableType: System.Boolean, mscorlib, Version=4.0.0.0, Culture=neutral,
-          PublicKeyToken=b77a5c561934e089
+        m_SerializableType: System.Boolean, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089
       m_SerializableObject: True
     m_Space: -1
   m_Property:
     name: _vfx_enabled
     m_serializedType:
-      m_SerializableType: System.Boolean, mscorlib, Version=4.0.0.0, Culture=neutral,
-        PublicKeyToken=b77a5c561934e089
+      m_SerializableType: System.Boolean, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089
   m_Direction: 0
   m_LinkedSlots: []
 --- !u!114 &8926484042661614830
@@ -1899,15 +1840,13 @@ MonoBehaviour:
     m_Owner: {fileID: 8926484042661614830}
     m_Value:
       m_Type:
-        m_SerializableType: UnityEngine.AnimationCurve, UnityEngine.CoreModule, Version=0.0.0.0,
-          Culture=neutral, PublicKeyToken=null
+        m_SerializableType: UnityEngine.AnimationCurve, UnityEngine.CoreModule, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null
       m_SerializableObject: '{"frames":[{"time":0.0,"value":0.75,"inTangent":0.0,"outTangent":1.25,"tangentMode":0,"leftTangentMode":2,"rightTangentMode":2,"broken":true},{"time":1.0,"value":2.0,"inTangent":1.25,"outTangent":2.0,"tangentMode":0,"leftTangentMode":2,"rightTangentMode":2,"broken":true}],"preWrapMode":8,"postWrapMode":8,"version":1}'
     m_Space: -1
   m_Property:
     name: Size
     m_serializedType:
-      m_SerializableType: UnityEngine.AnimationCurve, UnityEngine.CoreModule, Version=0.0.0.0,
-        Culture=neutral, PublicKeyToken=null
+      m_SerializableType: UnityEngine.AnimationCurve, UnityEngine.CoreModule, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null
   m_Direction: 0
   m_LinkedSlots: []
 --- !u!114 &8926484042661614832
@@ -1933,15 +1872,13 @@ MonoBehaviour:
     m_Owner: {fileID: 8926484042661614830}
     m_Value:
       m_Type:
-        m_SerializableType: System.Boolean, mscorlib, Version=4.0.0.0, Culture=neutral,
-          PublicKeyToken=b77a5c561934e089
+        m_SerializableType: System.Boolean, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089
       m_SerializableObject: True
     m_Space: -1
   m_Property:
     name: _vfx_enabled
     m_serializedType:
-      m_SerializableType: System.Boolean, mscorlib, Version=4.0.0.0, Culture=neutral,
-        PublicKeyToken=b77a5c561934e089
+      m_SerializableType: System.Boolean, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089
   m_Direction: 0
   m_LinkedSlots: []
 --- !u!114 &8926484042661614833
@@ -2014,15 +1951,13 @@ MonoBehaviour:
     m_Owner: {fileID: 8926484042661614834}
     m_Value:
       m_Type:
-        m_SerializableType: UnityEditor.VFX.TArcSphere, Unity.VisualEffectGraph.Editor,
-          Version=0.0.0.0, Culture=neutral, PublicKeyToken=null
+        m_SerializableType: UnityEditor.VFX.TArcSphere, Unity.VisualEffectGraph.Editor, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null
       m_SerializableObject: '{"sphere":{"transform":{"position":{"x":0.0,"y":0.0,"z":0.0},"angles":{"x":0.0,"y":0.0,"z":0.0},"scale":{"x":1.0,"y":1.0,"z":1.0}},"radius":0.029999999329447748},"arc":6.28000020980835}'
     m_Space: 0
   m_Property:
     name: arcSphere
     m_serializedType:
-      m_SerializableType: UnityEditor.VFX.TArcSphere, Unity.VisualEffectGraph.Editor,
-        Version=0.0.0.0, Culture=neutral, PublicKeyToken=null
+      m_SerializableType: UnityEditor.VFX.TArcSphere, Unity.VisualEffectGraph.Editor, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null
   m_Direction: 0
   m_LinkedSlots: []
 --- !u!114 &8926484042661614836
@@ -2056,8 +1991,7 @@ MonoBehaviour:
   m_Property:
     name: sphere
     m_serializedType:
-      m_SerializableType: UnityEditor.VFX.TSphere, Unity.VisualEffectGraph.Editor,
-        Version=0.0.0.0, Culture=neutral, PublicKeyToken=null
+      m_SerializableType: UnityEditor.VFX.TSphere, Unity.VisualEffectGraph.Editor, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null
   m_Direction: 0
   m_LinkedSlots: []
 --- !u!114 &8926484042661614837
@@ -2092,8 +2026,7 @@ MonoBehaviour:
   m_Property:
     name: transform
     m_serializedType:
-      m_SerializableType: UnityEditor.VFX.Transform, Unity.VisualEffectGraph.Editor,
-        Version=0.0.0.0, Culture=neutral, PublicKeyToken=null
+      m_SerializableType: UnityEditor.VFX.Transform, Unity.VisualEffectGraph.Editor, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null
   m_Direction: 0
   m_LinkedSlots: []
 --- !u!114 &8926484042661614838
@@ -2128,8 +2061,7 @@ MonoBehaviour:
   m_Property:
     name: position
     m_serializedType:
-      m_SerializableType: UnityEngine.Vector3, UnityEngine.CoreModule, Version=0.0.0.0,
-        Culture=neutral, PublicKeyToken=null
+      m_SerializableType: UnityEngine.Vector3, UnityEngine.CoreModule, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null
   m_Direction: 0
   m_LinkedSlots: []
 --- !u!114 &8926484042661614839
@@ -2161,8 +2093,7 @@ MonoBehaviour:
   m_Property:
     name: x
     m_serializedType:
-      m_SerializableType: System.Single, mscorlib, Version=4.0.0.0, Culture=neutral,
-        PublicKeyToken=b77a5c561934e089
+      m_SerializableType: System.Single, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089
   m_Direction: 0
   m_LinkedSlots: []
 --- !u!114 &8926484042661614840
@@ -2194,8 +2125,7 @@ MonoBehaviour:
   m_Property:
     name: y
     m_serializedType:
-      m_SerializableType: System.Single, mscorlib, Version=4.0.0.0, Culture=neutral,
-        PublicKeyToken=b77a5c561934e089
+      m_SerializableType: System.Single, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089
   m_Direction: 0
   m_LinkedSlots: []
 --- !u!114 &8926484042661614841
@@ -2227,8 +2157,7 @@ MonoBehaviour:
   m_Property:
     name: z
     m_serializedType:
-      m_SerializableType: System.Single, mscorlib, Version=4.0.0.0, Culture=neutral,
-        PublicKeyToken=b77a5c561934e089
+      m_SerializableType: System.Single, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089
   m_Direction: 0
   m_LinkedSlots: []
 --- !u!114 &8926484042661614842
@@ -2263,8 +2192,7 @@ MonoBehaviour:
   m_Property:
     name: angles
     m_serializedType:
-      m_SerializableType: UnityEngine.Vector3, UnityEngine.CoreModule, Version=0.0.0.0,
-        Culture=neutral, PublicKeyToken=null
+      m_SerializableType: UnityEngine.Vector3, UnityEngine.CoreModule, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null
   m_Direction: 0
   m_LinkedSlots: []
 --- !u!114 &8926484042661614843
@@ -2296,8 +2224,7 @@ MonoBehaviour:
   m_Property:
     name: x
     m_serializedType:
-      m_SerializableType: System.Single, mscorlib, Version=4.0.0.0, Culture=neutral,
-        PublicKeyToken=b77a5c561934e089
+      m_SerializableType: System.Single, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089
   m_Direction: 0
   m_LinkedSlots: []
 --- !u!114 &8926484042661614844
@@ -2329,8 +2256,7 @@ MonoBehaviour:
   m_Property:
     name: y
     m_serializedType:
-      m_SerializableType: System.Single, mscorlib, Version=4.0.0.0, Culture=neutral,
-        PublicKeyToken=b77a5c561934e089
+      m_SerializableType: System.Single, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089
   m_Direction: 0
   m_LinkedSlots: []
 --- !u!114 &8926484042661614845
@@ -2362,8 +2288,7 @@ MonoBehaviour:
   m_Property:
     name: z
     m_serializedType:
-      m_SerializableType: System.Single, mscorlib, Version=4.0.0.0, Culture=neutral,
-        PublicKeyToken=b77a5c561934e089
+      m_SerializableType: System.Single, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089
   m_Direction: 0
   m_LinkedSlots: []
 --- !u!114 &8926484042661614846
@@ -2398,8 +2323,7 @@ MonoBehaviour:
   m_Property:
     name: scale
     m_serializedType:
-      m_SerializableType: UnityEngine.Vector3, UnityEngine.CoreModule, Version=0.0.0.0,
-        Culture=neutral, PublicKeyToken=null
+      m_SerializableType: UnityEngine.Vector3, UnityEngine.CoreModule, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null
   m_Direction: 0
   m_LinkedSlots: []
 --- !u!114 &8926484042661614847
@@ -2431,8 +2355,7 @@ MonoBehaviour:
   m_Property:
     name: x
     m_serializedType:
-      m_SerializableType: System.Single, mscorlib, Version=4.0.0.0, Culture=neutral,
-        PublicKeyToken=b77a5c561934e089
+      m_SerializableType: System.Single, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089
   m_Direction: 0
   m_LinkedSlots: []
 --- !u!114 &8926484042661614848
@@ -2464,8 +2387,7 @@ MonoBehaviour:
   m_Property:
     name: y
     m_serializedType:
-      m_SerializableType: System.Single, mscorlib, Version=4.0.0.0, Culture=neutral,
-        PublicKeyToken=b77a5c561934e089
+      m_SerializableType: System.Single, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089
   m_Direction: 0
   m_LinkedSlots: []
 --- !u!114 &8926484042661614849
@@ -2497,8 +2419,7 @@ MonoBehaviour:
   m_Property:
     name: z
     m_serializedType:
-      m_SerializableType: System.Single, mscorlib, Version=4.0.0.0, Culture=neutral,
-        PublicKeyToken=b77a5c561934e089
+      m_SerializableType: System.Single, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089
   m_Direction: 0
   m_LinkedSlots: []
 --- !u!114 &8926484042661614850
@@ -2530,8 +2451,7 @@ MonoBehaviour:
   m_Property:
     name: radius
     m_serializedType:
-      m_SerializableType: System.Single, mscorlib, Version=4.0.0.0, Culture=neutral,
-        PublicKeyToken=b77a5c561934e089
+      m_SerializableType: System.Single, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089
   m_Direction: 0
   m_LinkedSlots: []
 --- !u!114 &8926484042661614851
@@ -2563,8 +2483,7 @@ MonoBehaviour:
   m_Property:
     name: arc
     m_serializedType:
-      m_SerializableType: System.Single, mscorlib, Version=4.0.0.0, Culture=neutral,
-        PublicKeyToken=b77a5c561934e089
+      m_SerializableType: System.Single, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089
   m_Direction: 0
   m_LinkedSlots: []
 --- !u!114 &8926484042661614852
@@ -2590,14 +2509,12 @@ MonoBehaviour:
     m_Owner: {fileID: 8926484042661614834}
     m_Value:
       m_Type:
-        m_SerializableType: System.Boolean, mscorlib, Version=4.0.0.0, Culture=neutral,
-          PublicKeyToken=b77a5c561934e089
+        m_SerializableType: System.Boolean, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089
       m_SerializableObject: True
     m_Space: -1
   m_Property:
     name: _vfx_enabled
     m_serializedType:
-      m_SerializableType: System.Boolean, mscorlib, Version=4.0.0.0, Culture=neutral,
-        PublicKeyToken=b77a5c561934e089
+      m_SerializableType: System.Boolean, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089
   m_Direction: 0
   m_LinkedSlots: []

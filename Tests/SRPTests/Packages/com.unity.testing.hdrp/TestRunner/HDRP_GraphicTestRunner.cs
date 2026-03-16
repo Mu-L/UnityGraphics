@@ -9,6 +9,7 @@ using UnityEngine.Rendering.HighDefinition;
 using UnityEngine.SceneManagement;
 using System.Linq;
 using UnityEngine.VFX;
+using Object = UnityEngine.Object;
 
 public class HDRP_GraphicTestRunner
 {
@@ -29,6 +30,59 @@ public class HDRP_GraphicTestRunner
             return forcedOn || mbAsset.gpuResidentDrawerMode != GPUResidentDrawerMode.Disabled;
 
         return false;
+    }
+
+    static Camera FindMainCamera()
+    {
+        {
+            var cameras = GameObject.FindGameObjectsWithTag("MainCamera");
+            Assert.LessOrEqual(cameras.Length, 1, "Multiple cameras found with tag 'MainCamera'.");
+            if (cameras.Length > 0) return cameras[0].GetComponent<Camera>();
+        }
+
+        {
+            var cameras = Object.FindObjectsByType<Camera>();
+            Assert.LessOrEqual(cameras.Length, 1, "No camera found with tag 'MainCamera', and multiple cameras found without it.");
+            if (cameras.Length > 0) return cameras[0].GetComponent<Camera>();
+        }
+
+        Assert.Fail("Missing camera for graphic tests.");
+        return null;
+    }
+
+    static HDRP_TestSettings FindHDRPTestSettings()
+    {
+        var settings = Object.FindObjectsByType<HDRP_TestSettings>();
+        Assert.AreEqual(1, settings.Length, "Multiple HDRP_TestSettings found.");
+        return settings[0];
+    }
+
+    static void VERYSLOW_SortByHierarchyPath<T>(T[] objects) where T : Component
+    {
+        // This weird little function is used to put the objects in the order they show up
+        // in the scene hierarchy. Which is something that cannot be inferred from their IDs.
+        // Unfortunately a lot of tests rely on this. This approach is really slow but the
+        // test scenes are quite small.
+
+        string GetHierarchySiblingPath(Transform t)
+        {
+            if (t.parent == null)
+                return t.GetSiblingIndex().ToString("D8");
+            return GetHierarchySiblingPath(t.parent) + "/" + t.GetSiblingIndex().ToString("D8");
+        }
+
+        var objectAndPath = new (T obj, string path)[objects.Length];
+        for (int i = 0; i < objects.Length; ++i)
+        {
+            objectAndPath[i] = (objects[i], GetHierarchySiblingPath(objects[i].transform));
+        }
+
+        Array.Sort(objectAndPath, (a, b) => a.path.CompareTo(b.path));
+
+        for (int i = 0; i < objects.Length; ++i)
+        {
+            objects[i] = objectAndPath[i].obj;
+        }
     }
 
     public static IEnumerator Run(SceneGraphicsTestCase testCase)
@@ -55,13 +109,8 @@ public class HDRP_GraphicTestRunner
         for (int i = 0; i < 5; ++i)
             yield return new WaitForEndOfFrame();
 
-        settings = GameObject.FindAnyObjectByType<HDRP_TestSettings>();
-        camera = GameObject.FindGameObjectWithTag("MainCamera").GetComponent<Camera>();
-        if (camera == null) camera = GameObject.FindAnyObjectByType<Camera>();
-        if (camera == null)
-        {
-            Assert.Fail("Missing camera for graphic tests.");
-        }
+        settings = FindHDRPTestSettings();
+        camera = FindMainCamera();
 
         if (!settings.gpuDrivenCompatible && GPUResidentDrawerRequested())
             Assert.Ignore("Test scene is not compatible with GPU Driven and and will be skipped.");
@@ -103,21 +152,15 @@ public class HDRP_GraphicTestRunner
             yield return new WaitForEndOfFrame();
 
         // Need to retrieve objects again after scene reload.
-        settings = GameObject.FindAnyObjectByType<HDRP_TestSettings>();
-        camera = GameObject.FindGameObjectWithTag("MainCamera").GetComponent<Camera>();
-        if (camera == null) camera = GameObject.FindAnyObjectByType<Camera>();
-        if (camera == null)
-        {
-            Assert.Fail("Missing camera for graphic tests.");
-        }
+        settings = FindHDRPTestSettings();
+        camera = FindMainCamera();
 
         // Grab the HDCamera
         HDCamera hdCamera = HDCamera.GetOrCreate(camera);
 
         //We need to get all the cameras to set accumulation in all of them for tests that uses multiple cameras
-#pragma warning disable CS0618 // Type or member is obsolete
-        cameras = GameObject.FindObjectsByType<Camera>(FindObjectsSortMode.InstanceID);
-#pragma warning restore CS0618 // Type or member is obsolete
+        cameras = Object.FindObjectsByType<Camera>();
+        VERYSLOW_SortByHierarchyPath(cameras);
 
         //Grab the HDCameras
         hdCameras = new HDCamera[cameras.Length];
@@ -160,11 +203,9 @@ public class HDRP_GraphicTestRunner
             settings.ImageComparisonSettings.PerPixelCorrectnessThreshold *= settings.xrThresholdMultiplier;
 
             // Increase number of volumetric slices to compensate for initial half-resolution due to XR single-pass optimization
-#pragma warning disable CS0618 // Type or member is obsolete
-            foreach (var volume in GameObject.FindObjectsByType<Volume>(FindObjectsSortMode.InstanceID))
-#pragma warning restore CS0618 // Type or member is obsolete
+            foreach (var volume in Object.FindObjectsByType<Volume>())
             {
-                if (volume.profile.TryGet<Fog>(out Fog fog))
+                if (volume.profile.TryGet(out Fog fog))
                     fog.volumeSliceCount.value *= 2;
             }
         }
@@ -220,7 +261,7 @@ public class HDRP_GraphicTestRunner
         for (int i = 0; i < waitFrames; ++i)
             yield return new WaitForEndOfFrame();
 
-        var settingsSG = (GameObject.FindAnyObjectByType<HDRP_TestSettings>() as HDRP_ShaderGraph_TestSettings);
+        var settingsSG = settings as HDRP_ShaderGraph_TestSettings;
         if (settingsSG == null || !settingsSG.compareSGtoBI)
         {
             // Standard Test

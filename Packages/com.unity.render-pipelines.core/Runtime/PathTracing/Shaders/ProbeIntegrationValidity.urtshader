@@ -47,7 +47,7 @@ void IntegrateValidity(UnifiedRT::DispatchInfo dispatchInfo)
     {
         UnifiedRT::InstanceData instance = UnifiedRT::GetInstance(hitResult.instanceID);
         PTHitGeom geometry = GetHitGeomInfo(instance, hitResult);
-        MaterialProperties material = LoadMaterialProperties(instance, false, geometry.uv0, geometry.uv1);
+        MaterialProperties material = LoadMaterialProperties(instance, geometry.uv0, geometry.uv1);
 
         if (!hitResult.isFrontFace && !material.doubleSidedGI && !material.isTransmissive)
             invalidHit = true;

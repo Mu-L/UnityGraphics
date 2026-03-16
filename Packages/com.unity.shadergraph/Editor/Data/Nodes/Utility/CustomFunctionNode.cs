@@ -150,8 +150,8 @@ namespace UnityEditor.ShaderGraph
 
         public void GenerateNodeCode(ShaderStringBuilder sb, GenerationMode generationMode)
         {
-            using (var inputSlots = PooledList<MaterialSlot>.Get())
-            using (var outputSlots = PooledList<MaterialSlot>.Get())
+            using (UnityEngine.Pool.ListPool<MaterialSlot>.Get(out var inputSlots))
+            using (UnityEngine.Pool.ListPool<MaterialSlot>.Get(out var outputSlots))
             {
                 GetInputSlots<MaterialSlot>(inputSlots);
                 GetOutputSlots<MaterialSlot>(outputSlots);
@@ -301,8 +301,8 @@ namespace UnityEditor.ShaderGraph
 
         void GetFunctionHeader(ShaderStringBuilder sb)
         {
-            using (var inputSlots = PooledList<MaterialSlot>.Get())
-            using (var outputSlots = PooledList<MaterialSlot>.Get())
+            using (UnityEngine.Pool.ListPool<MaterialSlot>.Get(out var inputSlots))
+            using (UnityEngine.Pool.ListPool<MaterialSlot>.Get(out var outputSlots))
             {
                 GetInputSlots(inputSlots);
                 GetOutputSlots(outputSlots);
@@ -380,7 +380,7 @@ namespace UnityEditor.ShaderGraph
 
         void ValidateSlotName()
         {
-            using (var slots = PooledList<MaterialSlot>.Get())
+            using (UnityEngine.Pool.ListPool<MaterialSlot>.Get(out var slots))
             {
                 GetSlots(slots);
                 foreach (var slot in slots)
@@ -398,10 +398,10 @@ namespace UnityEditor.ShaderGraph
 
         void ValidateBareTextureSlots()
         {
-            using (var outputSlots = PooledList<MaterialSlot>.Get())
+            using (UnityEngine.Pool.ListPool<MaterialSlot>.Get(out var slots))
             {
-                GetOutputSlots(outputSlots);
-                foreach (var slot in outputSlots)
+                GetOutputSlots(slots);
+                foreach (var slot in slots)
                 {
                     if (slot.bareResource)
                     {

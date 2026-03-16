@@ -15,7 +15,10 @@ namespace UnityEngine.PathTracing.Integration
         private readonly ProbeIntegrator _probeIntegrator;
         private UnityComputeWorld _world;
         private uint _bounceCount;
+        private LightSamplingMode _directLightSamplingMode = LightSamplingMode.RoundRobin;
         private uint _directRISCandidateCount = 4;
+        private LightSamplingMode _indirectLightSamplingMode = LightSamplingMode.Uniform;
+        private EmissiveSamplingMode _indirectEmissiveSamplingMode = EmissiveSamplingMode.BRDFSampling;
         private uint _indirectRISCandidateCount = 1;
         private uint _basePositionsOffset;
 
@@ -33,9 +36,9 @@ namespace UnityEngine.PathTracing.Integration
         private Rendering.Sampling.SamplingResources _samplingResources;
         private ProbeIntegratorResources _integrationResources;
 
-        public UnityComputeProbeIntegrator(bool countNEERayAsPathSegment, Rendering.Sampling.SamplingResources samplingResources, ProbeIntegratorResources integrationResources, ComputeShader probeOcclusionLightIndexMappingShader)
+        public UnityComputeProbeIntegrator(Rendering.Sampling.SamplingResources samplingResources, ProbeIntegratorResources integrationResources, ComputeShader probeOcclusionLightIndexMappingShader)
         {
-            _probeIntegrator = new ProbeIntegrator(countNEERayAsPathSegment);
+            _probeIntegrator = new ProbeIntegrator();
             _samplingResources = samplingResources;
             _probeOcclusionLightIndexMappingShader = probeOcclusionLightIndexMappingShader;
             _probeOcclusionLightIndexMappingKernel = _probeOcclusionLightIndexMappingShader.FindKernel("MapIndices");
@@ -66,6 +69,7 @@ namespace UnityEngine.PathTracing.Integration
                 (uint)positionCount,
                 sampleOffset,
                 (uint)sampleCount,
+                _directLightSamplingMode,
                 _directRISCandidateCount,
                 (uint)_world.PathTracingWorld.MaxLightsInAnyCell,
                 ignoreEnvironment,
@@ -97,8 +101,10 @@ namespace UnityEngine.PathTracing.Integration
                 _bounceCount,
                 sampleOffset,
                 (uint)sampleCount,
+                _indirectLightSamplingMode,
                 _indirectRISCandidateCount,
                 (uint)_world.PathTracingWorld.MaxLightsInAnyCell,
+                _indirectEmissiveSamplingMode,
                 ignoreEnvironment,
                 unifiedContext.GetComputeBuffer(radianceEstimateOut.Id),
                 (uint)radianceEstimateOut.Offset,
@@ -191,6 +197,20 @@ namespace UnityEngine.PathTracing.Integration
                 unifiedContext.GetComputeBuffer(reductionBuffer));
 
             return new IProbeIntegrator.Result(IProbeIntegrator.ResultType.Success, string.Empty);
+        }
+
+        public void SetLightSamplingSettings(
+            LightSamplingMode directLightSamplingMode,
+            uint directRISCandidateCount,
+            LightSamplingMode indirectLightSamplingMode,
+            uint indirectRISCandidateCount,
+            EmissiveSamplingMode indirectEmissiveSamplingMode)
+        {
+            _directLightSamplingMode = directLightSamplingMode;
+            _directRISCandidateCount = directRISCandidateCount;
+            _indirectLightSamplingMode = indirectLightSamplingMode;
+            _indirectRISCandidateCount = indirectRISCandidateCount;
+            _indirectEmissiveSamplingMode = indirectEmissiveSamplingMode;
         }
 
         public void Prepare(

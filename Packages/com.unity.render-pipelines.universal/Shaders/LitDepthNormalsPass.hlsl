@@ -18,7 +18,7 @@
 #define REQUIRES_WORLD_SPACE_TANGENT_INTERPOLATOR
 #endif
 
-#if defined(_ALPHATEST_ON) || defined(_PARALLAXMAP) || defined(_NORMALMAP) || defined(_DETAIL)
+#if defined(_ALPHATEST_ON) || defined(_PARALLAXMAP) || defined(_NORMALMAP) || defined(_DETAIL) || defined(_WRITE_SMOOTHNESS)
 #define REQUIRES_UV_INTERPOLATOR
 #endif
 
@@ -99,8 +99,12 @@ void DepthNormalsFragment(
     UNITY_SETUP_INSTANCE_ID(input);
     UNITY_SETUP_STEREO_EYE_INDEX_POST_VERTEX(input);
 
+    #if defined(_ALPHATEST_ON) || defined(_WRITE_SMOOTHNESS)
+        float alpha = SampleAlbedoAlpha(input.uv, TEXTURE2D_ARGS(_BaseMap, sampler_BaseMap)).a;
+    #endif
+
     #if defined(_ALPHATEST_ON)
-        Alpha(SampleAlbedoAlpha(input.uv, TEXTURE2D_ARGS(_BaseMap, sampler_BaseMap)).a, _BaseColor, _Cutoff);
+        Alpha(alpha, _BaseColor, _Cutoff);
     #endif
 
     #if defined(LOD_FADE_CROSSFADE)
@@ -140,6 +144,10 @@ void DepthNormalsFragment(
         #endif
 
         outNormalWS = half4(NormalizeNormalPerPixel(normalWS), 0.0);
+    #endif
+
+    #if defined(_WRITE_SMOOTHNESS) && !defined(_SCREENSPACEREFLECTIONS_OFF)
+        outNormalWS.a = SampleMetallicSpecGloss(input.uv, alpha).a;
     #endif
 
     #ifdef _WRITE_RENDERING_LAYERS

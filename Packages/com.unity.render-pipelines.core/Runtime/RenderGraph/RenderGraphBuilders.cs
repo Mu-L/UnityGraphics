@@ -75,6 +75,31 @@ namespace UnityEngine.Rendering.RenderGraphModule
 #endif            
         }
 
+        [Conditional("DEVELOPMENT_BUILD"), Conditional("UNITY_EDITOR")]
+        private void CheckDepthInputAttachmentFlagEnabled()
+        {
+            if (RenderGraph.enableValidityChecks)
+            {
+                if (!m_RenderPass.extendedFeatureFlags.HasFlag(ExtendedFeatureFlags.DepthAttachmentAsInputAttachment))
+                {
+                    throw new InvalidOperationException(
+                        RenderGraphExceptionMessages.DepthInputAttachmentNotEnabled(m_RenderPass.name));
+                }
+            }
+        }
+
+        [Conditional("DEVELOPMENT_BUILD"), Conditional("UNITY_EDITOR")]
+        private void CheckDepthInputAttachmentSupported()
+        {
+            if (RenderGraph.enableValidityChecks)
+            {
+                if (!SystemInfo.supportsDepthAttachmentAsInputAttachment)
+                {
+                    throw new InvalidOperationException(
+                        RenderGraphExceptionMessages.DepthInputAttachmentNotSupported(m_RenderPass.name));
+                }
+            }
+        }
 
         public void EnableAsyncCompute(bool value)
         {
@@ -531,7 +556,20 @@ namespace UnityEngine.Rendering.RenderGraphModule
 
             CheckFrameBufferFetchEmulationIsSupported(tex);
 
-            CheckUseFragment(tex, false);
+            // Check if this is a depth texture - requires DepthAttachmentAsInputAttachment feature flag
+            m_Resources.GetRenderTargetInfo(tex.handle, out var info);
+            if (GraphicsFormatUtility.IsDepthFormat(info.format))
+            {
+                CheckDepthInputAttachmentFlagEnabled();
+                CheckDepthInputAttachmentSupported();
+                CheckUseFragment(tex, true);
+            }
+            else
+            {
+                // Note: Regular color input attachments don't require extended feature flags - supported everywhere
+                CheckUseFragment(tex, false);
+            }
+
             var versionedTextureHandle = new TextureHandle(UseResource(tex.handle, flags));
             m_RenderPass.SetFragmentInputRaw(versionedTextureHandle, index, flags, mipLevel, depthSlice);
         }

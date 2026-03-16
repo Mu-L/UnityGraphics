@@ -1043,6 +1043,7 @@ namespace UnityEngine.Rendering.HighDefinition
             CoreUtils.Destroy(m_FinalBlitWithOETFTexArraySingleSlice);
 
             XRSystem.Dispose();
+            TextureXR.Cleanup();
             m_WaterSystem.Cleanup();
             m_VolumetricClouds.Cleanup();
             m_SkyManager.Cleanup();
@@ -1226,6 +1227,8 @@ namespace UnityEngine.Rendering.HighDefinition
 
             m_ShaderVariablesGlobalCB._ColorPyramidUvScaleAndLimitCurrentFrame = HDUtils.ComputeViewportScaleAndLimit(hdCamera.historyRTHandleProperties.currentViewportSize, hdCamera.historyRTHandleProperties.currentRenderTargetSize);
             m_ShaderVariablesGlobalCB._ColorPyramidUvScaleAndLimitPrevFrame = HDUtils.ComputeViewportScaleAndLimit(hdCamera.historyRTHandleProperties.previousViewportSize, hdCamera.historyRTHandleProperties.previousRenderTargetSize);
+            m_ShaderVariablesGlobalCB._ContactShadowDirectionalOnly = m_ContactShadows.directionalOnly.value ? 1u : 0u;
+            m_ShaderVariablesGlobalCB._ContactShadowHalfResolution = m_ContactShadows.halfResolution.value ? 1u : 0u;
 
             ConstantBuffer.PushGlobal(cmd, m_ShaderVariablesGlobalCB, HDShaderIDs._ShaderVariablesGlobal);
         }

@@ -116,7 +116,15 @@ GraphicsSettings:
     UnityEngine.Rendering.Universal.UniversalRenderPipeline: {fileID: 11400000, guid: 7e7acb644b0c301488c70628952b1f1c,
       type: 2}
   m_ShaderBuildSettings:
-    keywordDeclarationOverrides: []
+    keywordDeclarationOverrides:
+    - keywords:
+      - name: _
+        keepInBuild: 1
+      - name: _SCREEN_SPACE_REFLECTION
+        keepInBuild: 1
+      variantGenerationMode: 3
+    numInternalDefines: 0
+    defines: []
   m_LightsUseLinearIntensity: 1
   m_LightsUseColorTemperature: 1
   m_LogWhenShaderIsCompiled: 0

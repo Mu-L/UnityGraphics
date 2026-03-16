@@ -5,6 +5,8 @@ using System.Runtime.InteropServices;
 using Unity.Mathematics;
 using UnityEngine;
 using Unity.Collections.LowLevel.Unsafe;
+using UnityEditor.LightBaking;
+using MixedLightingMode = UnityEngine.MixedLightingMode;
 
 // The types defined in this file should match the types defined in BakeInput.h.
 namespace UnityEditor.PathTracing.LightBakerBridge
@@ -252,6 +254,15 @@ namespace UnityEditor.PathTracing.LightBakerBridge
         public float aoDistance;
         public bool useHardwareRayTracing;
 
+        public LightSamplingMode directLightSamplingMode;
+        public uint directRISCandidateCount;
+        public LightSamplingMode indirectLightSamplingMode;
+        public UInt32 indirectRISCandidateCount;
+        public LightAccelerationStructure lightAccelerationStructure;
+        public uint lightGridMaxCells;
+        public EmissiveSamplingMode directEmissiveSamplingMode;
+        public EmissiveSamplingMode indirectEmissiveSamplingMode;
+
         public void Transfer(IBakeInputVisitor visitor)
         {
             visitor.Transfer(ref lightmapSampleCounts);
@@ -263,6 +274,15 @@ namespace UnityEditor.PathTracing.LightBakerBridge
             visitor.TransferBoolean(ref aoEnabled);
             visitor.TransferBlittable(ref aoDistance);
             visitor.TransferBoolean(ref useHardwareRayTracing);
+
+            visitor.TransferBlittable(ref directLightSamplingMode);
+            visitor.TransferBlittable(ref directRISCandidateCount);
+            visitor.TransferBlittable(ref indirectLightSamplingMode);
+            visitor.TransferBlittable(ref indirectRISCandidateCount);
+            visitor.TransferBlittable(ref lightAccelerationStructure);
+            visitor.TransferBlittable(ref lightGridMaxCells);
+            visitor.TransferBlittable(ref directEmissiveSamplingMode);
+            visitor.TransferBlittable(ref indirectEmissiveSamplingMode);
         }
     }
 
@@ -893,7 +913,9 @@ namespace UnityEditor.PathTracing.LightBakerBridge
         public UInt32[] instanceToTextureDataIndex; // Index into albedoData and emissiveData for each instance
         public Int32[] materialToTransmissionDataIndex; // Index into transmissionData and transmissionDataProperties for each material
         public TextureData[] albedoData;
+        public TextureProperties[] albedoDataProperties; // Same size as albedoData
         public TextureData[] emissiveData;
+        public TextureProperties[] emissiveDataProperties; // Same size as emissiveData
         public TextureData[] transmissionData; // Same size as transmissionDataProperties
         public TextureProperties[] transmissionDataProperties; // Same size as transmissionData
         // Cookie data
@@ -914,7 +936,9 @@ namespace UnityEditor.PathTracing.LightBakerBridge
             visitor.TransferBlittableArray(ref instanceToTextureDataIndex);
             visitor.TransferBlittableArray(ref materialToTransmissionDataIndex);
             visitor.TransferArray(ref albedoData);
+            visitor.TransferArray(ref albedoDataProperties);
             visitor.TransferArray(ref emissiveData);
+            visitor.TransferArray(ref emissiveDataProperties);
             visitor.TransferArray(ref transmissionData);
             visitor.TransferArray(ref transmissionDataProperties);
             visitor.TransferArray(ref cookieData);
@@ -927,7 +951,7 @@ namespace UnityEditor.PathTracing.LightBakerBridge
     {
         // Should match BakeInputSerialization::kCurrentFileVersion in BakeInputSerialization.h.
         // If these are out of sync, the implementation in this file probably needs to be updated.
-        const UInt64 CurrentFileVersion = 202601191;
+        const UInt64 CurrentFileVersion = 202603061;
 
         public static bool Deserialize(string path, out BakeInput bakeInput)
         {

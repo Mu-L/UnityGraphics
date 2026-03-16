@@ -719,7 +719,7 @@ GameObject:
   - component: {fileID: 219034148}
   m_Layer: 0
   m_Name: Camera3
-  m_TagString: MainCamera
+  m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
@@ -1090,7 +1090,7 @@ GameObject:
   - component: {fileID: 298671246}
   m_Layer: 0
   m_Name: Camera4
-  m_TagString: MainCamera
+  m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
@@ -1629,7 +1629,7 @@ GameObject:
   - component: {fileID: 598190381}
   m_Layer: 0
   m_Name: Camera4
-  m_TagString: MainCamera
+  m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
@@ -1901,7 +1901,7 @@ GameObject:
   - component: {fileID: 707532090}
   m_Layer: 0
   m_Name: Camera4
-  m_TagString: MainCamera
+  m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
@@ -2090,7 +2090,7 @@ GameObject:
   - component: {fileID: 727444291}
   m_Layer: 0
   m_Name: Camera2
-  m_TagString: MainCamera
+  m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
@@ -2769,7 +2769,7 @@ GameObject:
   - component: {fileID: 840047874}
   m_Layer: 0
   m_Name: Camera1
-  m_TagString: MainCamera
+  m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
@@ -3202,7 +3202,7 @@ GameObject:
   - component: {fileID: 849348813}
   m_Layer: 0
   m_Name: Camera1
-  m_TagString: MainCamera
+  m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
@@ -3785,7 +3785,7 @@ GameObject:
   - component: {fileID: 1214449688}
   m_Layer: 0
   m_Name: Camera3
-  m_TagString: MainCamera
+  m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
@@ -4207,7 +4207,7 @@ GameObject:
   - component: {fileID: 1320503530}
   m_Layer: 0
   m_Name: Camera2
-  m_TagString: MainCamera
+  m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
@@ -5073,7 +5073,7 @@ GameObject:
   - component: {fileID: 1753111754}
   m_Layer: 0
   m_Name: Camera3
-  m_TagString: MainCamera
+  m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
@@ -5262,7 +5262,7 @@ GameObject:
   - component: {fileID: 1781338326}
   m_Layer: 0
   m_Name: Camera2
-  m_TagString: MainCamera
+  m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
@@ -6679,7 +6679,7 @@ GameObject:
   - component: {fileID: 2121218950}
   m_Layer: 0
   m_Name: Camera1
-  m_TagString: MainCamera
+  m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0

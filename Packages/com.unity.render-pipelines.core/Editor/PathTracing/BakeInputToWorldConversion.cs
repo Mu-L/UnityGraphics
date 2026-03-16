@@ -2,13 +2,15 @@ using System;
 using System.Collections.Generic;
 using UnityEngine.PathTracing.Core;
 using UnityEngine.Rendering;
-using UnityEngine.LightTransport;
 using Unity.Mathematics;
+using UnityEditor.LightBaking;
 using UnityEngine;
 using UnityEngine.PathTracing.Lightmapping;
 using UnityEngine.PathTracing.Integration;
 using UnityEngine.Rendering.Sampling;
 using UnityEngine.Rendering.UnifiedRayTracing;
+using InputExtraction = UnityEngine.LightTransport.InputExtraction;
+using Material = UnityEngine.Material;
 
 namespace UnityEditor.PathTracing.LightBakerBridge
 {
@@ -208,7 +210,7 @@ namespace UnityEditor.PathTracing.LightBakerBridge
                 lights[i] = lightDescriptor;
             }
 
-            world.lightPickingMethod = LightPickingMethod.LightGrid;
+            world.lightPickingMethod = bakeInput.lightingSettings.lightAccelerationStructure == LightAccelerationStructure.LightGrid ? LightPickingMethod.LightGrid : LightPickingMethod.Uniform;
             lightHandles = world.AddLights(lights, false, autoEstimateLUTRange, bakeInput.lightingSettings.mixedLightingMode);
         }
 
@@ -267,15 +269,27 @@ namespace UnityEditor.PathTracing.LightBakerBridge
             // Create albedo and emission textures from materials
             var perTexturePairMaterials = new MaterialPool.MaterialDescriptor[bakeInput.albedoData.Length];
             Debug.Assert(bakeInput.albedoData.Length == bakeInput.emissiveData.Length);
+            Debug.Assert(bakeInput.albedoData.Length == bakeInput.albedoDataProperties.Length);
+            Debug.Assert(bakeInput.emissiveData.Length == bakeInput.emissiveDataProperties.Length);
             for (int i = 0; i < bakeInput.albedoData.Length; i++)
             {
                 ref var material = ref perTexturePairMaterials[i];
                 var baseTexture = CreateTexture2DFromTextureData(in bakeInput.albedoData[i], $"World (albedo) {i}");
+                ref readonly TextureProperties albedoProperties = ref bakeInput.albedoDataProperties[i];
+                baseTexture.wrapModeU = albedoProperties.wrapModeU;
+                baseTexture.wrapModeV = albedoProperties.wrapModeV;
+                baseTexture.filterMode = albedoProperties.filterMode;
                 allocatedObjects.Add(baseTexture);
                 var emissiveTexture = CreateTexture2DFromTextureData(in bakeInput.emissiveData[i], $"World (emissive) {i}");
+                ref readonly TextureProperties emissiveProperties = ref bakeInput.emissiveDataProperties[i];
+                emissiveTexture.wrapModeU = emissiveProperties.wrapModeU;
+                emissiveTexture.wrapModeV = emissiveProperties.wrapModeV;
+                emissiveTexture.filterMode = emissiveProperties.filterMode;
                 allocatedObjects.Add(emissiveTexture);
                 material.Albedo = baseTexture;
                 material.Emission = emissiveTexture;
+                material.PointSampleAlbedo = albedoProperties.filterMode == FilterMode.Point;
+                material.PointSampleEmission = emissiveProperties.filterMode == FilterMode.Point;
 
                 // Only mark emissive if it isn't the default black texture
                 bool isEmissiveSinglePixel = bakeInput.emissiveData[i].data.Length == 1;
@@ -537,7 +551,7 @@ namespace UnityEditor.PathTracing.LightBakerBridge
             Dictionary<int, List<LodInstanceBuildData>> lodInstances;
             Dictionary<Int32, List<ContributorLodInfo>> lodgroupToContributorInstances;
             WorldHelpers.AddContributingInstancesToWorld(world.PathTracingWorld, in fatInstances, out lodInstances, out lodgroupToContributorInstances);
-            world.PathTracingWorld.Build(sceneBounds, cmd, ref world.ScratchBuffer, samplingResources, true, 1024);
+            world.PathTracingWorld.Build(sceneBounds, cmd, ref world.ScratchBuffer, samplingResources, true, 1024, (int)input.bakeInput.GetLightingSettings().lightGridMaxCells);
         }
 
         internal static void DeserializeAndInjectBakeInputData(

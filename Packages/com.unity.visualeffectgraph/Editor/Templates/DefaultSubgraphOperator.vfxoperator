@@ -12,10 +12,6 @@ VisualEffectResource:
     m_RendererSettings:
       motionVectorGenerationMode: 0
       shadowCastingMode: 0
-      rayTracingMode: 0
-      receiveShadows: 0
-      reflectionProbeUsage: 0
-      lightProbeUsage: 0
     m_CullingFlags: 3
     m_UpdateMode: 0
     m_PreWarmDeltaTime: 0.05
@@ -57,15 +53,14 @@ MonoBehaviour:
     realType: Single
     defaultValue:
       m_Type:
-        m_SerializableType: System.Single, mscorlib, Version=4.0.0.0, Culture=neutral,
-          PublicKeyToken=b77a5c561934e089
+        m_SerializableType: System.Single, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089
       m_SerializableObject: 0
     min: -Infinity
     max: Infinity
     enumValues: []
     descendantCount: 0
   m_ImportDependencies: []
-  m_GraphVersion: 18
+  m_GraphVersion: 19
   m_ResourceVersion: 1
   m_SubgraphDependencies: []
   m_CategoryPath: Subgraph Operator
@@ -116,12 +111,10 @@ MonoBehaviour:
   m_Operands:
   - name: a
     type:
-      m_SerializableType: System.Single, mscorlib, Version=4.0.0.0, Culture=neutral,
-        PublicKeyToken=b77a5c561934e089
+      m_SerializableType: System.Single, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089
   - name: b
     type:
-      m_SerializableType: System.Single, mscorlib, Version=4.0.0.0, Culture=neutral,
-        PublicKeyToken=b77a5c561934e089
+      m_SerializableType: System.Single, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089
 --- !u!114 &16
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -145,15 +138,13 @@ MonoBehaviour:
     m_Owner: {fileID: 15}
     m_Value:
       m_Type:
-        m_SerializableType: System.Single, mscorlib, Version=4.0.0.0, Culture=neutral,
-          PublicKeyToken=b77a5c561934e089
+        m_SerializableType: System.Single, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089
       m_SerializableObject: 1
     m_Space: -1
   m_Property:
     name: a
     m_serializedType:
-      m_SerializableType: System.Single, mscorlib, Version=4.0.0.0, Culture=neutral,
-        PublicKeyToken=b77a5c561934e089
+      m_SerializableType: System.Single, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089
   m_Direction: 0
   m_LinkedSlots:
   - {fileID: 20}
@@ -180,15 +171,13 @@ MonoBehaviour:
     m_Owner: {fileID: 15}
     m_Value:
       m_Type:
-        m_SerializableType: System.Single, mscorlib, Version=4.0.0.0, Culture=neutral,
-          PublicKeyToken=b77a5c561934e089
+        m_SerializableType: System.Single, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089
       m_SerializableObject: -1
     m_Space: -1
   m_Property:
     name: b
     m_serializedType:
-      m_SerializableType: System.Single, mscorlib, Version=4.0.0.0, Culture=neutral,
-        PublicKeyToken=b77a5c561934e089
+      m_SerializableType: System.Single, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089
   m_Direction: 0
   m_LinkedSlots: []
 --- !u!114 &18
@@ -214,15 +203,13 @@ MonoBehaviour:
     m_Owner: {fileID: 15}
     m_Value:
       m_Type:
-        m_SerializableType: System.Single, mscorlib, Version=4.0.0.0, Culture=neutral,
-          PublicKeyToken=b77a5c561934e089
+        m_SerializableType: System.Single, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089
       m_SerializableObject: 
     m_Space: -1
   m_Property:
     name: 
     m_serializedType:
-      m_SerializableType: System.Single, mscorlib, Version=4.0.0.0, Culture=neutral,
-        PublicKeyToken=b77a5c561934e089
+      m_SerializableType: System.Single, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089
   m_Direction: 1
   m_LinkedSlots:
   - {fileID: 26}
@@ -273,6 +260,7 @@ MonoBehaviour:
     position: {x: 814, y: -378}
     expandedSlots: []
     expanded: 0
+    supecollapsed: 0
 --- !u!114 &20
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -296,15 +284,13 @@ MonoBehaviour:
     m_Owner: {fileID: 19}
     m_Value:
       m_Type:
-        m_SerializableType: System.Single, mscorlib, Version=4.0.0.0, Culture=neutral,
-          PublicKeyToken=b77a5c561934e089
+        m_SerializableType: System.Single, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089
       m_SerializableObject: 0
     m_Space: -1
   m_Property:
     name: o
     m_serializedType:
-      m_SerializableType: System.Single, mscorlib, Version=4.0.0.0, Culture=neutral,
-        PublicKeyToken=b77a5c561934e089
+      m_SerializableType: System.Single, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089
   m_Direction: 1
   m_LinkedSlots:
   - {fileID: 16}
@@ -354,6 +340,7 @@ MonoBehaviour:
     position: {x: 1189, y: -282}
     expandedSlots: []
     expanded: 0
+    supecollapsed: 0
 --- !u!114 &23
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -399,6 +386,7 @@ MonoBehaviour:
     position: {x: 1191, y: -380}
     expandedSlots: []
     expanded: 0
+    supecollapsed: 0
 --- !u!114 &25
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -422,15 +410,13 @@ MonoBehaviour:
     m_Owner: {fileID: 23}
     m_Value:
       m_Type:
-        m_SerializableType: System.Single, mscorlib, Version=4.0.0.0, Culture=neutral,
-          PublicKeyToken=b77a5c561934e089
+        m_SerializableType: System.Single, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089
       m_SerializableObject: 0
     m_Space: -1
   m_Property:
     name: i
     m_serializedType:
-      m_SerializableType: System.Single, mscorlib, Version=4.0.0.0, Culture=neutral,
-        PublicKeyToken=b77a5c561934e089
+      m_SerializableType: System.Single, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089
   m_Direction: 0
   m_LinkedSlots:
   - {fileID: 20}
@@ -457,15 +443,13 @@ MonoBehaviour:
     m_Owner: {fileID: 21}
     m_Value:
       m_Type:
-        m_SerializableType: System.Single, mscorlib, Version=4.0.0.0, Culture=neutral,
-          PublicKeyToken=b77a5c561934e089
+        m_SerializableType: System.Single, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089
       m_SerializableObject: 0
     m_Space: -1
   m_Property:
     name: i
     m_serializedType:
-      m_SerializableType: System.Single, mscorlib, Version=4.0.0.0, Culture=neutral,
-        PublicKeyToken=b77a5c561934e089
+      m_SerializableType: System.Single, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089
   m_Direction: 0
   m_LinkedSlots:
   - {fileID: 18}
