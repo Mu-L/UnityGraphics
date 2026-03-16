@@ -490,7 +490,7 @@ namespace UnityEngine.Rendering.Universal
 
             public CameraRenderingScope(ScriptableRenderContext context, Camera camera)
             {
-                using (new ProfilingScope(beginCameraRenderingSampler))
+                using (new ProfilingScope(beginCameraRenderingSampler, camera))
                 {
                     m_Context = context;
                     m_Camera = camera;
@@ -501,7 +501,7 @@ namespace UnityEngine.Rendering.Universal
 
             public void Dispose()
             {
-                using (new ProfilingScope(endCameraRenderingSampler))
+                using (new ProfilingScope(endCameraRenderingSampler, m_Camera))
                 {
                     EndCameraRendering(m_Context, m_Camera);
                 }
@@ -898,9 +898,9 @@ namespace UnityEngine.Rendering.Universal
             CommandBuffer cmdScope = cameraData.xr.enabled ? null : cmd;
 
             var cameraMetadata = CameraMetadataCache.GetCached(camera);
-            using (new ProfilingScope(cmdScope, cameraMetadata.sampler)) // Enqueues a "BeginSample" command into the CommandBuffer cmd
+            using (new ProfilingScope(cmdScope, cameraMetadata.sampler, camera)) // Enqueues a "BeginSample" command into the CommandBuffer cmd
             {
-                using (new ProfilingScope(Profiling.Pipeline.Renderer.setupCullingParameters))
+                using (new ProfilingScope(Profiling.Pipeline.Renderer.setupCullingParameters, camera))
                 {
                     var legacyCameraData = new CameraData(frameData);
 
@@ -978,7 +978,7 @@ namespace UnityEngine.Rendering.Universal
                 UniversalShadowData shadowData;
                 CullContextData cullData;
 
-                using (new ProfilingScope(Profiling.Pipeline.initializeRenderingData))
+                using (new ProfilingScope(Profiling.Pipeline.initializeRenderingData, camera))
                 {
                     CreateUniversalResourceData(frameData);
                     lightData = CreateLightData(frameData, asset, data.cullResults.visibleLights, renderingMode);
@@ -1006,7 +1006,7 @@ namespace UnityEngine.Rendering.Universal
             context.ExecuteCommandBuffer(cmd); // Sends to ScriptableRenderContext all the commands enqueued since cmd.Clear, i.e the "EndSample" command
             CommandBufferPool.Release(cmd);
 
-            using (new ProfilingScope(Profiling.Pipeline.Context.submit))
+            using (new ProfilingScope(Profiling.Pipeline.Context.submit, cameraData.camera))
             {
                 context.Submit(); // Actually execute the commands that we previously sent to the ScriptableRenderContext context
             }
@@ -1037,7 +1037,7 @@ namespace UnityEngine.Rendering.Universal
         /// <param name="isLastBaseCamera">True if this is the last base camera.</param>
         static void RenderCameraStack(ScriptableRenderContext context, Camera baseCamera, bool isLastBaseCamera)
         {
-            using var profScope = new ProfilingScope(ProfilingSampler.Get(URPProfileId.RenderCameraStack));
+            using var profScope = new ProfilingScope(ProfilingSampler.Get(URPProfileId.RenderCameraStack), baseCamera);
 
             baseCamera.TryGetComponent<UniversalAdditionalCameraData>(out var baseCameraAdditionalData);
 

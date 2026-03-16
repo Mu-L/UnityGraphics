@@ -198,6 +198,34 @@ namespace UnityEngine.Rendering.Tests
             Assert.Greater(m_Sampler.inlineCpuSampleCount, 0);
         }
 
+        [UnityTest]
+        public IEnumerator ProfilingScopeWithObject_InlineCpu_IsCapturedByRecorder()
+        {
+            m_Sampler.enableRecording = true;
+
+            var texture = new Texture2D(1, 1) { name = "TestTexture" };
+            for (int i = 0; i < 2; i++)
+            {
+                using (new ProfilingScope(m_Sampler, texture))
+                { }
+                yield return null;
+            }
+            UnityEngine.Object.DestroyImmediate(texture);
+
+            Assert.Greater(m_Sampler.inlineCpuElapsedTime, 0.0f);
+            Assert.Greater(m_Sampler.inlineCpuSampleCount, 0);
+        }
+
+        [Test]
+        public void ProfilingScopeWithNullObject_InlineCpu_DoesNotCrash()
+        {
+            Assert.DoesNotThrow(() =>
+            {
+                using (new ProfilingScope(m_Sampler, null))
+                { }
+            });
+        }
+
         [Test]
         public void Dispose_DoesNotThrow()
         {

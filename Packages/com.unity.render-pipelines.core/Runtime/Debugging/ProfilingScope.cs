@@ -162,6 +162,25 @@ namespace UnityEngine.Rendering
         }
 
         /// <summary>
+        /// Begins the profiling block with a Unity Object context associated with the sample.
+        /// Records both a command-buffer marker (if <paramref name="cmd"/> is non-null) and an
+        /// inline CPU marker.
+        /// </summary>
+        /// <param name="cmd">Command buffer to receive the GPU-visible marker.
+        /// Pass <c>null</c> for CPU-only inline profiling.</param>
+        /// <param name="contextObject">Unity Object (e.g. Texture, Mesh, Material) to associate
+        /// with this sample. The Profiler displays it in the sample hierarchy.</param>
+        [Conditional("ENABLE_PROFILER")]
+        [MethodImpl(MethodImplOptions.AggressiveInlining | (MethodImplOptions)512)]
+        public void Begin(CommandBuffer cmd, Object contextObject)
+        {
+#if ENABLE_PROFILER
+            cmd?.BeginSample(m_Marker, contextObject);
+            m_InlineMarker.Begin(contextObject);
+#endif
+        }
+
+        /// <summary>
         /// Ends the profiling block started by <see cref="Begin"/> call.
         /// </summary>
         /// <param name="cmd">The same command buffer passed to <see cref="Begin"/> call,
@@ -345,7 +364,6 @@ namespace UnityEngine.Rendering
 #if ENABLE_PROFILER
         ProfilingSampler    m_Sampler;
         CommandBuffer       m_Cmd;
-        bool                m_Disposed;
 #endif
 
         /// <summary>
@@ -353,14 +371,25 @@ namespace UnityEngine.Rendering
         /// </summary>
         /// <param name="sampler">The sampler that provides the underlying marker.
         /// May be <c>null</c>; the scope is a no-op in that case.</param>
+        [MethodImpl(MethodImplOptions.AggressiveInlining | (MethodImplOptions)512)]
         public ProfilingScope(ProfilingSampler sampler)
+            : this((CommandBuffer)null, sampler)
         {
-#if ENABLE_PROFILER
-            m_Sampler = sampler;
-            m_Cmd = null;
-            m_Disposed = false;
-            m_Sampler?.Begin(m_Cmd);
-#endif            
+        }
+
+        /// <summary>
+        /// Creates an inline CPU-only profiling scope with a Unity Object context associated
+        /// with the sample. No command buffer is involved; the marker is emitted directly
+        /// on the CPU timeline.
+        /// </summary>
+        /// <param name="sampler">The sampler that provides the underlying marker.
+        /// May be <c>null</c>; the scope is a no-op in that case.</param>
+        /// <param name="contextObject">Unity Object (e.g. Texture, Mesh, Material) to associate
+        /// with this sample. The Profiler displays it in the sample hierarchy.</param>
+        [MethodImpl(MethodImplOptions.AggressiveInlining | (MethodImplOptions)512)]
+        public ProfilingScope(ProfilingSampler sampler, Object contextObject)
+            : this(null, sampler, contextObject)
+        {
         }
 
         /// <summary>
@@ -377,15 +406,29 @@ namespace UnityEngine.Rendering
         public ProfilingScope(CommandBuffer cmd, ProfilingSampler sampler)
         {
 #if ENABLE_PROFILER
-            if (sampler != null)
-            {
-                m_Disposed = false;
-                sampler.Begin(cmd);
-            }
-            else
-            {
-                m_Disposed = true;
-            }
+            sampler?.Begin(cmd);
+            m_Sampler = sampler;
+            m_Cmd = cmd;
+#endif
+        }
+
+        /// <summary>
+        /// Creates a profiling scope that records markers into <paramref name="cmd"/> with a
+        /// Unity Object context associated with the sample.
+        /// </summary>
+        /// <remarks>
+        /// Do not use with a named <see cref="CommandBuffer"/>. A named command buffer inserts
+        /// its own scope marker on execution, which orphans the markers added here.
+        /// </remarks>
+        /// <param name="cmd">Command buffer to receive the GPU-visible begin/end markers.</param>
+        /// <param name="sampler">The sampler that provides the underlying marker.
+        /// May be <c>null</c>; the scope is a no-op in that case.</param>
+        /// <param name="contextObject">Unity Object (e.g. Texture, Mesh, Material) to associate
+        /// with this sample. The Profiler displays it in the sample hierarchy.</param>
+        public ProfilingScope(CommandBuffer cmd, ProfilingSampler sampler, Object contextObject)
+        {
+#if ENABLE_PROFILER
+            sampler?.Begin(cmd, contextObject);
             m_Sampler = sampler;
             m_Cmd = cmd;
 #endif
@@ -405,15 +448,7 @@ namespace UnityEngine.Rendering
         public ProfilingScope(BaseCommandBuffer cmd, ProfilingSampler sampler)
         {
 #if ENABLE_PROFILER
-            if (sampler != null)
-            {
-                m_Disposed = false;
-                sampler.Begin(cmd.m_WrappedCommandBuffer);
-            }
-            else
-            {
-                m_Disposed = true;
-            }
+            sampler?.Begin(cmd.m_WrappedCommandBuffer);
             m_Sampler = sampler;
             m_Cmd = cmd.m_WrappedCommandBuffer;
 #endif
@@ -425,11 +460,11 @@ namespace UnityEngine.Rendering
         public void Dispose()
         {
 #if ENABLE_PROFILER
-            if (m_Disposed)
+            if (m_Sampler == null)
                 return;
 
-            m_Sampler?.End(m_Cmd);
-            m_Disposed = true;
+            m_Sampler.End(m_Cmd);
+            m_Sampler = null;
 #endif
         }
     }
