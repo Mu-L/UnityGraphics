@@ -1,5 +1,7 @@
 # Bloom
 
+[!include[birp-deprecation-message](snippets/birp-deprecation-message.md)]
+
 The **Bloom** effect makes bright areas in your image glow. To do this, it creates fringes of light that extend from bright areas in your image. This simulates the effect a real-world camera gives when light overwhelms the lens.
 
 The Bloom effect also has a **Dirtiness** feature, which you can use to apply a full-screen layer of smudges or dust to diffract the Bloom effect.

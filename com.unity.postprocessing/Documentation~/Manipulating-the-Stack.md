@@ -1,5 +1,7 @@
 # Controlling effects using scripts
 
+[!include[birp-deprecation-message](snippets/birp-deprecation-message.md)]
+
 This guide explains how to modify a post-processing script to create time-based events or temporary post-processing effects.
 
 ## Quick Volumes

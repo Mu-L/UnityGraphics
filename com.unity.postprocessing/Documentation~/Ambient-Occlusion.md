@@ -1,5 +1,7 @@
 # Ambient Occlusion
 
+[!include[birp-deprecation-message](snippets/birp-deprecation-message.md)]
+
 The **Ambient Occlusion** effect calculates points in your scene that are exposed to ambient lighting. It then darkens areas that are hidden from the ambient light, such as creases, holes, and spaces between objects which are close together.
 
 You can achieve the **Ambient Occlusion** effect in two ways: in real-time as a full-screen post-processing effect, or as a baked lighting effect (see [Baked Ambient Occlusion](https://docs.unity3d.com/Manual/LightingBakedAmbientOcclusion.html)). The real-time **Ambient Occlusion** effect can be resource-intensive, which makes it better for desktop or console platforms. Its impact on processing time depends on screen resolution and effects properties.

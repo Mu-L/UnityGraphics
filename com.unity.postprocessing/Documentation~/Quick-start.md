@@ -1,5 +1,7 @@
 # Getting started with post-processing
 
+[!include[birp-deprecation-message](snippets/birp-deprecation-message.md)]
+
 This page explains how to set up the components required to create post-processing effects in your scene.
 
 <a name="post-process-layer"></a>

@@ -1,5 +1,7 @@
 # Installation
 
+[!include[birp-deprecation-message](snippets/birp-deprecation-message.md)]
+
 Use the [**Package Manager**](https://docs.unity3d.com/Manual/upm-ui.html) to install the **Post Processing** package or to update an installed package to the latest version.
 
 To install the **Post Processing** package:

@@ -1,5 +1,7 @@
 # Grain
 
+[!include[birp-deprecation-message](snippets/birp-deprecation-message.md)]
+
 The **Grain** effect overlays film noise onto your image. Film noise is the effect that real-world cameras produce when small particles in the camera’s film give the image a coarse, unprocessed effect.
 Unity’s **Grain** effect is based on a coherent gradient noise. This gives your game a gritty effect that simulates the imperfections of film.
 

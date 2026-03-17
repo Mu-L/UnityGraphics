@@ -1,5 +1,7 @@
 # Auto Exposure
 
+[!include[birp-deprecation-message](snippets/birp-deprecation-message.md)]
+
 The **Auto Exposure** effect simulates how the human eye adjusts to changes in brightness in real-time. To do this, it dynamically adjusts the exposure of an image to match its mid-tone.
 
 In Unity, this effect generates a histogram on every frame and filters it to find the average luminance value. This histogram and the **Auto Exposure** effect requires [Compute shader](https://docs.unity3d.com/Manual/class-ComputeShader.html) support.
