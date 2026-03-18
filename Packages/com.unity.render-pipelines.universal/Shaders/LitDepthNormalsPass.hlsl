@@ -99,6 +99,15 @@ void DepthNormalsFragment(
     UNITY_SETUP_INSTANCE_ID(input);
     UNITY_SETUP_STEREO_EYE_INDEX_POST_VERTEX(input);
 
+    #if defined(_PARALLAXMAP)
+        #if defined(REQUIRES_TANGENT_SPACE_VIEW_DIR_INTERPOLATOR)
+            half3 viewDirTS = input.viewDirTS;
+        #else
+            half3 viewDirTS = GetViewDirectionTangentSpace(input.tangentWS, input.normalWS, input.viewDirWS);
+        #endif
+        ApplyPerPixelDisplacement(viewDirTS, input.uv);
+    #endif
+
     #if defined(_ALPHATEST_ON) || defined(_WRITE_SMOOTHNESS)
         float alpha = SampleAlbedoAlpha(input.uv, TEXTURE2D_ARGS(_BaseMap, sampler_BaseMap)).a;
     #endif
@@ -118,15 +127,6 @@ void DepthNormalsFragment(
         half3 packedNormalWS = PackFloat2To888(remappedOctNormalWS);      // values between [ 0,  1]
         outNormalWS = half4(packedNormalWS, 0.0);
     #else
-        #if defined(_PARALLAXMAP)
-            #if defined(REQUIRES_TANGENT_SPACE_VIEW_DIR_INTERPOLATOR)
-                half3 viewDirTS = input.viewDirTS;
-            #else
-                half3 viewDirTS = GetViewDirectionTangentSpace(input.tangentWS, input.normalWS, input.viewDirWS);
-            #endif
-            ApplyPerPixelDisplacement(viewDirTS, input.uv);
-        #endif
-
         #if defined(_NORMALMAP) || defined(_DETAIL)
             float sgn = input.tangentWS.w;      // should be either +1 or -1
             float3 bitangent = sgn * cross(input.normalWS.xyz, input.tangentWS.xyz);
