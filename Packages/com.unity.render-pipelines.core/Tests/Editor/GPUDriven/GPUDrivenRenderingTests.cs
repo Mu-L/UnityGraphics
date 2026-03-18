@@ -146,6 +146,14 @@ namespace UnityEngine.Rendering.Tests
             m_GPUResidentDrawer = null;
         }
 
+#if ENABLE_TERRAIN_MODULE
+        [Test]
+        public void TestInstanceDataSystemWindParamsCountIsInSyncWithTerrainModule()
+        {
+            Assert.AreEqual((int)SpeedTreeWindParamIndex.MaxWindParamsCount, InstanceDataSystem.k_STMaxWindParamsCount);
+        }
+#endif
+
         [Test, ConditionalIgnore("IgnoreGfxAPI", "Graphics API Not Supported.")]
         public void TestInstanceCullingBatcherAddRemove()
         {

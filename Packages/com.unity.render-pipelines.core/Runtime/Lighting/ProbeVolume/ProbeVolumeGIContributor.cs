@@ -11,6 +11,18 @@ namespace UnityEngine.Rendering
     struct GIContributors
     {
 #if UNITY_EDITOR
+
+        static GIContributors Create()
+        {
+            GIContributors contributors;
+            contributors.renderers = new();
+#if ENABLE_TERRAIN_MODULE
+            contributors.terrains = new();
+#endif
+            return contributors;
+        }
+
+#if ENABLE_TERRAIN_MODULE
         public struct TerrainContributor
         {
             public struct TreePrototype
@@ -28,10 +40,17 @@ namespace UnityEngine.Rendering
             public TreePrototype[] treePrototypes;
         }
 
-        public List<(Renderer component, Bounds bounds)> renderers;
         public List<TerrainContributor> terrains;
+#endif
 
-        public int Count => renderers.Count + terrains.Count;
+        public List<(Renderer component, Bounds bounds)> renderers;
+
+        public int Count =>
+#if ENABLE_TERRAIN_MODULE
+            renderers.Count + terrains.Count;
+#else
+            renderers.Count;
+#endif
 
         internal enum ContributorFilter { All, Scene, Selection };
 
@@ -67,6 +86,7 @@ namespace UnityEngine.Rendering
             return result;
         }
 
+#if ENABLE_TERRAIN_MODULE
         static internal Matrix4x4 GetTreeInstanceTransform(Terrain terrain, TreeInstance tree)
         {
             var position = terrain.GetPosition() + Vector3.Scale(tree.position, terrain.terrainData.size);
@@ -75,6 +95,7 @@ namespace UnityEngine.Rendering
 
             return Matrix4x4.TRS(position, rotation, scale);
         }
+#endif
 
         public static GIContributors Find(ContributorFilter filter, Scene? scene = null)
         {
@@ -83,11 +104,7 @@ namespace UnityEngine.Rendering
 
             Profiling.Profiler.BeginSample("GIContributors.Find");
 
-            var contributors = new GIContributors()
-            {
-                renderers = new(),
-                terrains = new(),
-            };
+            var contributors = GIContributors.Create();
 
             void PushRenderer(Renderer renderer)
             {
@@ -99,6 +116,7 @@ namespace UnityEngine.Rendering
                 contributors.renderers.Add((renderer, bounds));
             }
 
+#if ENABLE_TERRAIN_MODULE
             void PushTerrain(Terrain terrain)
             {
                 if (!ContributesGI(terrain.gameObject) || !terrain.gameObject.activeInHierarchy || !terrain.enabled || terrain.terrainData == null)
@@ -178,6 +196,7 @@ namespace UnityEngine.Rendering
                     treePrototypes = treePrototypes,
                 });
             }
+#endif
 
             if (filter == ContributorFilter.Selection)
             {
@@ -189,8 +208,10 @@ namespace UnityEngine.Rendering
                     {
                         if (children.gameObject.TryGetComponent(out Renderer renderer))
                             PushRenderer(renderer);
+#if ENABLE_TERRAIN_MODULE
                         else if (children.gameObject.TryGetComponent(out Terrain terrain))
                             PushTerrain(terrain);
+#endif
                     }
                 }
             }
@@ -207,7 +228,8 @@ namespace UnityEngine.Rendering
                 }
                 Profiling.Profiler.EndSample();
 
-                #pragma warning disable CS0618 // Type or member is obsolete
+#if ENABLE_TERRAIN_MODULE
+#pragma warning disable CS0618 // Type or member is obsolete
                 var terrains = Object.FindObjectsByType<Terrain>(FindObjectsSortMode.InstanceID);
 #pragma warning restore CS0618 // Type or member is obsolete
                 Profiling.Profiler.BeginSample($"Find Terrains ({terrains.Length})");
@@ -216,7 +238,9 @@ namespace UnityEngine.Rendering
                     if (filter != ContributorFilter.Scene || terrain.gameObject.scene == scene)
                         PushTerrain(terrain);
                 }
+
                 Profiling.Profiler.EndSample();
+#endif
             }
 
             Profiling.Profiler.EndSample();
@@ -245,11 +269,7 @@ namespace UnityEngine.Rendering
         {
             Profiling.Profiler.BeginSample("Filter GIContributors");
 
-            var contributors = new GIContributors()
-            {
-                renderers = new(),
-                terrains = new(),
-            };
+            var contributors = GIContributors.Create();
 
             Profiling.Profiler.BeginSample($"Filter Renderers ({renderers.Count})");
             foreach (var renderer in renderers)
@@ -273,6 +293,7 @@ namespace UnityEngine.Rendering
             }
             Profiling.Profiler.EndSample();
 
+#if ENABLE_TERRAIN_MODULE
             Profiling.Profiler.BeginSample($"Filter Terrains ({terrains.Count})");
             foreach (var terrain in terrains)
             {
@@ -363,6 +384,7 @@ namespace UnityEngine.Rendering
                 contributors.terrains.Add(terrainContrib);
             }
             Profiling.Profiler.EndSample();
+#endif
 
             Profiling.Profiler.EndSample();
             return contributors;
@@ -372,11 +394,7 @@ namespace UnityEngine.Rendering
         {
             Profiling.Profiler.BeginSample("Filter GIContributors LayerMask");
 
-            var contributors = new GIContributors()
-            {
-                renderers = new(),
-                terrains = new(),
-            };
+            var contributors = GIContributors.Create();
 
             foreach (var renderer in renderers)
             {
@@ -385,6 +403,7 @@ namespace UnityEngine.Rendering
                     contributors.renderers.Add(renderer);
             }
 
+#if ENABLE_TERRAIN_MODULE
             foreach (var terrain in terrains)
             {
                 int terrainLayerMask = 1 << terrain.component.gameObject.layer;
@@ -415,6 +434,7 @@ namespace UnityEngine.Rendering
                     contributors.terrains.Add(terrainContrib);
                 }
             }
+#endif
 
             Profiling.Profiler.EndSample();
             return contributors;

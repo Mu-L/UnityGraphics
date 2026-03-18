@@ -1,3 +1,4 @@
+#if ENABLE_TERRAIN_MODULE
 using System;
 using Unity.Collections;
 using UnityEngine.Profiling;
@@ -93,7 +94,7 @@ namespace UnityEngine.Rendering
 
             Assert.AreEqual(treeRenderers.Length, treeInstances.Length);
             Assert.AreEqual(defaultGPUComponents.speedTreeWind.Length, (int)SpeedTreeWindParamIndex.MaxWindParamsCount);
-            
+
             var gpuIndices = new NativeArray<GPUInstanceIndex>(treeInstances.Length, Allocator.TempJob, NativeArrayOptions.UninitializedMemory);
             m_InstanceDataSystem.QueryInstanceGPUIndices(treeInstances, gpuIndices);
 
@@ -114,7 +115,7 @@ namespace UnityEngine.Rendering
             windParams.elementOffset = 0;
             windParams.elementsCount = treeInstances.Length;
             SpeedTreeWindManager.UpdateWindAndWriteBufferWindParams(treeRenderers, windParams, history);
-            
+
             m_GPUUploadBuffer.SetData(writeBuffer);
 
             m_InstanceDataSystem.UploadDataToGPU(gpuIndices, m_GPUUploadBuffer, uploadData);
@@ -147,3 +148,4 @@ namespace UnityEngine.Rendering
         }
     }
 }
+#endif

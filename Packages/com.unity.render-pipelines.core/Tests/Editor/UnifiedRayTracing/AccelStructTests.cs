@@ -483,6 +483,7 @@ namespace UnityEngine.Rendering.UnifiedRayTracing.Tests
             CheckVisibleInstances(rays, expectedVisibleInstances);
         }
 
+#if ENABLE_TERRAIN_MODULE
         private void AddTerrainToAccelerationStructure(int heightmapResolution)
         {
             Terrain.CreateTerrainGameObject(new TerrainData());
@@ -516,6 +517,7 @@ namespace UnityEngine.Rendering.UnifiedRayTracing.Tests
         {
             AddTerrainToAccelerationStructure(4097);
         }
+#endif
 
         void CheckVisibleInstances(RayWithFlags[] rays, bool[] expectedVisibleInstances)
         {

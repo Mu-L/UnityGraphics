@@ -15,6 +15,7 @@ namespace UnityEngine.Rendering.LiveGI
         public List<MeshRendererChanges> changedMeshRenderers;
         public List<EntityId> removedMeshRenderers;
 
+#if ENABLE_TERRAIN_MODULE
         public List<Terrain> addedTerrains;
         public List<TerrainChanges> changedTerrains;
         public List<EntityId> removedTerrains;
@@ -22,6 +23,7 @@ namespace UnityEngine.Rendering.LiveGI
         public List<TerrainData> addedTerrainData;
         public List<TerrainDataChanges> changedTerrainData;
         public List<EntityId> removedTerrainData;
+#endif
 
         public List<Material> addedMaterials;
         public List<EntityId> removedMaterials;
@@ -37,6 +39,7 @@ namespace UnityEngine.Rendering.LiveGI
             changedMeshRenderers = new List<MeshRendererChanges>();
             removedMeshRenderers = new List<EntityId>();
 
+#if ENABLE_TERRAIN_MODULE
             addedTerrains = new List<Terrain>();
             changedTerrains = new List<TerrainChanges>();
             removedTerrains = new List<EntityId>();
@@ -44,6 +47,7 @@ namespace UnityEngine.Rendering.LiveGI
             addedTerrainData = new List<TerrainData>();
             changedTerrainData = new List<TerrainDataChanges>();
             removedTerrainData = new List<EntityId>();
+#endif
 
             addedMaterials = new List<Material>();
             removedMaterials = new List<EntityId>();
@@ -57,8 +61,10 @@ namespace UnityEngine.Rendering.LiveGI
         public bool HasChanges()
         {
             return (addedMeshRenderers.Count | removedMeshRenderers.Count | changedMeshRenderers.Count
+#if ENABLE_TERRAIN_MODULE
                 | addedTerrains.Count | changedTerrains.Count | removedTerrains.Count
                 | addedTerrainData.Count | changedTerrainData.Count | removedTerrainData.Count
+#endif
                 | addedMaterials.Count | removedMaterials.Count | changedMaterials.Count
                 | addedLights.Count | removedLights.Count | changedLights.Count) != 0;
         }
@@ -69,6 +75,7 @@ namespace UnityEngine.Rendering.LiveGI
             removedMeshRenderers.Clear();
             changedMeshRenderers.Clear();
 
+#if ENABLE_TERRAIN_MODULE
             addedTerrains.Clear();
             removedTerrains.Clear();
             changedTerrains.Clear();
@@ -76,6 +83,7 @@ namespace UnityEngine.Rendering.LiveGI
             addedTerrainData.Clear();
             removedTerrainData.Clear();
             changedTerrainData.Clear();
+#endif
 
             addedMaterials.Clear();
             removedMaterials.Clear();
@@ -96,6 +104,7 @@ namespace UnityEngine.Rendering.LiveGI
         public ModifiedProperties changes;
     }
 
+#if ENABLE_TERRAIN_MODULE
     internal struct TerrainChanges
     {
         public Terrain terrain;
@@ -107,6 +116,7 @@ namespace UnityEngine.Rendering.LiveGI
         public TerrainData terrainData;
         public ModifiedProperties changes;
     }
+#endif
 
     internal class SceneUpdatesTracker : IDisposable
     {
@@ -147,6 +157,7 @@ namespace UnityEngine.Rendering.LiveGI
             public ShadowCastingMode shadowCastingMode;
         }
 
+#if ENABLE_TERRAIN_MODULE
         class TerrainDescriptor
         {
             public Timestamp timestamp;
@@ -157,12 +168,6 @@ namespace UnityEngine.Rendering.LiveGI
             public ShadowCastingMode shadowCastingMode;
         }
 
-        class LightDescriptor
-        {
-            public Light light;
-            public Timestamp timestamp;
-        }
-
         class TerrainDataDescriptor
         {
             public Timestamp timestamp;
@@ -171,11 +176,20 @@ namespace UnityEngine.Rendering.LiveGI
             public Hash128 heightmapImageContentsHash;
             public Hash128 holesContentsHash;
         }
+#endif
+
+        class LightDescriptor
+        {
+            public Light light;
+            public Timestamp timestamp;
+        }
 
         ObjectDispatcher m_ObjectDispatcher;
         Dictionary<EntityId, MeshRendererDescriptor> m_MeshRenderers;
+#if ENABLE_TERRAIN_MODULE
         Dictionary<EntityId, TerrainDescriptor> m_Terrains;
         Dictionary<EntityId, TerrainDataDescriptor> m_TerrainData;
+#endif
         Dictionary<EntityId, MaterialData> m_Materials;
         Dictionary<EntityId, LightDescriptor> m_Lights;
         SceneChanges m_Changes;
@@ -185,8 +199,10 @@ namespace UnityEngine.Rendering.LiveGI
         {
             m_Changes = new SceneChanges();
             m_MeshRenderers = new Dictionary<EntityId, MeshRendererDescriptor>();
+#if ENABLE_TERRAIN_MODULE
             m_Terrains = new Dictionary<EntityId, TerrainDescriptor>();
             m_TerrainData = new Dictionary<EntityId, TerrainDataDescriptor>();
+#endif
             m_Materials = new Dictionary<EntityId, MaterialData>();
             m_Lights = new Dictionary<EntityId, LightDescriptor>();
 
@@ -197,9 +213,11 @@ namespace UnityEngine.Rendering.LiveGI
 #endif
             m_ObjectDispatcher.EnableTypeTracking<MeshRenderer>(ObjectDispatcher.TypeTrackingFlags.SceneObjects);
             m_ObjectDispatcher.EnableTransformTracking<MeshRenderer>(ObjectDispatcher.TransformTrackingType.GlobalTRS);
+#if ENABLE_TERRAIN_MODULE
             m_ObjectDispatcher.EnableTypeTracking<Terrain>(ObjectDispatcher.TypeTrackingFlags.SceneObjects);
             m_ObjectDispatcher.EnableTransformTracking<Terrain>(ObjectDispatcher.TransformTrackingType.GlobalTRS);
             m_ObjectDispatcher.EnableTypeTracking<TerrainData>(ObjectDispatcher.TypeTrackingFlags.SceneObjects | ObjectDispatcher.TypeTrackingFlags.Assets);
+#endif
             m_ObjectDispatcher.EnableTypeTracking<Material>(ObjectDispatcher.TypeTrackingFlags.SceneObjects | ObjectDispatcher.TypeTrackingFlags.Assets);
             m_ObjectDispatcher.EnableTypeTracking<Light>(ObjectDispatcher.TypeTrackingFlags.SceneObjects);
             m_ObjectDispatcher.EnableTransformTracking<Light>(ObjectDispatcher.TransformTrackingType.GlobalTRS);
@@ -217,8 +235,10 @@ namespace UnityEngine.Rendering.LiveGI
             m_Changes.Clear();
 
             FindMeshRendererChanges();
+#if ENABLE_TERRAIN_MODULE
             FindTerrainChanges();
             FindTerrainDataChanges();
+#endif
             FindMaterialsChanges();
             FindLightChanges(filterBakedLights);
 
@@ -249,6 +269,7 @@ namespace UnityEngine.Rendering.LiveGI
                 }
             }
 
+#if ENABLE_TERRAIN_MODULE
             // Handle added materials in terrains
             foreach (var terrain in m_Terrains.Values)
             {
@@ -266,6 +287,7 @@ namespace UnityEngine.Rendering.LiveGI
                     m_Materials.Add(material.GetEntityId(), new MaterialData(material, m_Timestamp));
                 }
             }
+#endif
 
             var justCompiledMaterials = new HashSet<Material>();
 
@@ -412,6 +434,7 @@ namespace UnityEngine.Rendering.LiveGI
             };
         }
 
+#if ENABLE_TERRAIN_MODULE
         private void FindTerrainChanges()
         {
             // Handle changed terrains
@@ -492,7 +515,6 @@ namespace UnityEngine.Rendering.LiveGI
                 }
             }
         }
-
         static TerrainDescriptor CreateTerrainDescriptor(uint timestamp, Terrain terrain)
         {
             return new TerrainDescriptor()
@@ -623,6 +645,7 @@ namespace UnityEngine.Rendering.LiveGI
             foreach (var terrain in terrainsToRefresh)
                 RefreshTerrainDescriptorAndEmitChanges(terrain, m_Terrains, m_Changes.changedTerrains, m_TerrainData, m_Timestamp);
         }
+#endif
 
         static private bool ShouldIncludeLight(Light light, bool filterBakedLights)
         {
@@ -692,6 +715,7 @@ namespace UnityEngine.Rendering.LiveGI
             };
         }
 
+#if ENABLE_TERRAIN_MODULE
         static Hash128 GetTerrainDataHeightmapHash(TerrainData terrainData)
         {
             Hash128 hash = new Hash128();
@@ -739,6 +763,7 @@ namespace UnityEngine.Rendering.LiveGI
             }
             return hash;
         }
+#endif
 
         struct ChangedObject<T>
             where T : Component

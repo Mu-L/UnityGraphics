@@ -371,8 +371,10 @@ namespace UnityEngine.Rendering
 
                     foreach (var renderer in filteredContributors.renderers)
                         scenesInCell.Add(ProbeReferenceVolume.GetSceneGUID(renderer.component.gameObject.scene));
+#if ENABLE_TERRAIN_MODULE
                     foreach (var terrain in filteredContributors.terrains)
                         scenesInCell.Add(ProbeReferenceVolume.GetSceneGUID(terrain.component.gameObject.scene));
+#endif
 
                     result.cells.Add((cell.position, cell.bounds, bricks));
                     result.scenesPerCells[cell.position] = scenesInCell;

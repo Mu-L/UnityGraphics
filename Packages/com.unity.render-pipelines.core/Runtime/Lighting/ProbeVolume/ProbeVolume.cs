@@ -115,8 +115,10 @@ namespace UnityEngine.Rendering
             var contributors = GIContributors.Find(filter, scene);
             foreach (var renderer in contributors.renderers)
                 ExpandBounds(renderer.component.bounds);
+#if ENABLE_TERRAIN_MODULE
             foreach (var terrain in contributors.terrains)
                 ExpandBounds(terrain.boundsWithTrees);
+#endif
 
             return bounds;
         }

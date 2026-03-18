@@ -30,6 +30,11 @@
             "name": "com.unity.modules.imageconversion",
             "expression": "1.0.0",
             "define": "ENABLE_IMAGECONVERSION_MODULE"
+        },
+        {
+            "name": "com.unity.modules.imageconversion",
+            "expression": "1.0.0",
+            "define": "ENABLE_IMAGECONVERSION_MODULE"
         }
     ],
     "noEngineReferences": false

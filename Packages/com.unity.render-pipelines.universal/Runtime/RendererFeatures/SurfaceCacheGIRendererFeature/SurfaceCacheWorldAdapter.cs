@@ -28,6 +28,7 @@ namespace UnityEngine.Rendering.Universal
         private MaterialPool.MaterialDescriptor _fallbackMaterialDescriptor;
         private MaterialHandle _fallbackMaterialHandle;
 
+#if ENABLE_TERRAIN_MODULE
         // Maps TerrainData EntityID to list of Terrains that use that TerrainData
         private readonly Dictionary<EntityId, List<Terrain>> _terrainDataToTerrains = new();
 
@@ -41,6 +42,7 @@ namespace UnityEngine.Rendering.Universal
 
         private readonly Dictionary<EntityId, TerrainRebuild> _deferredTerrainRebuilds = new();
         private const double k_TerrainRebuildDelay = 0.5;
+#endif
 #endif
 
         public SurfaceCacheWorldAdapter(SurfaceCacheWorld world, Material fallbackMaterial)
@@ -63,6 +65,7 @@ namespace UnityEngine.Rendering.Universal
                 changes.addedMeshRenderers,
                 changes.changedMeshRenderers,
                 changes.removedMeshRenderers);
+#if ENABLE_TERRAIN_MODULE
             UpdateTerrains(
                 world,
                 changes.addedTerrains,
@@ -71,6 +74,7 @@ namespace UnityEngine.Rendering.Universal
                 changes.addedTerrainData,
                 changes.changedTerrainData,
                 changes.removedTerrainData);
+#endif
 
             const bool multiplyPunctualLightIntensityByPI = false;
             UpdateLights(world, changes.addedLights, changes.removedLights, changes.changedLights, multiplyPunctualLightIntensityByPI);
@@ -275,6 +279,7 @@ namespace UnityEngine.Rendering.Universal
             }
         }
 
+#if ENABLE_TERRAIN_MODULE
         private void UpdateTerrains(
             SurfaceCacheWorld world,
             List<Terrain> addedTerrains,
@@ -543,6 +548,7 @@ namespace UnityEngine.Rendering.Universal
             Debug.Assert(!entityIDToInstanceHandle.ContainsKey(terrainEntityID));
             entityIDToInstanceHandle.Add(terrainEntityID, instance);
         }
+#endif // ENABLE_TERRAIN_MODULE
 
         public void Dispose()
         {

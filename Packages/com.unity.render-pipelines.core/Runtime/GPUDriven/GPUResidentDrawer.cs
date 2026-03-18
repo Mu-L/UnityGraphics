@@ -386,7 +386,9 @@ namespace UnityEngine.Rendering
         internal OcclusionCullingCommon m_OcclusionCullingCommon;
         internal InstanceCullingBatcher m_Batcher;
         internal GPUResidentContext m_GRDContext;
+#if ENABLE_TERRAIN_MODULE
         internal SpeedTreeWindGPUDataUpdater m_SpeedTreeWindGPUDataUpdater;
+#endif
         internal WorldProcessor m_WorldProcessor;
 
         internal GPUResidentDrawerSettings settings => m_Settings;
@@ -455,7 +457,6 @@ namespace UnityEngine.Rendering
                 m_OcclusionCullingCommon,
                 m_Batcher,
                 resources);
-            m_SpeedTreeWindGPUDataUpdater = new SpeedTreeWindGPUDataUpdater();
             m_WorldProcessor = new WorldProcessor();
 
             m_ObjectDispatcher.EnableTypeTracking<Mesh>();
@@ -469,7 +470,10 @@ namespace UnityEngine.Rendering
             m_Culler.Initialize(resources, m_GRDContext.debugStats);
             m_OcclusionCullingCommon.Initialize(resources);
             m_Batcher.Initialize(m_GRDContext, settings, OnFinishedCulling, internalSettings.onCompleteCallback);
+#if ENABLE_TERRAIN_MODULE
+            m_SpeedTreeWindGPUDataUpdater = new SpeedTreeWindGPUDataUpdater();
             m_SpeedTreeWindGPUDataUpdater.Initialize(m_InstanceDataSystem, m_Culler);
+#endif
             m_WorldProcessor.Initialize(m_GPUDrivenProcessor, m_ObjectDispatcher, m_GRDContext);
 
 #if UNITY_EDITOR
@@ -524,8 +528,10 @@ namespace UnityEngine.Rendering
 
             m_WorldProcessor.Dispose();
             m_WorldProcessor = null;
+#if ENABLE_TERRAIN_MODULE
             m_SpeedTreeWindGPUDataUpdater.Dispose();
             m_SpeedTreeWindGPUDataUpdater = null;
+#endif
             m_Batcher.Dispose();
             m_Batcher = null;
             m_OcclusionCullingCommon?.Dispose();
@@ -601,7 +607,9 @@ namespace UnityEngine.Rendering
 #if UNITY_EDITOR
                 EditorFrameUpdate(cameras);
 #endif
+#if ENABLE_TERRAIN_MODULE
                 m_SpeedTreeWindGPUDataUpdater.OnBeginContextRendering();
+#endif
             }
 
             if (m_DebugDisplaySettings == null)
@@ -633,7 +641,9 @@ namespace UnityEngine.Rendering
         private void OnFinishedCulling(IntPtr customCullingResult)
         {
             m_Culler.EnsureValidOcclusionTestResults(viewID : EntityId.FromULong((ulong)customCullingResult));
+#if ENABLE_TERRAIN_MODULE
             m_SpeedTreeWindGPUDataUpdater.UpdateGPUData();
+#endif
         }
 
         private void OnPostCullBeginCameraRendering(RenderRequestBatcherContext context) {}

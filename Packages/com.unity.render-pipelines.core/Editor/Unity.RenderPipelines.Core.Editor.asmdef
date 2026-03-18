@@ -46,6 +46,11 @@
             "name": "com.unity.modules.amd",
             "expression": "1.0.0",
             "define": "ENABLE_AMD_MODULE"
+        },
+        {
+            "name": "com.unity.modules.terrain",
+            "expression": "1.0.0",
+            "define": "ENABLE_TERRAIN_MODULE"
         }
     ],
     "noEngineReferences": false

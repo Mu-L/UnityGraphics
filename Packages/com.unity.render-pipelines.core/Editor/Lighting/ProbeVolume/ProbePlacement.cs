@@ -564,6 +564,7 @@ namespace UnityEngine.Rendering
                 }
             }
 
+#if ENABLE_TERRAIN_MODULE
             if (contributors.terrains.Count > 0)
             {
                 using (new ProfilingScope(cmd, new ProfilingSampler("Rasterize Terrains")))
@@ -604,6 +605,7 @@ namespace UnityEngine.Rendering
                     }
                 }
             }
+#endif
 
             cmd.ClearRandomWriteTargets();
         }
