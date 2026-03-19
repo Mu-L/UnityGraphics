@@ -228,15 +228,13 @@ float3 OutgoingDirectionalBounceAndMultiBounceRadiance(
     float3 dirLightIntensity,
     bool multiBounce,
     IrradianceBufferType patchIrradiances,
-    StructuredBuffer<uint> cellPatchIndices,
-    uint volumeSpatialResolution,
-    StructuredBuffer<int3> cascadeOffsets,
-    float3 volumeTargetPos,
-    uint cascadeCount,
-    float volumeVoxelMinSize,
+    CellPatchIndexBufferType cellPatchIndices,
+    PatchUtil::VolumeParamSet volumeParams,
     float3 albedo,
-    float3 emission)
+    float3 emission,
+    out bool multiBounceSurfaceCacheMiss)
 {
+    multiBounceSurfaceCacheMiss = false;
     float3 radiance = 0.0f;
 
     if (any(dirLightIntensity != 0.0f))
@@ -260,9 +258,11 @@ float3 OutgoingDirectionalBounceAndMultiBounceRadiance(
 
     if (multiBounce)
     {
-        float3 cacheRead = PatchUtil::ReadPlanarIrradiance(volumeTargetPos, patchIrradiances, cellPatchIndices, volumeSpatialResolution, cascadeOffsets, cascadeCount, volumeVoxelMinSize, position, normal);
+        float3 cacheRead = PatchUtil::ReadPlanarIrradiance(patchIrradiances, cellPatchIndices, volumeParams, position, normal);
         if (all(cacheRead != PatchUtil::invalidIrradiance))
             radiance += cacheRead;
+        else
+            multiBounceSurfaceCacheMiss = true;
     }
 
     radiance *= albedo * INV_PI;
@@ -281,12 +281,12 @@ float3 IncomingEnviromentAndDirectionalBounceAndMultiBounceRadiance(
     TextureCube<float3> envTex,
     SamplerState envSampler,
     IrradianceBufferType patchIrradiances,
-    StructuredBuffer<uint> cellPatchIndices,
-    uint volumeSpatialResolution,
-    StructuredBuffer<int3> cascadeOffsets,
-    float3 volumeTargetPos,
-    uint cascadeCount,
-    float volumeVoxelMinSize)
+    PatchGeometryBufferType patchGeometries,
+    RWStructuredBuffer<PatchUtil::PatchStatisticsSet> patchStatistics,
+    PatchUtil::PatchAllocationParamSet allocParams,
+    PatchUtil::VolumeParamSet volumeParams,
+    bool enablePatchAllocation,
+    uint frameIndex)
 {
     UnifiedRT::Hit hitResult = UnifiedRT::TraceRayClosestHit(dispatchInfo, accelStruct, 0xFFFFFFFF, ray, UnifiedRT::kRayFlagNone);
     float3 radiance;
@@ -304,6 +304,7 @@ float3 IncomingEnviromentAndDirectionalBounceAndMultiBounceRadiance(
             const float3 hitAlbedo = MaterialPool::LoadAlbedoWithBoost(matEntry, matPoolParams.albedoTextures, matPoolParams.albedoSampler, matPoolParams.atlasTexelSize, matPoolParams.albedoBoost, hitGeo.uv0, hitGeo.uv1);
             const float3 hitEmission = MaterialPool::LoadEmission(matEntry, matPoolParams.emissionTextures, matPoolParams.emissionSampler, matPoolParams.atlasTexelSize, hitGeo.uv0, hitGeo.uv1);
 
+            bool multiBounceSurfaceCacheMiss = false;
             radiance = OutgoingDirectionalBounceAndMultiBounceRadiance(
                 hitGeo.position,
                 hitGeo.normal,
@@ -313,14 +314,26 @@ float3 IncomingEnviromentAndDirectionalBounceAndMultiBounceRadiance(
                 dirLightIntensity,
                 multiBounce,
                 patchIrradiances,
-                cellPatchIndices,
-                volumeSpatialResolution,
-                cascadeOffsets,
-                volumeTargetPos,
-                cascadeCount,
-                volumeVoxelMinSize,
+                allocParams.cellPatchIndices,
+                volumeParams,
                 hitAlbedo,
-                hitEmission);
+                hitEmission,
+                multiBounceSurfaceCacheMiss);
+
+            #if BOUNCE_PATCH_ALLOCATION
+            if (multiBounceSurfaceCacheMiss && enablePatchAllocation)
+            {
+                PatchUtil::AllocatePatch(
+                    hitGeo.position,
+                    hitGeo.normal,
+                    patchIrradiances,
+                    patchGeometries,
+                    patchStatistics,
+                    allocParams,
+                    volumeParams,
+                    frameIndex);
+            }
+            #endif
         }
     }
     else

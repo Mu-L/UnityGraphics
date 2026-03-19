@@ -81,7 +81,14 @@ void Visualize(uint2 threadIdx : SV_DispatchThreadID)
         const float3 worldShadedNormal = UnpackGBufferNormal(_ScreenShadedNormals[threadIdx.xy]);
         const float3 worldFlatNormal = _ScreenFlatNormals[threadIdx.xy];
 
-        PatchUtil::VolumePositionResolution posResolution = PatchUtil::ResolveVolumePosition(worldPos, _VolumeTargetPos, _VolumeSpatialResolution, _CascadeOffsets, _CascadeCount, _VolumeVoxelMinSize);
+        PatchUtil::VolumeParamSet volumeParams;
+        volumeParams.targetPos = _VolumeTargetPos;
+        volumeParams.spatialResolution = _VolumeSpatialResolution;
+        volumeParams.voxelMinSize = _VolumeVoxelMinSize;
+        volumeParams.cascadeOffsets = _CascadeOffsets;
+        volumeParams.cascadeCount = _CascadeCount;
+
+        PatchUtil::VolumePositionResolution posResolution = PatchUtil::ResolveVolumePosition(worldPos, volumeParams);
         output = float3(1.0f, 0.0f, 1.0f);
         if (posResolution.isValid())
         {

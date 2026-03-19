@@ -44,6 +44,13 @@ void FilterSpatially(uint patchIdx : SV_DispatchThreadID)
     const int cascadeResolution = PatchUtil::ResolveCascadeIndex(_VolumeTargetPos, patchGeo.position, _VolumeSpatialResolution, _CascadeCount, _VolumeVoxelMinSize);
     const uint cascadeIdx = cascadeResolution != -1 ? cascadeResolution : _CascadeCount - 1;
 
+    PatchUtil::VolumeParamSet volume;
+    volume.targetPos = _VolumeTargetPos;
+    volume.spatialResolution = _VolumeSpatialResolution;
+    volume.voxelMinSize = _VolumeVoxelMinSize;
+    volume.cascadeOffsets = _CascadeOffsets;
+    volume.cascadeCount = _CascadeCount;
+
     for (uint sampleIdx = 0; sampleIdx < _SampleCount; ++sampleIdx)
     {
         const float2 jitter = rng.GetSample(0) * 2.0f - 1.0f;
@@ -51,7 +58,7 @@ void FilterSpatially(uint patchIdx : SV_DispatchThreadID)
 
         SphericalHarmonics::RGBL1 irradiance;
         bool result = PatchUtil::ReadHemisphericalIrradiance(
-            _InputPatchIrradiances, _CellPatchIndices, _VolumeSpatialResolution, _CascadeOffsets, _VolumeTargetPos, _CascadeCount, _VolumeVoxelMinSize,
+            _InputPatchIrradiances, _CellPatchIndices, volume,
             patchGeo.position + displacement, patchGeo.normal, irradiance);
 
         if (result)

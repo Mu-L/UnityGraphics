@@ -11,6 +11,7 @@ namespace UnityEditor.Rendering.Universal
         protected SerializedDataParameter m_Quality;
 
         protected SerializedDataParameter m_MultiBounce;
+        protected SerializedDataParameter m_BouncePatchAllocation;
         protected SerializedDataParameter m_SampleCount;
 
         protected SerializedDataParameter m_TemporalSmoothing;
@@ -34,6 +35,7 @@ namespace UnityEditor.Rendering.Universal
         struct LightTransportSetting
         {
             public bool multiBounce;
+            public bool bouncePatchAllocation;
             public int sampleCount;
         }
 
@@ -66,28 +68,28 @@ namespace UnityEditor.Rendering.Universal
             // Low
             new QualitySetting
             {
-                lightTransport  = new LightTransportSetting  { multiBounce = false, sampleCount = 1 },
+                lightTransport  = new LightTransportSetting  { multiBounce = false, bouncePatchAllocation = false, sampleCount = 1 },
                 patchFiltering  = new PatchFilteringSetting  { temporalSmoothing = 0.9f, spatialFilterEnabled = false, spatialSampleCount = 4, spatialRadius = 1.0f, temporalPostFilter = false },
                 screenFiltering = new ScreenFilteringSetting { lookupSampleCount = 4, upsamplingKernelSize = 2.0f, upsamplingSampleCount = 1 },
             },
             // Medium
             new QualitySetting
             {
-                lightTransport  = new LightTransportSetting  { multiBounce = true, sampleCount = 2 },
+                lightTransport  = new LightTransportSetting  { multiBounce = true, bouncePatchAllocation = true, sampleCount = 2 },
                 patchFiltering  = new PatchFilteringSetting  { temporalSmoothing = 0.8f, spatialFilterEnabled = true, spatialSampleCount = 4, spatialRadius = 1.0f, temporalPostFilter = true },
                 screenFiltering = new ScreenFilteringSetting { lookupSampleCount = 6, upsamplingKernelSize = 4.0f, upsamplingSampleCount = 2 },
             },
             // High
             new QualitySetting
             {
-                lightTransport  = new LightTransportSetting  { multiBounce = true, sampleCount = 4 },
+                lightTransport  = new LightTransportSetting  { multiBounce = true, bouncePatchAllocation = true, sampleCount = 4 },
                 patchFiltering  = new PatchFilteringSetting  { temporalSmoothing = 0.7f, spatialFilterEnabled = true, spatialSampleCount = 6, spatialRadius = 1.5f, temporalPostFilter = true },
                 screenFiltering = new ScreenFilteringSetting { lookupSampleCount = 8, upsamplingKernelSize = 5.0f, upsamplingSampleCount = 4 },
             },
             // Ultra
             new QualitySetting
             {
-                lightTransport  = new LightTransportSetting  { multiBounce = true, sampleCount = 8 },
+                lightTransport  = new LightTransportSetting  { multiBounce = true, bouncePatchAllocation = true, sampleCount = 8 },
                 patchFiltering  = new PatchFilteringSetting  { temporalSmoothing = 0.6f, spatialFilterEnabled = true, spatialSampleCount = 8, spatialRadius = 2.0f, temporalPostFilter = true },
                 screenFiltering = new ScreenFilteringSetting { lookupSampleCount = 8, upsamplingKernelSize = 7.0f, upsamplingSampleCount = 8 },
             },
@@ -95,6 +97,7 @@ namespace UnityEditor.Rendering.Universal
 
         static GUIContent s_Quality = EditorGUIUtility.TrTextContent("Quality", "Quality preset for Surface Cache GI. Select Custom to manually adjust individual parameters.");
         static GUIContent s_MultiBounce = EditorGUIUtility.TrTextContent("Multi Bounce", "Enable multi-bounce global illumination for more accurate light propagation.");
+        static GUIContent s_BouncePatchAllocation = EditorGUIUtility.TrTextContent("Bounce Patch Allocation", "When enabled, new patches are allocated at ray hit locations when multi-bounce cache lookups fail");
         static GUIContent s_SampleCount = EditorGUIUtility.TrTextContent("Sample Count", "Number of samples used for GI estimation. Higher values improve quality at performance cost.");
         static GUIContent s_TemporalSmoothing = EditorGUIUtility.TrTextContent("Temporal Smoothing", "Temporal smoothing for patch data. Higher values produce more stable results but slower response to lighting changes.");
         static GUIContent s_SpatialFilterEnabled = EditorGUIUtility.TrTextContent("Spatial Filter", "Enables spatial filtering across patches. This reduces noise but may also increase leaking.");
@@ -123,6 +126,7 @@ namespace UnityEditor.Rendering.Universal
 
             m_Quality = Unpack(o.Find(x => x.quality));
             m_MultiBounce = Unpack(o.Find("m_MultiBounce"));
+            m_BouncePatchAllocation = Unpack(o.Find("m_BouncePatchAllocation"));
             m_SampleCount = Unpack(o.Find("m_SampleCount"));
             m_TemporalSmoothing = Unpack(o.Find("m_TemporalSmoothing"));
             m_SpatialFilterEnabled = Unpack(o.Find("m_SpatialFilterEnabled"));
@@ -157,6 +161,7 @@ namespace UnityEditor.Rendering.Universal
             EditorGUILayout.LabelField(s_LightTransportHeader, EditorStyles.boldLabel);
             EditorGUI.BeginChangeCheck();
             PropertyField(m_MultiBounce, s_MultiBounce);
+            PropertyField(m_BouncePatchAllocation, s_BouncePatchAllocation);
             PropertyField(m_SampleCount, s_SampleCount);
             if (EditorGUI.EndChangeCheck())
                 SwitchToCustomIfNeeded();
@@ -224,6 +229,8 @@ namespace UnityEditor.Rendering.Universal
 
             m_MultiBounce.value.boolValue = settings.lightTransport.multiBounce;
             m_MultiBounce.overrideState.boolValue = true;
+            m_BouncePatchAllocation.value.boolValue = settings.lightTransport.bouncePatchAllocation;
+            m_BouncePatchAllocation.overrideState.boolValue = true;
             m_SampleCount.value.intValue = settings.lightTransport.sampleCount;
             m_SampleCount.overrideState.boolValue = true;
             m_TemporalSmoothing.value.floatValue = settings.patchFiltering.temporalSmoothing;
