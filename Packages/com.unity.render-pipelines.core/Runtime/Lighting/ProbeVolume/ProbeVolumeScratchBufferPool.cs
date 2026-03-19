@@ -165,6 +165,14 @@ namespace UnityEngine.Rendering
         // Used to avoid gcalloc in m_Pools.FindIndex
         static int s_ChunkCount;
 
+#if UNITY_EDITOR
+        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterAssembliesLoaded)]
+        static void ResetStaticsOnLoad()
+        {
+            s_ChunkCount = 0;
+        }
+#endif
+
         // Will return a the smallest GraphicsBuffer with at least enough space for chunkCount chunks.
         public bool AllocateScratchBuffer(int chunkCount, out CellStreamingScratchBuffer scratchBuffer, out CellStreamingScratchBufferLayout layout, bool allocateGraphicsBuffers)
         {

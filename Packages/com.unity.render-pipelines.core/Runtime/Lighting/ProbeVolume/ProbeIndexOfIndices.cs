@@ -1,3 +1,4 @@
+using System;
 using CellIndexInfo = UnityEngine.Rendering.ProbeReferenceVolume.CellIndexInfo;
 
 namespace UnityEngine.Rendering
@@ -12,7 +13,15 @@ namespace UnityEngine.Rendering
 
         internal struct IndexMetaData
         {
-            static uint[] s_PackedValues = new uint[kUintPerEntry];
+            static readonly uint[] s_PackedValues = new uint[kUintPerEntry];
+
+#if UNITY_EDITOR
+            [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterAssembliesLoaded)]
+            static void ResetStaticsOnLoad()
+            {
+                Array.Clear(s_PackedValues, 0, s_PackedValues.Length);
+            }
+#endif
 
             internal Vector3Int minLocalIdx;
             internal Vector3Int maxLocalIdxPlusOne;

@@ -2,8 +2,10 @@ namespace UnityEngine.Rendering
 {
     internal static class ProbeVolumePositioning
     {
-        internal static Vector3[] m_Axes = new Vector3[6];
-        internal static Vector3[] m_AABBCorners = new Vector3[8];
+        // Scratch buffers reused across calls to avoid per-call allocation.
+        // Every code path fully writes all elements before reading — no reset needed on domain reload.
+        static readonly Vector3[] m_Axes = new Vector3[6];
+        static readonly Vector3[] m_AABBCorners = new Vector3[8];
 
         public static bool OBBIntersect(in ProbeReferenceVolume.Volume a, in ProbeReferenceVolume.Volume b)
         {

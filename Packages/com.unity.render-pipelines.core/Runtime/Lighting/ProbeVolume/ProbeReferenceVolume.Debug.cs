@@ -117,6 +117,15 @@ namespace UnityEngine.Rendering
 
         static internal int s_ActiveAdjustmentVolumes = 0;
 
+#if UNITY_EDITOR
+        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterAssembliesLoaded)]
+        static void ResetStaticsOnLoad()
+        {
+            currentOffset = Vector3.zero;
+            s_ActiveAdjustmentVolumes = 0;
+        }
+#endif
+
         public ProbeVolumeDebug()
         {
             Init();
@@ -166,12 +175,12 @@ namespace UnityEngine.Rendering
         internal static Func<Color> GetSparseSubdivisionColor;
         internal static Func<Color> GetSparsestSubdivisionColor;
 
-        internal static Color s_DetailSubdivision   = new Color32(135, 35,  255, 255);
-        internal static Color s_MediumSubdivision   = new Color32(54,  208, 228, 255);
-        internal static Color s_LowSubdivision      = new Color32(255, 100, 45,  255);
-        internal static Color s_VeryLowSubdivision  = new Color32(52,  87,  255, 255);
-        internal static Color s_SparseSubdivision   = new Color32(255, 71,  97,  255);
-        internal static Color s_SparsestSubdivision = new Color32(200, 227, 39,  255);
+        internal static readonly Color s_DetailSubdivision   = new Color32(135, 35,  255, 255);
+        internal static readonly Color s_MediumSubdivision   = new Color32(54,  208, 228, 255);
+        internal static readonly Color s_LowSubdivision      = new Color32(255, 100, 45,  255);
+        internal static readonly Color s_VeryLowSubdivision  = new Color32(52,  87,  255, 255);
+        internal static readonly Color s_SparseSubdivision   = new Color32(255, 71,  97,  255);
+        internal static readonly Color s_SparsestSubdivision = new Color32(200, 227, 39,  255);
 
         static ProbeVolumeDebugColorPreferences()
         {

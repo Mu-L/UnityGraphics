@@ -49,6 +49,22 @@ namespace UnityEngine.PathTracing.Lightmapping
             internal static int GetValueKernel;
             internal static int NormalizeByAlphaKernel;
 
+#if UNITY_EDITOR
+            [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterAssembliesLoaded)]
+            static void ResetStaticsOnLoad()
+            {
+                MultiplyKernel = -1;
+                BroadcastChannelKernel = -1;
+                SetChannelKernel = -1;
+                ReferenceBoxFilterKernel = -1;
+                ReferenceBoxFilterBlueChannelKernel = -1;
+                StandardErrorKernel = -1;
+                StandardErrorThresholdKernel = -1;
+                GetValueKernel = -1;
+                NormalizeByAlphaKernel = -1;
+            }
+#endif
+
             public void Load()
             {
 #if UNITY_EDITOR

@@ -839,7 +839,7 @@ namespace UnityEngine.Rendering
                 return 0;
         }
 
-        static DynamicArray<Cell>.SortComparer s_BlendingComparer = BlendingComparer;
+        static readonly DynamicArray<Cell>.SortComparer s_BlendingComparer = BlendingComparer;
 
         void UpdateBlendingCellStreaming(CommandBuffer cmd)
         {
@@ -964,7 +964,7 @@ namespace UnityEngine.Rendering
             else return 0;
         }
 
-        static DynamicArray<Cell>.SortComparer s_DefragComparer = DefragComparer;
+        static readonly DynamicArray<Cell>.SortComparer s_DefragComparer = DefragComparer;
 
         void StartIndexDefragmentation()
         {

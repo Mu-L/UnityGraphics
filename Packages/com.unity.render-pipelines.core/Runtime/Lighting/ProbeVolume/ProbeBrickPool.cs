@@ -122,6 +122,21 @@ namespace UnityEngine.Rendering
         static LocalKeyword s_DataUpload_SkyOcclusion;
         static LocalKeyword s_DataUpload_SkyShadingDirection;
 
+#if UNITY_EDITOR
+        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterAssembliesLoaded)]
+        static void ResetStaticsOnLoad()
+        {
+            s_DataUploadCS = null;
+            s_DataUploadKernel = -1;
+            s_DataUploadL2CS = null;
+            s_DataUploadL2Kernel = -1;
+            s_DataUpload_Shared = default;
+            s_DataUpload_ProbeOcclusion = default;
+            s_DataUpload_SkyOcclusion = default;
+            s_DataUpload_SkyShadingDirection = default;
+        }
+#endif
+
         internal static void Initialize()
         {
             if (!SystemInfo.supportsComputeShaders)
@@ -619,6 +634,15 @@ namespace UnityEngine.Rendering
     {
         static ComputeShader stateBlendShader;
         static int scenarioBlendingKernel = -1;
+
+#if UNITY_EDITOR
+        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterAssembliesLoaded)]
+        static void ResetStaticsOnLoad()
+        {
+            stateBlendShader = null;
+            scenarioBlendingKernel = -1;
+        }
+#endif
 
         static readonly int _PoolDim_LerpFactor = Shader.PropertyToID("_PoolDim_LerpFactor");
         static readonly int _ChunkList = Shader.PropertyToID("_ChunkList");
