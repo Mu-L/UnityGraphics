@@ -1,4 +1,5 @@
 using System;
+using UnityEngine.Serialization;
 
 namespace UnityEngine.Rendering.Universal
 {
@@ -8,7 +9,7 @@ namespace UnityEngine.Rendering.Universal
     /// <remarks>
     /// To change those settings, go to Editor > Project Settings in the Graphics tab (URP).
     /// Changing this through the API is only allowed in the Editor. In the Player, this raises an error.
-    /// 
+    ///
     /// This container is removed from all build Players.
     /// </remarks>
     /// <seealso cref="IRenderPipelineGraphicsSettings"/>
@@ -17,7 +18,7 @@ namespace UnityEngine.Rendering.Universal
     /// <code>
     /// using UnityEngine.Rendering;
     /// using UnityEngine.Rendering.Universal;
-    /// 
+    ///
     /// public static class URPShaderStrippingHelper
     /// {
     ///     public static bool enabled
@@ -53,9 +54,9 @@ namespace UnityEngine.Rendering.Universal
         #endregion
 
         #region SerializeFields
-        [SerializeField]
-        [Tooltip("Controls whether to automatically strip post processing shader variants based on VolumeProfile components. Stripping is done based on VolumeProfiles in project, their usage in scenes is not considered.")]
-        bool m_StripUnusedPostProcessingVariants = false;
+        [SerializeField, FormerlySerializedAs("m_StripUnusedPostProcessingVariants")]
+        [Tooltip("Controls whether to automatically strip post processing shader variants and resources based on VolumeProfile components. Stripping is done based on VolumeProfiles in project, their usage in scenes is not considered.")]
+        bool m_StripUnusedPostProcessingVariantsAndResources = false;
 
         [SerializeField]
         [Tooltip("Controls whether to strip variants if the feature is disabled.")]
@@ -69,13 +70,14 @@ namespace UnityEngine.Rendering.Universal
         #region Data Accessors
 
         /// <summary>
-        /// Controls whether to automatically strip post processing shader variants based on <see cref="VolumeProfile"/> components.
-        /// Stripping is done based on VolumeProfiles in project, their usage in scenes is not considered.
+        /// Controls whether to automatically strip post processing shader variants and resources based on
+        /// <see cref="VolumeProfile"/> components. Stripping is done based on VolumeProfiles in project, their usage
+        /// in scenes is not considered.
         /// </summary>
         public bool stripUnusedPostProcessingVariants
         {
-            get => m_StripUnusedPostProcessingVariants;
-            set => this.SetValueAndNotify(ref m_StripUnusedPostProcessingVariants, value);
+            get => m_StripUnusedPostProcessingVariantsAndResources;
+            set => this.SetValueAndNotify(ref m_StripUnusedPostProcessingVariantsAndResources, value);
         }
 
         /// <summary>

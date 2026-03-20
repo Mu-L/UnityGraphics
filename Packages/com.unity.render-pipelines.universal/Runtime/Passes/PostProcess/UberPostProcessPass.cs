@@ -595,9 +595,18 @@ namespace UnityEngine.Rendering.Universal
             // NOTE: Procedural FilmGrain can be done using the custom texture with RenderTexture. No need to import it into the RenderGraph.
             const float k_FilmGrainIntensityScale = 4f;
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            static public void CalcFilmGrainParams(FilmGrain filmGrain, Texture2D[] filmGrainTextures, out Texture grainTexture, out Vector2 grainParams)
+            internal static void CalcFilmGrainParams(FilmGrain filmGrain, Texture2D[] filmGrainTextures, out Texture grainTexture, out Vector2 grainParams)
             {
-                grainTexture = (filmGrain.type.value == FilmGrainLookup.Custom) ? filmGrain.texture.value : filmGrainTextures[(int)filmGrain.type.value];
+                if (filmGrain.type.value == FilmGrainLookup.Custom)
+                {
+                    grainTexture = filmGrain.texture.value;
+                }
+                else
+                {
+                    grainTexture = (filmGrainTextures != null && (int)filmGrain.type.value < filmGrainTextures.Length)
+                        ? filmGrainTextures[(int)filmGrain.type.value]
+                        : null;
+                }
                 grainParams = new Vector2(filmGrain.intensity.value * k_FilmGrainIntensityScale, filmGrain.response.value);
             }
         }

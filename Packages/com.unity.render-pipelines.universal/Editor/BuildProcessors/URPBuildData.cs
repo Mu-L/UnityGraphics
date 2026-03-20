@@ -17,6 +17,8 @@ namespace UnityEditor.Rendering.Universal
 
         public List<UniversalRenderPipelineAsset> renderPipelineAssets { get; private set; } = new List<UniversalRenderPipelineAsset>();
 
+        public List<ScriptableRendererData> rendererDataList { get; private set; } = new List<ScriptableRendererData>();
+
         public URPBuildData(BuildTarget buildTarget, bool isDevelopmentBuild)
         {
             m_Instance = this;
@@ -31,12 +33,22 @@ namespace UnityEditor.Rendering.Universal
                     Assert.IsTrue(asset is UniversalRenderPipelineAsset);
                     renderPipelineAssets.Add(asset as UniversalRenderPipelineAsset);
                 }
+
+                foreach (var asset in renderPipelineAssets)
+                {
+                    foreach (var rendererData in asset.m_RendererDataList)
+                    {
+                        if (rendererData != null)
+                            rendererDataList.Add(rendererData);
+                    }
+                }
             }
         }
 
         public void Dispose()
         {
             renderPipelineAssets?.Clear();
+            rendererDataList?.Clear();
 
             buildingPlayerForUniversalRenderPipeline = false;
 

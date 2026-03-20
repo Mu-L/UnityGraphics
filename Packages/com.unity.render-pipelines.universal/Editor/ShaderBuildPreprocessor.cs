@@ -331,31 +331,40 @@ namespace UnityEditor.Rendering.Universal
             volumeFeatures = VolumeFeatures.All;
         }
 
-        // Checks each Volume Profile Assets for used features...
+        // Checks each Volume Profile Asset for used features
         private static void GetSupportedFeaturesFromVolumes(ref VolumeFeatures volumeFeatures)
         {
-            if (!s_StripUnusedPostProcessingVariants)
-                return;
-
-            volumeFeatures = VolumeFeatures.Calculated;
+            List<VolumeProfile> volumeProfiles = new();
             string[] guids = AssetDatabase.FindAssets("t:VolumeProfile");
-            foreach (string guid in guids)
+            for (int i = 0; i < guids.Length; i++)
             {
-                string path = AssetDatabase.GUIDToAssetPath(guid);
-
+                string path = AssetDatabase.GUIDToAssetPath(guids[i]);
                 // We only care what is in assets folder
                 if (!path.StartsWith("Assets"))
                     continue;
 
                 VolumeProfile asset = AssetDatabase.LoadAssetAtPath<VolumeProfile>(path);
+                if (asset != null)
+                    volumeProfiles.Add(asset);
+            }
+            GetSupportedFeaturesFromVolumes(volumeProfiles, ref volumeFeatures);
+        }
+
+        internal static void GetSupportedFeaturesFromVolumes(List<VolumeProfile> volumeProfiles, ref VolumeFeatures volumeFeatures)
+        {
+            if (!s_StripUnusedPostProcessingVariants)
+                return;
+
+            volumeFeatures = VolumeFeatures.Calculated;
+            foreach (VolumeProfile asset in volumeProfiles)
+            {
                 if (asset == null)
                     continue;
 
-                if (asset.Has<LensDistortion>())
+                if (asset.TryGet<LensDistortion>(out var lensDistortion) && lensDistortion.IsActive())
                     volumeFeatures |= VolumeFeatures.LensDistortion;
 
-                Bloom bloom;
-                if (asset.TryGet<Bloom>(out bloom))
+                if (asset.TryGet<Bloom>(out var bloom) && bloom.IsActive())
                 {
                     //strip unused bloom variants. #pragma multi_compile_local_fragment _ _BLOOM_LQ _BLOOM_HQ _BLOOM_LQ_DIRT _BLOOM_HQ_DIRT
                     if (bloom.highQualityFiltering.value)
@@ -374,17 +383,17 @@ namespace UnityEditor.Rendering.Universal
                     }
                 }
 
-                if (asset.Has<Tonemapping>())
+                if (asset.TryGet<Tonemapping>(out var toneMapping) && toneMapping.IsActive())
                     volumeFeatures |= VolumeFeatures.ToneMapping;
-                if (asset.Has<FilmGrain>())
+                if (asset.TryGet<FilmGrain>(out var filmGrain) && filmGrain.IsActive())
                     volumeFeatures |= VolumeFeatures.FilmGrain;
-                if (asset.Has<DepthOfField>())
+                if (asset.TryGet<DepthOfField>(out var depthOfField) && depthOfField.IsActive())
                     volumeFeatures |= VolumeFeatures.DepthOfField;
-                if (asset.Has<MotionBlur>())
+                if (asset.TryGet<MotionBlur>(out var motionBlur) && motionBlur.IsActive())
                     volumeFeatures |= VolumeFeatures.CameraMotionBlur;
-                if (asset.Has<PaniniProjection>())
+                if (asset.TryGet<PaniniProjection>(out var paniniProjection) && paniniProjection.IsActive())
                     volumeFeatures |= VolumeFeatures.PaniniProjection;
-                if (asset.Has<ChromaticAberration>())
+                if (asset.TryGet<ChromaticAberration>(out var chromaticAberration) && chromaticAberration.IsActive())
                     volumeFeatures |= VolumeFeatures.ChromaticAberration;
             }
         }
