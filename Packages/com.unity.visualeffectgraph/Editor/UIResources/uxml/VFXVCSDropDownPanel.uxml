@@ -1,4 +1,3 @@
-<?xml version="1.0" encoding="Windows-1252"?>
 <UXML xmlns:ui="UnityEngine.UIElements">
     <ui:Button name="getlatest" text="Get Latest" style="margin-top:8px" />
     <ui:Button name="submit" text="Submit" />

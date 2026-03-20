@@ -1,4 +1,3 @@
-<?xml version="1.0" encoding="Windows-1252"?>
 <UXML xmlns:ui="UnityEngine.UIElements">
     <ui:Box>
         <ui:Toggle name="autoCompile" text="Auto Compile" tooltip="Toggles auto-compilation" style="margin-top:4px" />
