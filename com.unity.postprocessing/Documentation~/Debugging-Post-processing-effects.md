@@ -1,5 +1,7 @@
 # Debugging Post-processing effects
 
+[!include[birp-deprecation-message](snippets/birp-deprecation-message.md)]
+
 The **Post-process Debug** component displays real-time data about post-processing effects. You can use this data to debug your post-processing effects, and to see the results of adjusting your effects in real time.
 
 When you attach the Post-Process Debug component to a GameObject with a Camera component, the Post-Process Debug component displays its data on top of that Camera's output. You can use the Post-process Debug component in the Unity Editor, or when your application is running on a device.

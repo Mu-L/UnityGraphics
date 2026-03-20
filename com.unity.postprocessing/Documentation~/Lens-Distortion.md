@@ -1,5 +1,7 @@
 # Lens Distortion
 
+[!include[birp-deprecation-message](snippets/birp-deprecation-message.md)]
+
 The **Lens Distortion** effect simulates distortion caused by the shape of a real-world camera lens. You can adjust the intensity of this effect between barrel distortion and pincushion distortion.
 
 ![Scene without Lens Distortion effect](images/no-lens-distortion.png)

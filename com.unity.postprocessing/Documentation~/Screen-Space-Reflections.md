@@ -1,5 +1,7 @@
 # Screen Space Reflections
 
+[!include[birp-deprecation-message](snippets/birp-deprecation-message.md)]
+
 The **Screen Space Reflection** effect creates subtle reflections that simulate wet floor surfaces or puddles. It reflects both static and dynamic GameObjects to create realistic reflections.
 
 Screen Space Reflection replaces specular highlights on a surface, which makes it an ideal effect to limit the amount of [specular light](https://docs.unity3d.com/Manual/shader-NormalSpecular.html) leaking.

@@ -1,5 +1,7 @@
 # Chromatic Aberration
 
+[!include[birp-deprecation-message](snippets/birp-deprecation-message.md)]
+
 The **Chromatic Aberration** effect splits color along boundaries in an image into their red, green, and blue channels. This reproduces the effect a real-world camera produces when light refracts and causes the wavelengths to disperse in the lens.
 
 Unity provides support for red/blue and green/purple fringing. You can define fringing colors by using an input texture.

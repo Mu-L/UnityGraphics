@@ -1,5 +1,7 @@
 # Writing custom effects
 
+[!include[birp-deprecation-message](snippets/birp-deprecation-message.md)]
+
 This quick-start guide demonstrates how to write a custom [post-processing effect](https://docs.unity3d.com/Manual/PostProcessingOverview.html) and include it in the post-processing stack. This process does not require you to modify the codebase.
 
 Custom post-processing effects require a minimum of two files:

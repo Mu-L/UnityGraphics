@@ -1,5 +1,7 @@
 # Color Grading
 
+[!include[birp-deprecation-message](snippets/birp-deprecation-message.md)]
+
 The **Color Grading** effect alters or corrects the color and luminance of the final image that Unity produces. You can use this to alter the look and feel of your application.
 
 ![Three examples of how you can use Color Grading](images/screenshot-grading.png)

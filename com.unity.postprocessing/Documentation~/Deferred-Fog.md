@@ -1,5 +1,7 @@
 # Deferred Fog
 
+[!include[birp-deprecation-message](snippets/birp-deprecation-message.md)]
+
 The **Deferred Fog** effect simulates the look of fog or mist in outdoor environments. To do this, it overlays a color onto objects depending on how far away they are from the Camera.
 
  ![Scene rendered with Deferred Fog enabled](images/screenshot-fog.png)

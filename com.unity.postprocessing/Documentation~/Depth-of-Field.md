@@ -1,5 +1,7 @@
 # Depth of Field
 
+[!include[birp-deprecation-message](snippets/birp-deprecation-message.md)]
+
 The **Depth of Field** effect blurs the background of your image while the objects in the foreground stay in focus. This simulates the focal properties of a real-world camera lens.
 
  ![A scene with the Depth of Field effect applied](images/screenshot-dof.png)
