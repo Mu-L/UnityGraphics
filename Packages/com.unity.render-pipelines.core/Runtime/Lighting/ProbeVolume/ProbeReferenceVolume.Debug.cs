@@ -209,7 +209,7 @@ namespace UnityEngine.Rendering
         /// <summary>Name of debug panel for Probe Volume</summary>
         public static readonly string k_DebugPanelName = "Probe Volumes";
 
-        internal ProbeVolumeDebug probeVolumeDebug { get; private set; }
+        internal ProbeVolumeDebug probeVolumeDebug { get; private set; } = new ProbeVolumeDebug();
 
         /// <summary>Colors that can be used for debug visualization of the brick structure subdivision.</summary>
         public Color[] subdivisionDebugColors { get; } = new Color[ProbeBrickIndex.kMaxSubdivisionLevels];
