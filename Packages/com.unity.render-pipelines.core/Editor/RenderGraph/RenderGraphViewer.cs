@@ -2197,6 +2197,7 @@ namespace UnityEditor.Rendering
                 var painter = ctx.painter2D;
                 var resolvedStyle = ctx.visualElement.resolvedStyle;
                 var color = useStyle ? resolvedStyle.color : this.color;
+                color *= EditorUtility.activePlayModeTint;
                 var width = useStyle ? resolvedStyle.width : this.width;
                 var height = useStyle ? resolvedStyle.height : this.height;
 
