@@ -23,6 +23,7 @@ SAMPLER(sampler_MotionVectorColorTexture);
 SAMPLER(sampler_BlitTexture);
 
 // Params
+float4x4 _CameraViewProjections[2];
 float4x4 _CameraInverseViewProjections[2];
 float4x4 _CameraProjections[2];
 float4x4 _CameraInverseProjections[2];
@@ -367,12 +368,21 @@ float4 ComputeSSR(Varyings input) : SV_Target
         return float4(SAMPLE_TEXTURE2D_X_LOD(_CameraColorTexture, sampler_CameraColorTexture, positionNDC, 0).rgb, alpha);
     }
 
-    // Calculate ray origin and direction in view space and screen space
+    // Calculate ray origin and direction in world space
     float3 normalWS = SampleSceneNormals(positionNDC);
     float3 positionWS = ComputeWorldSpacePosition(positionNDC, deviceDepth, _CameraInverseViewProjections[unity_eyeIndex]);
     float3 positionToCamWS = GetWorldSpaceNormalizeViewDir(positionWS);
-    float3 positionVS = mul(_CameraViews[unity_eyeIndex], float4(positionWS, 1)).xyz;
     float3 rayDirWS = reflect(-positionToCamWS, normalWS);
+
+    // Apply normal bias with the magnitude dependent on the distance from the camera.
+    #ifdef _HIZ_TRACE
+    float3 camPosWS = GetCurrentViewPosition();
+    positionWS = camPosWS + (positionWS - camPosWS) * (1 - 0.001 * rcp(max(dot(normalWS, positionToCamWS), FLT_EPS)));
+    deviceDepth = ComputeNormalizedDeviceCoordinatesWithZ(positionWS, _CameraViewProjections[unity_eyeIndex]).z;
+    #endif
+
+    // Transform ray origin and direction to view space.
+    float3 positionVS = mul(_CameraViews[unity_eyeIndex], float4(positionWS, 1)).xyz;
     float3 rayDirVS = SafeNormalize(mul(_CameraViews[unity_eyeIndex], float4(rayDirWS, 0)).xyz);
 
     // Calculate ray end position in view space and screen space

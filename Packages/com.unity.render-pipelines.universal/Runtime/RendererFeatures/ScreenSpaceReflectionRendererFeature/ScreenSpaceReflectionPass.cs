@@ -61,6 +61,7 @@ namespace UnityEngine.Rendering.Universal
             internal static readonly int _CameraProjections = Shader.PropertyToID("_CameraProjections");
             internal static readonly int _CameraInverseProjections = Shader.PropertyToID("_CameraInverseProjections");
             internal static readonly int _CameraInverseViewProjections = Shader.PropertyToID("_CameraInverseViewProjections");
+            internal static readonly int _CameraViewProjections = Shader.PropertyToID("_CameraViewProjections");
             internal static readonly int _CameraViews = Shader.PropertyToID("_CameraViews");
             internal static readonly int _CameraColorTexture = Shader.PropertyToID("_CameraColorTexture");
             internal static readonly int _CameraDepthTexture = Shader.PropertyToID("_CameraDepthTexture");
@@ -170,6 +171,7 @@ namespace UnityEngine.Rendering.Universal
             // Camera data. This is not expected to change during a frame.
             internal UniversalCameraData cameraData;
             internal Matrix4x4[] cameraInverseViewProjections = new Matrix4x4[2];
+            internal Matrix4x4[] cameraViewProjections = new Matrix4x4[2];
             internal Matrix4x4[] cameraProjections = new Matrix4x4[2];
             internal Matrix4x4[] cameraInverseProjections = new Matrix4x4[2];
             internal Matrix4x4[] cameraViews = new Matrix4x4[2];
@@ -469,7 +471,8 @@ namespace UnityEngine.Rendering.Universal
                 data.cameraProjections[eyeIndex] = proj;
                 data.cameraInverseProjections[eyeIndex] = proj.inverse;
                 data.cameraViews[eyeIndex] = view;
-                data.cameraInverseViewProjections[eyeIndex] = (proj * view).inverse;
+                data.cameraViewProjections[eyeIndex] = proj * view;
+                data.cameraInverseViewProjections[eyeIndex] = data.cameraViewProjections[eyeIndex].inverse;
             }
 
             data.material.SetVector(ShaderConstants._ProjectionParams2, new Vector4(1.0f / cameraData.camera.nearClipPlane, 0.0f, 0.0f, 0.0f));
@@ -477,6 +480,7 @@ namespace UnityEngine.Rendering.Universal
             data.material.SetMatrixArray(ShaderConstants._CameraInverseProjections, data.cameraInverseProjections);
             data.material.SetMatrixArray(ShaderConstants._CameraViews, data.cameraViews);
             data.material.SetMatrixArray(ShaderConstants._CameraInverseViewProjections, data.cameraInverseViewProjections);
+            data.material.SetMatrixArray(ShaderConstants._CameraViewProjections, data.cameraViewProjections);
             data.material.SetVector(ShaderConstants._MinimumSmoothnessAndFadeStart, new Vector4(data.minimumSmoothness, data.smoothnessFadeStart));
             data.material.SetVector(ShaderConstants._ScreenEdgeFadeAndViewConeDot, new Vector4(data.screenEdgeFade, 1.0f - data.screenEdgeFade, 2.0f * data.normalFade - 1.0f));
             data.material.SetInteger(ShaderConstants._ReflectSky, data.reflectSky ? 1 : 0);
