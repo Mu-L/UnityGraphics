@@ -23,7 +23,7 @@ namespace UnityEditor.ShaderGraph
     {
         public const string Extension = "shadergraph";
         public const string LegacyExtension = "ShaderGraph";
-        const string IconBasePath = "Packages/com.unity.shadergraph/Editor/Resources/Icons/sg_graph_icon.png";
+        const string IconPath = "Packages/com.unity.shadergraph/Editor/Resources/Icons/sg_graph_icon@2x.png";
 
         internal static readonly string TemplateFieldName = nameof(m_Template);
         internal static readonly string UseAsTemplateFieldName = nameof(m_UseAsTemplate);
@@ -103,7 +103,7 @@ Shader ""Hidden/GraphErrorShader2""
 
         public DataBag AdditionalSearchTerms => m_IndexedData?.AdditionalSeachTerms ?? default;
 
-        public static Texture2D GetIcon() => EditorGUIUtility.IconContent(IconBasePath)?.image as Texture2D;
+        public static Texture2D GetIcon() => AssetDatabase.LoadAssetAtPath<Texture2D>(IconPath);
 
         [SuppressMessage("ReSharper", "UnusedMember.Local")]
         static string[] GatherDependenciesFromSourceFile(string assetPath)
@@ -113,7 +113,11 @@ Shader ""Hidden/GraphErrorShader2""
                 AssetCollection assetCollection = new AssetCollection();
                 MinimalGraphData.GatherMinimalDependenciesFromFile(assetPath, assetCollection);
 
-                List<string> dependencyPaths = new List<string>();
+                List<string> dependencyPaths = new List<string>
+                {
+                    IconPath
+                };
+
                 foreach (var asset in assetCollection.assets)
                 {
                     // only artifact dependencies need to be declared in GatherDependenciesFromSourceFile
