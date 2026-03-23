@@ -47,7 +47,7 @@ namespace UnityEngine.Rendering.Universal.Internal
         /// <seealso cref="RenderPassEvent"/>
         public FinalBlitPass(RenderPassEvent evt, Material blitMaterial, Material blitHDRMaterial)
         {
-            profilingSampler = ProfilingSampler.Get(URPProfileId.BlitFinalToBackBuffer);
+            profilingSampler = URPProfilingSamplers.BlitFinalToBackBuffer;
             renderPassEvent = evt;
 
             // Find sampler passes by name

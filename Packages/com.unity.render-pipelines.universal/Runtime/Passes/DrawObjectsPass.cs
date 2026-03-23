@@ -67,11 +67,11 @@ namespace UnityEngine.Rendering.Universal.Internal
         {
         }
 
-        internal DrawObjectsPass(URPProfileId profileId, bool opaque, RenderPassEvent evt, RenderQueueRange renderQueueRange, LayerMask layerMask, StencilState stencilState, int stencilReference)
+        internal DrawObjectsPass(ProfilingSampler sampler, bool opaque, RenderPassEvent evt, RenderQueueRange renderQueueRange, LayerMask layerMask, StencilState stencilState, int stencilReference)
         {
             Init(opaque, evt, renderQueueRange, layerMask, stencilState, stencilReference);
 
-            profilingSampler = ProfilingSampler.Get(profileId);
+            profilingSampler = sampler;
         }
 
         internal void Init(bool opaque, RenderPassEvent evt, RenderQueueRange renderQueueRange, LayerMask layerMask, StencilState stencilState, int stencilReference, ShaderTagId[] shaderTagIds = null)
@@ -332,16 +332,16 @@ namespace UnityEngine.Rendering.Universal.Internal
         /// <summary>
         /// Creates a new <c>DrawObjectsWithRenderingLayersPass</c> instance.
         /// </summary>
-        /// <param name="profilerTag">The profiler tag used with the pass.</param>
+        /// <param name="sampler">The profiling sampler used with the pass.</param>
         /// <param name="opaque">Marks whether the objects are opaque or transparent.</param>
         /// <param name="evt">The <c>RenderPassEvent</c> to use.</param>
         /// <param name="renderQueueRange">The <c>RenderQueueRange</c> to use for creating filtering settings that control what objects get rendered.</param>
         /// <param name="layerMask">The layer mask to use for creating filtering settings that control what objects get rendered.</param>
         /// <param name="stencilState">The stencil settings to use with this poss.</param>
         /// <param name="stencilReference">The stencil reference value to use with this pass.</param>
-        public DrawObjectsWithRenderingLayersPass(URPProfileId profilerTag, bool opaque, RenderPassEvent evt, RenderQueueRange renderQueueRange, LayerMask layerMask, StencilState stencilState,
+        internal DrawObjectsWithRenderingLayersPass(ProfilingSampler sampler, bool opaque, RenderPassEvent evt, RenderQueueRange renderQueueRange, LayerMask layerMask, StencilState stencilState,
             int stencilReference) :
-            base(profilerTag, opaque, evt, renderQueueRange, layerMask, stencilState, stencilReference)
+            base(sampler, opaque, evt, renderQueueRange, layerMask, stencilState, stencilReference)
         {
         }
 

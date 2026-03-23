@@ -27,7 +27,7 @@ namespace UnityEngine.Rendering.Universal
         public UberPostProcessPass(Shader shader, Texture2D[] filmGrainTextures)
         {
             this.renderPassEvent = RenderPassEvent.AfterRenderingPostProcessing - 1;
-            this.profilingSampler = new ProfilingSampler("Blit Post Processing");
+            this.profilingSampler = URPProfilingSamplers.UberPostProcess;
 
             m_Material = PostProcessUtils.LoadShader(shader, passName);
             m_IsValid = m_Material != null;
@@ -388,7 +388,7 @@ namespace UnityEngine.Rendering.Universal
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
             public static void CalcBloomParams(Bloom bloom, in TextureDesc srcDesc, out Vector4 bloomParams, out bool highQualityFiltering, out Texture dirtTexture, out Vector4 dirtScaleOffset, out float dirtIntensity)
             {
-                using (new ProfilingScope(ProfilingSampler.Get(URPProfileId.RG_UberPostSetupBloomPass)))
+                using (new ProfilingScope(URPProfilingSamplers.UberPostSetupBloomPass))
                 {
                     // Setup bloom on uber
                     var tint = bloom.tint.value.linear;

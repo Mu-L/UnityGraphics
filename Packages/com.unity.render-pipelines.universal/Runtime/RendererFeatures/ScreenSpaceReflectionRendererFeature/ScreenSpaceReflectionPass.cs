@@ -96,7 +96,7 @@ namespace UnityEngine.Rendering.Universal
             }
         };
 
-        readonly ProfilingSampler m_ProfilingSampler = ProfilingSampler.Get(URPProfileId.SSR);
+        readonly ProfilingSampler m_ProfilingSampler = URPProfilingSamplers.SSR;
         readonly ProfilingSampler m_DepthPyramidSampler = new("SSR - Depth Pyramid Generation");
         readonly ProfilingSampler m_UpscalingSampler = new("SSR - Upscaling");
         readonly ProfilingSampler m_FinalBlitSampler = new("SSR - Final Blit");

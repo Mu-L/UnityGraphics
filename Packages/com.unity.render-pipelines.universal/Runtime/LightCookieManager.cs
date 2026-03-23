@@ -326,7 +326,7 @@ namespace UnityEngine.Rendering.Universal
 
         public void Setup(CommandBuffer cmd, UniversalLightData lightData)
         {
-            using var profScope = new ProfilingScope(cmd, ProfilingSampler.Get(URPProfileId.LightCookies));
+            using var profScope = new ProfilingScope(cmd, URPProfilingSamplers.LightCookies);
 
             // Main light, 1 directional, bound directly
             bool isMainLightAvailable = lightData.mainLightIndex >= 0;

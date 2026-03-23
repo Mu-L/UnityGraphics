@@ -300,7 +300,7 @@ namespace UnityEngine.Rendering.Universal
                 Debug.LogWarning("A number of reflection probes have been skipped due to the reflection probe atlas being full.\nTo fix this, you can decrease the number or resolution of probes.");
             }
 
-            using (new ProfilingScope(cmd, ProfilingSampler.Get(URPProfileId.UpdateReflectionProbeAtlas)))
+            using (new ProfilingScope(cmd, URPProfilingSamplers.UpdateReflectionProbeAtlas))
             {
                 cmd.SetRenderTarget(m_AtlasTexture0);
 

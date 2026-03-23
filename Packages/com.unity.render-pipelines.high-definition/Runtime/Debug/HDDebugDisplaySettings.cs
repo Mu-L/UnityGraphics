@@ -7,7 +7,7 @@ namespace UnityEngine.Rendering.HighDefinition
         /// <summary>
         /// Rendering Debugger display stats.
         /// </summary>
-        internal DebugDisplaySettingsStats<HDProfileId> displayStats { get; private set; }
+        internal DebugDisplaySettingsStats displayStats { get; private set; }
 
         /// <summary>
         /// Volume-related Rendering Debugger settings.
@@ -37,7 +37,7 @@ namespace UnityEngine.Rendering.HighDefinition
         public override void Reset()
         {
             base.Reset();
-            displayStats = Add(new DebugDisplaySettingsStats<HDProfileId>(new HDDebugDisplayStats()));
+            displayStats = Add(new DebugDisplaySettingsStats(new HDDebugDisplayStats()));
             volumeSettings = Add(DebugDisplaySerializer.GetOrCreate<DebugDisplaySettingsVolume>());
             decalSettings = Add(DebugDisplaySerializer.GetOrCreate<DebugDisplaySettingsDecal>());
             gpuResidentDrawerSettings = Add(DebugDisplaySerializer.GetOrCreate<DebugDisplayGPUResidentDrawer>());

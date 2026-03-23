@@ -53,7 +53,7 @@ namespace UnityEngine.Rendering.Universal.Internal
 
         private static void ExecutePass(RasterCommandBuffer cmd, RendererList rendererList)
         {
-            using (new ProfilingScope(cmd, ProfilingSampler.Get(URPProfileId.DepthPrepass)))
+            using (new ProfilingScope(cmd, URPProfilingSamplers.DepthPrepass))
             {
                 cmd.DrawRendererList(rendererList);
             }

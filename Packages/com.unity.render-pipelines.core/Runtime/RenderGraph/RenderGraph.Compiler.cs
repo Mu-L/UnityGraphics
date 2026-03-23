@@ -10,7 +10,7 @@ namespace UnityEngine.Rendering.RenderGraphModule
 
         internal NativePassCompiler CompileNativeRenderGraph(int graphHash)
         {
-            using (new ProfilingScope(m_RenderGraphContext.cmd, ProfilingSampler.Get(RenderGraphProfileId.CompileRenderGraph)))
+            using (new ProfilingScope(m_RenderGraphContext.cmd, RenderGraphProfilerMarkers.CompileRenderGraph))
             {
                 if (nativeCompiler == null)
                     nativeCompiler = new NativePassCompiler(m_CompilationCache);
@@ -35,7 +35,7 @@ namespace UnityEngine.Rendering.RenderGraphModule
 
         void ExecuteNativeRenderGraph()
         {
-            using (new ProfilingScope(m_RenderGraphContext.cmd, ProfilingSampler.Get(RenderGraphProfileId.ExecuteRenderGraph)))
+            using (new ProfilingScope(m_RenderGraphContext.cmd, RenderGraphProfilerMarkers.ExecuteRenderGraph))
             {
                 nativeCompiler.ExecuteGraph(m_RenderGraphContext, m_Resources, m_RenderPasses);
             }

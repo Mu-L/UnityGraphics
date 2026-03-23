@@ -375,7 +375,7 @@ namespace UnityEngine.Rendering
             List<BrickChunkAlloc> dstLocations, bool updateSharedData, Texture validityTexture, ProbeVolumeSHBands bands,
             bool skyOcclusion, Texture skyOcclusionTexture, bool skyShadingDirections, Texture skyShadingDirectionsTexture, bool probeOcclusion)
         {
-            using (new ProfilingScope(cmd, ProfilingSampler.Get(CoreProfileId.APVDiskStreamingUpdatePool)))
+            using (new ProfilingScope(cmd, CoreProfilingSamplers.APVDiskStreamingUpdatePool))
             {
                 int chunkCount = dstLocations.Count;
 

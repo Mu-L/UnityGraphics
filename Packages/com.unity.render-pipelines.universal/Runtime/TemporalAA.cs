@@ -436,7 +436,7 @@ namespace UnityEngine.Rendering.Universal
             // Frame #2: MotionVectors.Update: #2, Taa.Execute: #2 prev #2   (Ooops! Incorrect history for frame #2!)
             TextureHandle activeMotionVectors = isNewFrame ? srcMotionVectors : renderGraph.defaultResources.blackTexture;
 
-            using (var builder = renderGraph.AddRasterRenderPass<TaaPassData>("Temporal Anti-aliasing", out var passData, ProfilingSampler.Get(URPProfileId.RG_TAA)))
+            using (var builder = renderGraph.AddRasterRenderPass<TaaPassData>("Temporal Anti-aliasing", out var passData, URPProfilingSamplers.TAA))
             {
                 passData.dstTex = dstColor;
                 builder.SetRenderAttachment(dstColor, 0, AccessFlags.Write);
@@ -504,7 +504,7 @@ namespace UnityEngine.Rendering.Universal
             if (isNewFrame)
             {
                 int kHistoryCopyPass = taaMaterial.shader.passCount - 1;
-                using (var builder = renderGraph.AddRasterRenderPass<TaaPassData>("Temporal Anti-aliasing Copy History", out var passData, ProfilingSampler.Get(URPProfileId.RG_TAACopyHistory)))
+                using (var builder = renderGraph.AddRasterRenderPass<TaaPassData>("Temporal Anti-aliasing Copy History", out var passData, URPProfilingSamplers.TAACopyHistory))
                 {
                     passData.dstTex = srcAccumulation;
                     builder.SetRenderAttachment(srcAccumulation, 0, AccessFlags.Write);

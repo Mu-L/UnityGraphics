@@ -19,7 +19,7 @@ namespace UnityEngine.Rendering.Universal
         /// <seealso cref="RenderPassEvent"/>
         public DrawSkyboxPass(RenderPassEvent evt)
         {
-            profilingSampler = ProfilingSampler.Get(URPProfileId.DrawSkybox);
+            profilingSampler = URPProfilingSamplers.DrawSkybox;
             renderPassEvent = evt;
         }
 

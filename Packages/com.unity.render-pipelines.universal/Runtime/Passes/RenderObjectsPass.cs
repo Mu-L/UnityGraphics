@@ -99,13 +99,6 @@ namespace UnityEngine.Rendering.Universal
             Init(renderPassEvent, shaderTags, renderQueueType, layerMask, cameraSettings);
         }
 
-        internal RenderObjectsPass(URPProfileId profileId, RenderPassEvent renderPassEvent, string[] shaderTags, RenderQueueType renderQueueType, int layerMask,
-            RenderObjects.CustomCameraSettings cameraSettings)
-        {
-            profilingSampler = ProfilingSampler.Get(profileId);
-            Init(renderPassEvent, shaderTags, renderQueueType, layerMask, cameraSettings);
-        }
-
         internal void Init(RenderPassEvent renderPassEvent, string[] shaderTags, RenderQueueType renderQueueType, int layerMask, RenderObjects.CustomCameraSettings cameraSettings)
         {
             m_PassData = new PassData();

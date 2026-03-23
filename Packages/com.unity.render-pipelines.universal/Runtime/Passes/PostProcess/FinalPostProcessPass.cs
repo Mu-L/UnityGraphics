@@ -1,4 +1,5 @@
 using System;
+using Unity.Profiling.LowLevel;
 using UnityEngine.Rendering.RenderGraphModule;
 using System.Runtime.CompilerServices; // AggressiveInlining
 
@@ -6,6 +7,9 @@ namespace UnityEngine.Rendering.Universal
 {
     internal sealed class FinalPostProcessPass : PostProcessPass
     {
+        /// <summary>Blits the final post-processed image to the camera target, applying FXAA, upscaling, or format conversion as the last rendering step.</summary>
+        static readonly ProfilingSampler k_ProfilingSampler = ProfilingSampler.Create("Blit Final Post Processing", MarkerFlags.Default);
+
         Material m_Material;
         Texture2D[] m_FilmGrainTextures;
         bool m_IsValid;
@@ -28,7 +32,7 @@ namespace UnityEngine.Rendering.Universal
         public FinalPostProcessPass(Shader shader, Texture2D[] filmGrainTextures)
         {
             this.renderPassEvent = RenderPassEvent.AfterRenderingPostProcessing - 1;
-            this.profilingSampler = new ProfilingSampler("Blit Final Post Processing");
+            this.profilingSampler = k_ProfilingSampler;
 
             m_Material = PostProcessUtils.LoadShader(shader, passName);
             m_IsValid = m_Material != null;

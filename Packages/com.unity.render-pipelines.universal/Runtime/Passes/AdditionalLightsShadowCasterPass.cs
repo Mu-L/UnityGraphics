@@ -770,7 +770,7 @@ namespace UnityEngine.Rendering.Universal.Internal
 
             bool additionalLightHasSoftShadows = false;
 
-            using (new ProfilingScope(cmd, ProfilingSampler.Get(URPProfileId.AdditionalLightsShadow)))
+            using (new ProfilingScope(cmd, URPProfilingSamplers.AdditionalLightsShadow))
             {
                 bool anyShadowSliceRenderer = false;
                 int shadowSlicesCount = m_ShadowSliceToAdditionalLightIndex.Count;

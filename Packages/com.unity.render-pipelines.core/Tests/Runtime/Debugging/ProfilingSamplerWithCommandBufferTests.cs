@@ -79,13 +79,14 @@ namespace UnityEngine.Rendering.Tests
         {
             RuntimePlatform.WindowsPlayer,
             RuntimePlatform.WindowsEditor,
-            RuntimePlatform.Android,
             RuntimePlatform.PS5,
-            RuntimePlatform.Switch,
-            RuntimePlatform.XboxOne
+            RuntimePlatform.Switch
         })]
         public IEnumerator CommandBufferBeginSampleWithObject_GpuSamples_ReturnsNonZeroCount()
         {
+            if (!SystemInfo.supportsGpuRecorder)
+                yield break;
+
             var sampler = new ProfilingSampler(nameof(CommandBufferBeginSampleWithObject_GpuSamples_ReturnsNonZeroCount));
             using var recorder = ProfilerRecorder.StartNew(ProfilerCategory.Render, sampler.name, 1, ProfilerRecorderOptions.GpuRecorder | ProfilerRecorderOptions.Default);
 
@@ -105,13 +106,14 @@ namespace UnityEngine.Rendering.Tests
         {
             RuntimePlatform.WindowsPlayer,
             RuntimePlatform.WindowsEditor,
-            RuntimePlatform.Android,
             RuntimePlatform.PS5,
-            RuntimePlatform.Switch,
-            RuntimePlatform.XboxOne
+            RuntimePlatform.Switch
         })]
         public IEnumerator CommandBufferBeginSample_GpuSamples_ReturnsNonZeroCount()
         {
+            if (!SystemInfo.supportsGpuRecorder)
+                yield break;
+
             var sampler = new ProfilingSampler(nameof(CommandBufferBeginSample_GpuSamples_ReturnsNonZeroCount));
             using var recorder = ProfilerRecorder.StartNew(ProfilerCategory.Render, sampler.name, 1, ProfilerRecorderOptions.GpuRecorder | ProfilerRecorderOptions.Default);
 
