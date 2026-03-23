@@ -19,6 +19,15 @@ namespace UnityEngine.Rendering.Universal.Internal
         // DX10 uses SM 4.0. However URP shaders requires SM 4.5 or will use fallback to SM 2.0 shaders otherwise.
         // We will consider deferred renderer is not available when SM 2.0 shaders run.
         internal static bool IsDX10 { get; set; }
+
+#if UNITY_EDITOR
+        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterAssembliesLoaded)]
+        static void ResetStaticsOnLoad()
+        {
+            IsOpenGL = false;
+            IsDX10 = false;
+        }
+#endif
     }
 
     internal enum LightFlag
@@ -56,21 +65,21 @@ namespace UnityEngine.Rendering.Universal.Internal
 
             public static readonly int _ScreenToWorld = Shader.PropertyToID("_ScreenToWorld");
 
-            public static int _MainLightPosition = Shader.PropertyToID("_MainLightPosition");   // ForwardLights.LightConstantBuffer also refers to the same ShaderPropertyID - TODO: move this definition to a common location shared by other UniversalRP classes
-            public static int _MainLightColor = Shader.PropertyToID("_MainLightColor");         // ForwardLights.LightConstantBuffer also refers to the same ShaderPropertyID - TODO: move this definition to a common location shared by other UniversalRP classes
-            public static int _MainLightLayerMask = Shader.PropertyToID("_MainLightLayerMask"); // ForwardLights.LightConstantBuffer also refers to the same ShaderPropertyID - TODO: move this definition to a common location shared by other UniversalRP classes
-            public static int _SpotLightScale = Shader.PropertyToID("_SpotLightScale");
-            public static int _SpotLightBias = Shader.PropertyToID("_SpotLightBias");
-            public static int _SpotLightGuard = Shader.PropertyToID("_SpotLightGuard");
-            public static int _LightPosWS = Shader.PropertyToID("_LightPosWS");
-            public static int _LightColor = Shader.PropertyToID("_LightColor");
-            public static int _LightAttenuation = Shader.PropertyToID("_LightAttenuation");
-            public static int _LightOcclusionProbInfo = Shader.PropertyToID("_LightOcclusionProbInfo");
-            public static int _LightDirection = Shader.PropertyToID("_LightDirection");
-            public static int _LightFlags = Shader.PropertyToID("_LightFlags");
-            public static int _ShadowLightIndex = Shader.PropertyToID("_ShadowLightIndex");
-            public static int _LightLayerMask = Shader.PropertyToID("_LightLayerMask");
-            public static int _CookieLightIndex = Shader.PropertyToID("_CookieLightIndex");
+            public static readonly int _MainLightPosition = Shader.PropertyToID("_MainLightPosition");   // ForwardLights.LightConstantBuffer also refers to the same ShaderPropertyID - TODO: move this definition to a common location shared by other UniversalRP classes
+            public static readonly int _MainLightColor = Shader.PropertyToID("_MainLightColor");         // ForwardLights.LightConstantBuffer also refers to the same ShaderPropertyID - TODO: move this definition to a common location shared by other UniversalRP classes
+            public static readonly int _MainLightLayerMask = Shader.PropertyToID("_MainLightLayerMask"); // ForwardLights.LightConstantBuffer also refers to the same ShaderPropertyID - TODO: move this definition to a common location shared by other UniversalRP classes
+            public static readonly int _SpotLightScale = Shader.PropertyToID("_SpotLightScale");
+            public static readonly int _SpotLightBias = Shader.PropertyToID("_SpotLightBias");
+            public static readonly int _SpotLightGuard = Shader.PropertyToID("_SpotLightGuard");
+            public static readonly int _LightPosWS = Shader.PropertyToID("_LightPosWS");
+            public static readonly int _LightColor = Shader.PropertyToID("_LightColor");
+            public static readonly int _LightAttenuation = Shader.PropertyToID("_LightAttenuation");
+            public static readonly int _LightOcclusionProbInfo = Shader.PropertyToID("_LightOcclusionProbInfo");
+            public static readonly int _LightDirection = Shader.PropertyToID("_LightDirection");
+            public static readonly int _LightFlags = Shader.PropertyToID("_LightFlags");
+            public static readonly int _ShadowLightIndex = Shader.PropertyToID("_ShadowLightIndex");
+            public static readonly int _LightLayerMask = Shader.PropertyToID("_LightLayerMask");
+            public static readonly int _CookieLightIndex = Shader.PropertyToID("_CookieLightIndex");
         }
 
         internal static readonly string[] k_GBufferNames = new string[]
@@ -275,7 +284,8 @@ namespace UnityEngine.Rendering.Universal.Internal
             m_UseDeferredPlus = initParams.deferredPlus;
         }
 
-        static ProfilingSampler s_SetupDeferredLights = new ProfilingSampler("Setup Deferred lights");
+        static readonly ProfilingSampler s_SetupDeferredLights = new ProfilingSampler("Setup Deferred lights");
+
         private class SetupLightPassData
         {
             internal UniversalCameraData cameraData;

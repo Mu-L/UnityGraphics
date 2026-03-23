@@ -30,7 +30,17 @@ namespace UnityEngine.Rendering.Universal.Internal
         private const int k_MaxCascades = 4;
         private const int k_ShadowmapBufferBits = 16;
         private const string k_MainLightShadowMapTextureName = "_MainLightShadowmapTexture";
-        private static Vector4 s_EmptyShadowParams = new(0f, 0f, 1f, 0f);
+        private static readonly Vector4 k_DefaultEmptyShadowParams = new Vector4(0f, 0f, 1f, 0f);
+        private static Vector4 s_EmptyShadowParams = k_DefaultEmptyShadowParams;
+
+#if UNITY_EDITOR
+        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterAssembliesLoaded)]
+        static void ResetStaticsOnLoad()
+        {
+            s_EmptyShadowParams = k_DefaultEmptyShadowParams;
+        }
+#endif
+
         private static readonly Vector4 s_EmptyShadowmapSize = new(k_EmptyShadowMapDimensions, 1f / k_EmptyShadowMapDimensions, k_EmptyShadowMapDimensions, k_EmptyShadowMapDimensions);
 
         // Classes
