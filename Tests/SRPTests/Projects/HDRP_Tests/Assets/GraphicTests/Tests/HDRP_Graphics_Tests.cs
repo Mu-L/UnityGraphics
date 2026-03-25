@@ -1,6 +1,7 @@
 using System.Collections;
 using System.Runtime.InteropServices;
 using NUnit.Framework;
+using UnityEngine;
 using UnityEngine.SceneManagement;
 using UnityEngine.TestTools;
 using UnityEngine.TestTools.Graphics;
@@ -465,6 +466,22 @@ namespace UnityEngine.Rendering.HighDefinition.Tests
         [IgnoreGraphicsTest(
             "9950-LineRendering",
             "Also fails because of Alembic removal https://jira.unity3d.com/browse/UUM-136889"
+        )]
+        [IgnoreGraphicsTest(
+            "4089_DRS-DLSS-Software",
+            "Disabled for Instability https://jira.unity3d.com/browse/UUM-135194",
+            runtimePlatforms: new[]
+            {
+                RuntimePlatform.WindowsEditor
+            }
+        )]
+        [IgnoreGraphicsTest(
+            "4088_DRS-DLSS-Hardware",
+            "Disabled for Instability https://jira.unity3d.com/browse/UUM-135194",
+            runtimePlatforms: new[]
+            {
+                RuntimePlatform.WindowsEditor
+            }
         )]
         public IEnumerator Run(SceneGraphicsTestCase testCase)
         {
