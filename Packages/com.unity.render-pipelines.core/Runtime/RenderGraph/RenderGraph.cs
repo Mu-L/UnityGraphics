@@ -506,7 +506,7 @@ namespace UnityEngine.Rendering.RenderGraphModule
 
         internal List<DebugUI.Widget> GetWidgetList()
         {
-            return m_DebugParameters.GetWidgetList(name);
+            return m_DebugParameters.GetWidgetList();
         }
 
         internal bool areAnySettingsActive => m_DebugParameters.AreAnySettingsActive;
