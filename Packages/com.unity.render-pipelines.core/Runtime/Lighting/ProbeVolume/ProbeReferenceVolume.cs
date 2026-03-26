@@ -1469,11 +1469,13 @@ namespace UnityEngine.Rendering
             }
 
             // Remove bricks and empty cells
-            foreach (var cellIndex in cellList)
+            if (cellList != null)
             {
-                RemoveCell(cellIndex);
+                foreach (var cellIndex in cellList)
+                {
+                    RemoveCell(cellIndex);
+                }
             }
-
             ClearDebugData();
             ComputeCellGlobalInfo();
         }
