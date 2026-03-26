@@ -483,6 +483,22 @@ namespace UnityEngine.Rendering.HighDefinition.Tests
                 RuntimePlatform.WindowsEditor
             }
         )]
+        [IgnoreGraphicsTest(
+            "9800_Compositor",
+            "Disabled for Instability https://jira.unity3d.com/browse/UUM-138001",
+            runtimePlatforms: new[]
+            {
+                RuntimePlatform.WindowsEditor
+            }
+        )]
+        [IgnoreGraphicsTest(
+            "9801_ShurikenLightModule",
+            "Disabled for Instability https://jira.unity3d.com/browse/UUM-138001",
+            runtimePlatforms: new[]
+            {
+                RuntimePlatform.WindowsEditor
+            }
+        )]
         public IEnumerator Run(SceneGraphicsTestCase testCase)
         {
             yield return HDRP_GraphicTestRunner.Run(testCase);
