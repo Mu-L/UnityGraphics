@@ -1,3 +1,4 @@
+using System;
 using UnityEngine.Rendering;
 using Unity.Collections;
 using Unity.Mathematics;
@@ -16,7 +17,15 @@ namespace UnityEngine.Rendering.HighDefinition
         public static int Asint(float val) { unsafe { return *((int*)&val); } }
         public static uint Asuint(float val) { unsafe { return *((uint*)&val); } }
 
-        static Plane[] s_CachedPlanes = new Plane[6];
+        static readonly Plane[] s_CachedPlanes = new Plane[6];
+
+#if UNITY_EDITOR
+        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterAssembliesLoaded)]
+        static void ResetStaticsOnLoad()
+        {
+            Array.Clear(s_CachedPlanes, 0, s_CachedPlanes.Length);
+        }
+#endif
 
         // Keep in sync with both HDShadowSampling.hlsl
         static float GetPunctualFilterWidthInTexels(HDShadowFilteringQuality quality)

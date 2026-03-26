@@ -26,6 +26,15 @@ namespace UnityEngine.Rendering.HighDefinition
         // Only dispose resources
         static void DisposeStaticInstance() => s_Instance.Dispose();
 
+#if UNITY_EDITOR
+        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterAssembliesLoaded)]
+        static void ResetStaticsOnLoad()
+        {
+            s_Instance?.Dispose();
+            s_Instance = new HDProbeSystemInternal();
+        }
+#endif
+
         public static ReflectionSystemParameters Parameters
         {
             get => s_Instance.Parameters;

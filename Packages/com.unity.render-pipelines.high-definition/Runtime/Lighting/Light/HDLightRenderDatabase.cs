@@ -167,7 +167,7 @@ namespace UnityEngine.Rendering.HighDefinition
     {
         #region internal HDRP API
 
-        public static int InvalidDataIndex = -1;
+        public const int InvalidDataIndex = -1;
 
         //total light count of all lights in the world.
         public int lightCount => m_LightCount;
@@ -660,6 +660,14 @@ namespace UnityEngine.Rendering.HighDefinition
         {
             DeleteArrays();
         }
+
+#if UNITY_EDITOR
+        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterAssembliesLoaded)]
+        static void ResetStaticsOnLoad()
+        {
+            s_Instance = null;
+        }
+#endif
 
         #endregion
     }

@@ -652,6 +652,14 @@ namespace UnityEngine.Rendering.HighDefinition
 
         internal NativeList<HDShadowResolutionRequest> shadowResolutionRequestStorage => m_ShadowResolutionRequestStorage;
 
+#if UNITY_EDITOR
+        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterAssembliesLoaded)]
+        static void ResetStaticsOnLoad()
+        {
+            s_Instance = new HDShadowManager();
+        }
+#endif
+
         private HDShadowManager()
         {
 #if UNITY_EDITOR

@@ -751,10 +751,10 @@ namespace UnityEngine.Rendering.HighDefinition
         static readonly ProfilerMarker k_ProfilerMarkerBuild = new ("WorldLightManager.Build");
         static readonly ProfilerMarker k_ProfilerMarkerVolume = new ("WorldLightManager.Volumes");
         internal const int SizeAlignment = 32;
-        internal static Vector3 minBounds = new Vector3(float.MaxValue, float.MaxValue, float.MaxValue);
-        internal static Vector3 maxBounds = new Vector3(-float.MaxValue, -float.MaxValue, -float.MaxValue);
-        internal static LightData s_defaultLightData = new LightData();
-        internal static EnvLightData s_defaultEnvLightData = new EnvLightData();
+        internal static readonly Vector3 minBounds = new Vector3(float.MaxValue, float.MaxValue, float.MaxValue);
+        internal static readonly Vector3 maxBounds = new Vector3(-float.MaxValue, -float.MaxValue, -float.MaxValue);
+        internal static readonly LightData s_defaultLightData = new LightData();
+        internal static readonly EnvLightData s_defaultEnvLightData = new EnvLightData();
 
         private static void OOBBToAABBBounds(Vector3 centerWS, Vector3 extents, Vector3 up, Vector3 right, Vector3 forward, ref Bounds bounds)
         {

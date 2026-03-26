@@ -240,7 +240,7 @@ namespace UnityEngine.Rendering.HighDefinition
 
         /// <summary>Default value.</summary>
         [Obsolete("Use ProbeSettings.NewDefault() instead. #from(2019.3)")]
-        public static ProbeSettings @default = default;
+        public static readonly ProbeSettings @default = default;
         /// <summary>Default value.</summary>
         /// <returns>The default value.</returns>
         public static ProbeSettings NewDefault()
@@ -343,5 +343,6 @@ namespace UnityEngine.Rendering.HighDefinition
             }
             return h;
         }
+
     }
 }

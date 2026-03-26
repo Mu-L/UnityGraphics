@@ -61,6 +61,15 @@ namespace UnityEngine.Rendering.HighDefinition
 #endregion
 
         private static HDShadowRequestDatabase s_Instance;
+
+#if UNITY_EDITOR
+        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterAssembliesLoaded)]
+        static void ResetStaticsOnLoad()
+        {
+            s_Instance = null;
+        }
+#endif
+
         // TODO: Pad each set of HDShadowRequests to eliminate cache line sharing between sets, as a prerequisite for parallel shadow request update work.
         private int m_HDShadowRequestFreeListIndex;
         private int m_HDShadowRequestCount;
@@ -70,6 +79,11 @@ namespace UnityEngine.Rendering.HighDefinition
         private NativeList<float4> m_FrustumPlanesStorage = new NativeList<float4>(Allocator.Persistent);
         private NativeList<Vector3> m_CachedViewPositionsStorage = new NativeList<Vector3>(Allocator.Persistent);
         private bool m_HDShadowRequestsCreated = true;
+
+        ~HDShadowRequestDatabase()
+        {
+            DeleteArrays();
+        }
 
         public NativeList<HDShadowRequest> hdShadowRequestStorage => m_HDShadowRequestStorage;
         public NativeList<int> hdShadowRequestIndicesStorage => m_HDShadowRequestIndicesStorage;

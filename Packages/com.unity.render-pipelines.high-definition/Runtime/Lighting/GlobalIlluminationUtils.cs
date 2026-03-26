@@ -249,7 +249,7 @@ namespace UnityEngine.Rendering.HighDefinition
             return true;
         }
 
-        static public Lightmapping.RequestLightsDelegate hdLightsDelegate = (Light[] requests, NativeArray<LightDataGI> lightsOutput) =>
+        static public readonly Lightmapping.RequestLightsDelegate hdLightsDelegate = (Light[] requests, NativeArray<LightDataGI> lightsOutput) =>
         {
             // Get all lights in the scene
             LightDataGI lightDataGI = new LightDataGI();

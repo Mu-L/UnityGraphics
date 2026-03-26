@@ -64,7 +64,7 @@ namespace UnityEngine.Rendering.HighDefinition
         // Compute the inverse of SphericalHarmonicsL2::kNormalizationConstants.
         // See SetSHEMapConstants() in "Stupid Spherical Harmonics Tricks".
 
-        static float[] invNormConsts = { 1 / c0, -1 / c1, 1 / c1, -1 / c1, 1 / c2, -1 / c2, 1 / c3, -1 / c2, 1 / c4 };
+        static readonly float[] invNormConsts = { 1 / c0, -1 / c1, 1 / c1, -1 / c1, 1 / c2, -1 / c2, 1 / c3, -1 / c2, 1 / c4 };
 
         // Undoes coefficient rescaling due to the convolution with the clamped cosine kernel
         // to obtain the canonical values of SH.
@@ -87,7 +87,7 @@ namespace UnityEngine.Rendering.HighDefinition
         const float k3 = 0.31539156525252000603f; // {2, 0} : 1/4 * sqrt(5/Pi)
         const float k4 = 0.54627421529603953527f; // {2, 2} : 1/4 * sqrt(15/Pi)
 
-        static float[] ks = { k0, -k1, k1, -k1, k2, -k2, k3, -k2, k4 };
+        static readonly float[] ks = { k0, -k1, k1, -k1, k2, -k2, k3, -k2, k4 };
 
 
         // Premultiplies the SH with the polynomial coefficients of SH basis functions,
@@ -140,5 +140,6 @@ namespace UnityEngine.Rendering.HighDefinition
             // Quadratic (5)
             packedCoeffs[6].Set(sh[0, 8], sh[1, 8], sh[2, 8], 1.0f);
         }
+
     }
 }

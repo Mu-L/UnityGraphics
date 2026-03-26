@@ -12,12 +12,12 @@ namespace UnityEngine.Rendering.HighDefinition
     {
         static class ComputeShadowCullingInfoProfilerMarkers
         {
-            public static ProfilerMarker indicesAndPreambleMarker = new ProfilerMarker("WriteShadowIndicesAndCollectLightInfo");
-            public static ProfilerMarker lightBucketingMarker = new ProfilerMarker("LightBucketing");
-            public static ProfilerMarker computePointShadowCullingInfosMarker = new ProfilerMarker("ComputePointShadowCullingInfos");
-            public static ProfilerMarker computeSpotShadowCullingInfosMarker = new ProfilerMarker("ComputeSpotShadowCullingInfos");
-            public static ProfilerMarker computeAreaRectangleShadowCullingInfosMarker = new ProfilerMarker("ComputeAreaRectangleShadowCullingInfos");
-            public static ProfilerMarker computeDirectionalShadowCullingInfosMarker = new ProfilerMarker("ComputeDirectionalShadowCullingInfos");
+            public static readonly ProfilerMarker indicesAndPreambleMarker = new ProfilerMarker("WriteShadowIndicesAndCollectLightInfo");
+            public static readonly ProfilerMarker lightBucketingMarker = new ProfilerMarker("LightBucketing");
+            public static readonly ProfilerMarker computePointShadowCullingInfosMarker = new ProfilerMarker("ComputePointShadowCullingInfos");
+            public static readonly ProfilerMarker computeSpotShadowCullingInfosMarker = new ProfilerMarker("ComputeSpotShadowCullingInfos");
+            public static readonly ProfilerMarker computeAreaRectangleShadowCullingInfosMarker = new ProfilerMarker("ComputeAreaRectangleShadowCullingInfos");
+            public static readonly ProfilerMarker computeDirectionalShadowCullingInfosMarker = new ProfilerMarker("ComputeDirectionalShadowCullingInfos");
         }
 
         public static unsafe void ComputeCullingSplits(in HDShadowInitParameters hdShadowInitParams,

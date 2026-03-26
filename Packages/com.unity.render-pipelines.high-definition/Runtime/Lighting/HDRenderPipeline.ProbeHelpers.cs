@@ -5,7 +5,7 @@ namespace UnityEngine.Rendering.HighDefinition
 {
     public partial class HDRenderPipeline
     {
-        static Vector4[] m_PackedCoeffsProbe = new Vector4[7];
+        static readonly Vector4[] m_PackedCoeffsProbe = new Vector4[7];
 
         // Ref: "Efficient Evaluation of Irradiance Environment Maps" from ShaderX 2
         static Vector3 SHEvalLinearL0L1(Vector3 N, Vector4 shAr, Vector4 shAg, Vector4 shAb)
