@@ -21,6 +21,7 @@ using UnityEditor;
 
 namespace UnityEngine.Rendering
 {
+#if !UNITY_WEBGL_RENDERER_ONLY
     internal struct InternalGPUResidentDrawerSettings
     {
         public RenderPipelineAsset renderPipelineAsset;
@@ -36,6 +37,7 @@ namespace UnityEngine.Rendering
             isManagedByUnitTest = false,
         };
     }
+#endif
 
     /// <summary>
     /// Static utility class for updating data post cull in begin camera rendering
@@ -43,6 +45,7 @@ namespace UnityEngine.Rendering
     [BurstCompile]
     public partial class GPUResidentDrawer
     {
+#if !UNITY_WEBGL_RENDERER_ONLY
 #if GPU_RESIDENT_DRAWER_ENABLE_VALIDATION || GPU_RESIDENT_DRAWER_ENABLE_DEEP_VALIDATION
         internal const bool EnableValidation = true;
 #else
@@ -675,5 +678,26 @@ namespace UnityEngine.Rendering
             m_FrameUpdateNeeded = false;
 #endif
         }
+#else
+        // Public API stubs
+        public static bool IsInstanceOcclusionCullingEnabled() => false;
+        public static void PostCullBeginCameraRendering(RenderRequestBatcherContext context) {}
+        public static void OnSetupAmbientProbe() {}
+        public static void InstanceOcclusionTest(RenderGraph renderGraph, in OcclusionCullingSettings settings, ReadOnlySpan<SubviewOcclusionTest> subviewOcclusionTests) {}
+        public static void UpdateInstanceOccluders(RenderGraph renderGraph, in OccluderParameters occluderParameters, ReadOnlySpan<OccluderSubviewUpdate> occluderSubviewUpdates) {}
+        public static void ReinitializeIfNeeded() {}
+        public static void RenderDebugOcclusionTestOverlay(RenderGraph renderGraph, DebugDisplayGPUResidentDrawer debugSettings, EntityId viewID, TextureHandle colorBuffer) {}
+        public static void RenderDebugOccluderOverlay(RenderGraph renderGraph, DebugDisplayGPUResidentDrawer debugSettings, Vector2 screenPos, float maxHeight, TextureHandle colorBuffer) {}
+
+        // Internal stubs (for e.g. IGPUResidentRenderPipeline)
+        internal static bool IsInitialized() => false;
+        internal static void Reinitialize() {}
+
+        // Internal stubs (for tests)
+        internal static bool IsForcedOnViaCommandLine() => false;
+        internal static bool IsOcclusionForcedOnViaCommandLine() => false;
+        internal static bool MaintainContext { get; set; }
+        internal static bool ForceOcclusion { get; set; }
+#endif
     }
 }

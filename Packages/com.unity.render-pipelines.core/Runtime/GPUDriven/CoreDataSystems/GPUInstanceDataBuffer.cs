@@ -1,3 +1,4 @@
+#if !UNITY_WEBGL_RENDERER_ONLY
 using System;
 using System.Collections;
 using Unity.Burst;
@@ -1018,3 +1019,5 @@ namespace UnityEngine.Rendering
         public override int GetHashCode() { return index; }
     }
 }
+
+#endif // !UNITY_WEBGL_RENDERER_ONLY

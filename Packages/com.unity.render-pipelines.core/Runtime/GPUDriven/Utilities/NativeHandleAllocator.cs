@@ -1,3 +1,4 @@
+#if !UNITY_WEBGL_RENDERER_ONLY
 using System;
 using Unity.Burst;
 using Unity.Collections;
@@ -204,3 +205,5 @@ namespace UnityEngine.Rendering
         public static void TrimLength(NativeHandleAllocator* allocator) => allocator->TrimLengthImpl();
     }
 }
+
+#endif // !UNITY_WEBGL_RENDERER_ONLY

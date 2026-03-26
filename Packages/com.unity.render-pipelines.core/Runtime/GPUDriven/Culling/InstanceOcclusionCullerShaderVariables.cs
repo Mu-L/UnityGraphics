@@ -1,3 +1,4 @@
+#if !UNITY_WEBGL_RENDERER_ONLY
 using System;
 
 namespace UnityEngine.Rendering
@@ -15,3 +16,5 @@ namespace UnityEngine.Rendering
         public int _InstanceOcclusionCullerPad0;
     }
 }
+
+#endif // !UNITY_WEBGL_RENDERER_ONLY

@@ -1,3 +1,4 @@
+#if !UNITY_WEBGL_RENDERER_ONLY
 using System;
 using System.Runtime.CompilerServices;
 using System.Threading;
@@ -652,3 +653,5 @@ namespace UnityEngine.Rendering
 
     }
 }
+
+#endif // !UNITY_WEBGL_RENDERER_ONLY

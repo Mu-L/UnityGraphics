@@ -1,3 +1,4 @@
+#if !UNITY_WEBGL_RENDERER_ONLY
 using System;
 using NUnit.Framework;
 using Unity.Collections;
@@ -86,3 +87,4 @@ namespace UnityEngine.Rendering.Tests
         }
     }
 }
+#endif

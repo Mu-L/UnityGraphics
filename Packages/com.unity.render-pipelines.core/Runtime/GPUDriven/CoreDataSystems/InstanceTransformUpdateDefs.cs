@@ -1,3 +1,4 @@
+#if !UNITY_WEBGL_RENDERER_ONLY
 using Unity.Mathematics;
 using System.Runtime.InteropServices;
 
@@ -21,3 +22,5 @@ namespace UnityEngine.Rendering
         public float shb0, shb1, shb2, shb3, shb4, shb5, shb6, shb7, shb8;
     }
 }
+
+#endif // !UNITY_WEBGL_RENDERER_ONLY

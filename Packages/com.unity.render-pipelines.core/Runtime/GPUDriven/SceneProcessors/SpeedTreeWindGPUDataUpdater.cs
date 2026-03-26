@@ -1,3 +1,4 @@
+#if !UNITY_WEBGL_RENDERER_ONLY
 #if ENABLE_TERRAIN_MODULE
 using System;
 using Unity.Collections;
@@ -149,3 +150,5 @@ namespace UnityEngine.Rendering
     }
 }
 #endif
+
+#endif // !UNITY_WEBGL_RENDERER_ONLY
