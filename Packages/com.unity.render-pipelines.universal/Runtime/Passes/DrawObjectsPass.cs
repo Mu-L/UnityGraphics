@@ -23,6 +23,13 @@ namespace UnityEngine.Rendering.Universal.Internal
         /// </summary>
         public bool m_ShouldTransparentsReceiveShadows;
 
+#if URP_SCREEN_SPACE_REFLECTION
+        /// <summary>
+        /// Used to indicate whether transparent objects should receive screen space reflections or not.
+        /// </summary>
+        public bool shouldTransparentsReceiveSSR { get; set; }
+#endif
+
         static readonly int s_DrawObjectPassDataPropID = Shader.PropertyToID("_DrawObjectPassData");
 
         /// <summary>
@@ -86,6 +93,9 @@ namespace UnityEngine.Rendering.Universal.Internal
             m_RenderStateBlock = new RenderStateBlock(RenderStateMask.Nothing);
             m_IsOpaque = opaque;
             m_ShouldTransparentsReceiveShadows = false;
+#if URP_SCREEN_SPACE_REFLECTION
+            shouldTransparentsReceiveSSR = false;
+#endif
 
             if (stencilState.enabled)
             {
@@ -151,10 +161,16 @@ namespace UnityEngine.Rendering.Universal.Internal
             internal TextureHandle albedoHdl;
             internal TextureHandle depthHdl;
             internal TextureHandle screenSpaceIrradianceHdl;
+#if URP_SCREEN_SPACE_REFLECTION
+            internal TextureHandle screenSpaceReflectionHdl;
+#endif
 
             internal UniversalCameraData cameraData;
             internal bool isOpaque;
             internal bool shouldTransparentsReceiveShadows;
+#if URP_SCREEN_SPACE_REFLECTION
+            internal bool shouldTransparentsReceiveSSR;
+#endif
             internal uint batchLayerMask;
             internal bool isActiveTargetBackBuffer;
             internal RendererListHandle rendererListHdl;
@@ -175,6 +191,9 @@ namespace UnityEngine.Rendering.Universal.Internal
             passData.cameraData = cameraData;
             passData.isOpaque = m_IsOpaque;
             passData.shouldTransparentsReceiveShadows = m_ShouldTransparentsReceiveShadows;
+#if URP_SCREEN_SPACE_REFLECTION
+            passData.shouldTransparentsReceiveSSR = shouldTransparentsReceiveSSR;
+#endif
             passData.batchLayerMask = batchLayerMask;
             passData.isActiveTargetBackBuffer = isActiveTargetBackBuffer;
         }
@@ -202,7 +221,7 @@ namespace UnityEngine.Rendering.Universal.Internal
                 m_RenderStateBlock.depthState = new DepthState(false, CompareFunction.Equal);
                 m_RenderStateBlock.mask |= RenderStateMask.Depth;
             }
-            else 
+            else
             {
                 m_RenderStateBlock.depthState = DepthState.defaultValue;
                 m_RenderStateBlock.mask &= ~RenderStateMask.Depth;
@@ -269,6 +288,19 @@ namespace UnityEngine.Rendering.Universal.Internal
                     builder.UseTexture(irradianceTexture, AccessFlags.Read);
                 }
 
+#if URP_SCREEN_SPACE_REFLECTION
+                TextureHandle ssrTexture = resourceData.ssrTexture;
+                if (ssrTexture.IsValid())
+                {
+                    passData.screenSpaceReflectionHdl = ssrTexture;
+                    builder.UseTexture(ssrTexture, AccessFlags.Read);
+                }
+                else
+                {
+                    passData.screenSpaceReflectionHdl = TextureHandle.nullHandle;
+                }
+#endif
+
                 RenderGraphUtils.UseDBufferIfValid(builder, resourceData);
 
                 InitRendererLists(renderingData, cameraData, lightData, ref passData, renderGraph, disableZWrite);
@@ -318,6 +350,15 @@ namespace UnityEngine.Rendering.Universal.Internal
                         context.cmd.SetGlobalTexture(ShaderPropertyId.screenSpaceIrradiance, data.screenSpaceIrradianceHdl);
                     }
 
+#if URP_SCREEN_SPACE_REFLECTION
+                    bool useSSR = data.screenSpaceReflectionHdl.IsValid() && (data.isOpaque || data.shouldTransparentsReceiveSSR);
+                    context.cmd.SetKeyword(ShaderGlobalKeywords.ScreenSpaceReflection, useSSR);
+                    if (useSSR)
+                    {
+                        context.cmd.SetGlobalTexture(ShaderPropertyId.screenSpaceReflection, data.screenSpaceReflectionHdl);
+                    }
+#endif
+
                     ExecutePass(context.cmd, data, data.rendererListHdl, data.objectsWithErrorRendererListHdl, yFlip);
                 });
             }
@@ -364,7 +405,7 @@ namespace UnityEngine.Rendering.Universal.Internal
                 UniversalResourceData resourceData = frameData.Get<UniversalResourceData>();
                 UniversalRenderingData renderingData = frameData.Get<UniversalRenderingData>();
                 UniversalCameraData cameraData = frameData.Get<UniversalCameraData>();
-                UniversalLightData lightData = frameData.Get<UniversalLightData>();                
+                UniversalLightData lightData = frameData.Get<UniversalLightData>();
 
                 InitPassData(cameraData, ref passData.basePassData, batchLayerMask);
 

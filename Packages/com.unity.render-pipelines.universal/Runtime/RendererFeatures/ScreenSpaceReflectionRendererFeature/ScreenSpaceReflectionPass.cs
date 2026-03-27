@@ -140,10 +140,6 @@ namespace UnityEngine.Rendering.Universal
                 renderPassEvent = m_AfterOpaque ? (settings.ShouldRenderTransparents() ? RenderPassEvent.AfterRenderingTransparents + 25 : RenderPassEvent.AfterRenderingSkybox + 25) : RenderPassEvent.AfterRenderingPrePasses + 5;
 
                 requiredInputs = ScriptableRenderPassInput.Depth | ScriptableRenderPassInput.Normal;
-
-                // Deferred rendering before opaques, need to generate smoothness in depth normals prepass as GBuffer isn't ready yet.
-                if (!m_AfterOpaque)
-                    renderingData.writesSmoothnessToDepthNormalsAlpha = true;
             }
             else
             {
@@ -151,10 +147,10 @@ namespace UnityEngine.Rendering.Universal
 
                 // Request DepthNormals texture.
                 requiredInputs = ScriptableRenderPassInput.Depth | ScriptableRenderPassInput.Normal;
-
-                // With forward rendering, we are forced to generate a smoothness in depth normals prepass.
-                renderingData.writesSmoothnessToDepthNormalsAlpha = true;
             }
+
+            // Write smoothness to alpha of depth normals texture so we can sample it in SSR pass.
+            renderingData.writesSmoothnessToDepthNormalsAlpha = true;
 
             // Before opaque needs motion vectors for reprojection.
             if (!m_AfterOpaque && (cameraType == CameraType.VR || cameraType == CameraType.Game))
@@ -351,14 +347,6 @@ namespace UnityEngine.Rendering.Universal
                         }
                     }
 
-                    // If running before opaque pass, we need to export the SSR texture as a global uniform,
-                    // so it can be sampled in the opaque pass.
-                    if (!passData.afterOpaque)
-                    {
-                        builder.UseTexture(finalTexture, AccessFlags.ReadWrite);
-                        builder.SetGlobalTextureAfterPass(finalTexture, ShaderConstants._ScreenSpaceReflectionFinalTexture);
-                    }
-
                     builder.SetRenderFunc<ScreenSpaceReflectionPassData>(static (ssrData, rgContext) =>
                     {
                         SetupKeywordsAndParameters(ref ssrData);
@@ -385,7 +373,6 @@ namespace UnityEngine.Rendering.Universal
                         if (!ssrData.afterOpaque)
                         {
                             // We only want URP shaders to sample SSR if After Opaque is disabled...
-                            cmd.SetKeyword(ShaderGlobalKeywords.ScreenSpaceReflection, true);
                             cmd.SetGlobalVector(ShaderConstants._ReflectionParam, new Vector4(1f, ssrData.minimumSmoothness, ssrData.smoothnessFadeStart, 0f));
                         }
                     });
@@ -454,6 +441,12 @@ namespace UnityEngine.Rendering.Universal
                     }
                 }
             }
+
+            // Set global texture so subsequent passes can read it.
+            if (m_AfterOpaque)
+                resourceData.ssrTexture = TextureHandle.nullHandle;
+            else
+                resourceData.ssrTexture = finalTexture;
         }
 
         static void SetupKeywordsAndParameters(ref ScreenSpaceReflectionPassData data)
@@ -625,16 +618,6 @@ namespace UnityEngine.Rendering.Universal
             }
             else
                 depthPyramidTexture = TextureHandle.nullHandle;
-        }
-
-        /// <inheritdoc/>
-        public override void OnCameraCleanup(CommandBuffer cmd)
-        {
-            if (cmd == null)
-                throw new ArgumentNullException(nameof(cmd));
-
-            if (!m_AfterOpaque)
-                cmd.SetKeyword(ShaderGlobalKeywords.ScreenSpaceReflection, false);
         }
     }
 }

@@ -73,6 +73,15 @@ namespace UnityEngine.Rendering.Universal.Internal
                 cmd.SetGlobalTexture(ShaderPropertyId.screenSpaceIrradiance, data.screenSpaceIrradianceHdl);
             }
 
+#if URP_SCREEN_SPACE_REFLECTION
+            bool useSSR = data.screenSpaceReflectionHdl.IsValid();
+            cmd.SetKeyword(ShaderGlobalKeywords.ScreenSpaceReflection, useSSR);
+            if (useSSR)
+            {
+                cmd.SetGlobalTexture(ShaderPropertyId.screenSpaceReflection, data.screenSpaceReflectionHdl);
+            }
+#endif
+
             cmd.DrawRendererList(rendererList);
 
             // Render objects that did not match any shader pass with error shader
@@ -93,6 +102,9 @@ namespace UnityEngine.Rendering.Universal.Internal
             internal RendererListHandle objectsWithErrorRendererListHdl;
 
             internal TextureHandle screenSpaceIrradianceHdl;
+#if URP_SCREEN_SPACE_REFLECTION
+            internal TextureHandle screenSpaceReflectionHdl;
+#endif
         }
 
         private void InitRendererLists( ref PassData passData, ScriptableRenderContext context, RenderGraph renderGraph, UniversalRenderingData renderingData, UniversalCameraData cameraData, UniversalLightData lightData, uint batchLayerMask = uint.MaxValue)
@@ -151,6 +163,19 @@ namespace UnityEngine.Rendering.Universal.Internal
                 passData.screenSpaceIrradianceHdl = irradianceTexture;
                 builder.UseTexture(irradianceTexture, AccessFlags.Read);
             }
+
+#if URP_SCREEN_SPACE_REFLECTION
+            TextureHandle ssrTexture = resourceData.ssrTexture;
+            if (ssrTexture.IsValid())
+            {
+                passData.screenSpaceReflectionHdl = ssrTexture;
+                builder.UseTexture(ssrTexture, AccessFlags.Read);
+            }
+            else
+            {
+                passData.screenSpaceReflectionHdl = TextureHandle.nullHandle;
+            }
+#endif
 
             RenderGraphUtils.UseDBufferIfValid(builder, resourceData);
 
