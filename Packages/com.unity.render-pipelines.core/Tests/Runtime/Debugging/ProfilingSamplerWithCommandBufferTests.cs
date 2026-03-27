@@ -82,6 +82,7 @@ namespace UnityEngine.Rendering.Tests
             RuntimePlatform.PS5,
             RuntimePlatform.Switch
         })]
+        [UnityPlatform(exclude = new RuntimePlatform[] { RuntimePlatform.WindowsEditor })] // Unstable: https://jira.unity3d.com/browse/UUM-138158
         public IEnumerator CommandBufferBeginSampleWithObject_GpuSamples_ReturnsNonZeroCount()
         {
             if (!SystemInfo.supportsGpuRecorder)
@@ -109,6 +110,7 @@ namespace UnityEngine.Rendering.Tests
             RuntimePlatform.PS5,
             RuntimePlatform.Switch
         })]
+        [UnityPlatform(exclude = new RuntimePlatform[] { RuntimePlatform.WindowsEditor })] // Unstable: https://jira.unity3d.com/browse/UUM-138158
         public IEnumerator CommandBufferBeginSample_GpuSamples_ReturnsNonZeroCount()
         {
             if (!SystemInfo.supportsGpuRecorder)
