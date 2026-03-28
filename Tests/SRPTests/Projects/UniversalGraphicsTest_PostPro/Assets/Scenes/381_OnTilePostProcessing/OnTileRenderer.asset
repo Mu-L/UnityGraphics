@@ -70,4 +70,4 @@ MonoBehaviour:
   m_DepthTextureFormat: 0
   m_AccurateGbufferNormals: 0
   m_IntermediateTextureMode: 0
-  m_OnTileValidation: 1
+  m_TileOnlyMode: 1
