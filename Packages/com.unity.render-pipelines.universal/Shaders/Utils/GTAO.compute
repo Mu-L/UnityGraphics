@@ -1,0 +1,262 @@
+// SSAO Compute Shader for GTAO mode
+// This compute shader provides an alternative path to the fragment shader for GTAO computation
+
+// #pragma enable_d3d11_debug_symbols
+
+#pragma only_renderers d3d11 playstation xboxone xboxseries vulkan metal switch switch2
+
+#pragma kernel GTAOCompute
+#pragma kernel BilateralBlurH
+#pragma kernel BilateralBlurV
+#pragma kernel TemporalFilter
+#pragma kernel CopyHistory
+#pragma kernel FinalBlit
+
+// Keywords matching fragment shader variants
+#pragma multi_compile_local _ _BLUE_NOISE _INTERLEAVED_GRADIENT
+#pragma multi_compile_local _ _TEMPORAL_FILTERING
+#pragma multi_compile_local _ _ORTHOGRAPHIC
+
+// Provide types needed for the texture and macro declarations that follow
+#define GTAO_COMPUTE_PATH
+#include "Packages/com.unity.render-pipelines.core/ShaderLibrary/Common.hlsl"
+#include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Core.hlsl"
+#include "Packages/com.unity.render-pipelines.core/Runtime/Utilities/Blit.hlsl"
+
+// Textures and Caller-defined macros for sampling (must be defined before SSAOCommon include)
+TEXTURE2D_HALF(_BlueNoiseTexture);
+SAMPLER(sampler_BlitTexture);
+#define SSAO_COMMON_SAMPLE_BASEMAP(uv)                              half4(SAMPLE_TEXTURE2D_X_LOD(_BlitTexture, sampler_BlitTexture, UnityStereoTransformScreenSpaceTex(uv), 0))
+#define SSAO_COMMON_SAMPLE_BASEMAP_R(uv)                            half(SAMPLE_TEXTURE2D_X_LOD(_BlitTexture, sampler_BlitTexture, UnityStereoTransformScreenSpaceTex(uv), 0).r)
+#define SSAO_COMMON_SAMPLE_BLUE_NOISE(uv)                           SAMPLE_TEXTURE2D_LOD(_BlueNoiseTexture, sampler_PointRepeat, UnityStereoTransformScreenSpaceTex(uv), 0).a
+#define SSAO_COMMON_FETCH_DEPTH(samplePos, screenSize, downsample)  LoadSceneDepth(uint2(samplePos * rcp(downsample)))
+#define SSAO_COMMON_DECLARE_UNIFORMS
+
+// Compute path uses dynamic values instead of compile-time constants
+int _GTAODirectionCount;
+int _GTAOStepCount;
+
+#define GTAO_STEP_COUNT             _GTAOStepCount
+#if defined(_TEMPORAL_FILTERING)
+    #define GTAO_DIRECTION_COUNT    1
+#else
+    #define GTAO_DIRECTION_COUNT    _GTAODirectionCount
+#endif
+
+// Includes
+#include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/DeclareDepthTexture.hlsl"
+#include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/DeclareNormalsTexture.hlsl"
+#include "Packages/com.unity.render-pipelines.core/ShaderLibrary/FoveatedRendering.hlsl"
+#include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/SSAOCommon.hlsl"
+
+RW_TEXTURE2D(half4, _AOOutput);
+RW_TEXTURE2D(half4, _BlurOutput);
+RW_TEXTURE2D(half4, _TemporalOutput);
+RW_TEXTURE2D(half4, _HistoryOutput);
+RW_TEXTURE2D(half4, _FinalOutput);
+
+TEXTURE2D_X_HALF(_ScreenSpaceOcclusionTexture);
+TEXTURE2D_X_HALF(_SSAOHistoryTexture);
+TEXTURE2D_X(_MotionVectorTexture);
+
+// Compute-specific defines
+#define DOWNSAMPLE              _SSAOParams.z
+#define DOWNSAMPLED_SCREEN_SIZE uint2(_SourceSize.xy * DOWNSAMPLE)
+#define DOWNSAMPLED_TEXEL_SIZE  (_SourceSize.zw * rcp(DOWNSAMPLE))
+
+
+// ------------------------------------------------------------------
+// Compute-Specific Functions
+// ------------------------------------------------------------------
+
+// Bilateral blur -- takes fully explicit inputs; no global access apart from texture sampling.
+half4 ComputeBilateralBlur(float2 uv, float2 delta)
+{
+    half4 p0 = SSAO_COMMON_SAMPLE_BASEMAP(uv);
+    half4 p1a = SSAO_COMMON_SAMPLE_BASEMAP(uv - delta * 1.3846153846);
+    half4 p1b = SSAO_COMMON_SAMPLE_BASEMAP(uv + delta * 1.3846153846);
+    half4 p2a = SSAO_COMMON_SAMPLE_BASEMAP(uv - delta * 3.2307692308);
+    half4 p2b = SSAO_COMMON_SAMPLE_BASEMAP(uv + delta * 3.2307692308);
+
+    half3 n0 = GetPackedNormal(p0);
+
+    half w0 = half(0.2270270270);
+    half w1a = CompareNormal(n0, GetPackedNormal(p1a)) * half(0.3162162162);
+    half w1b = CompareNormal(n0, GetPackedNormal(p1b)) * half(0.3162162162);
+    half w2a = CompareNormal(n0, GetPackedNormal(p2a)) * half(0.0702702703);
+    half w2b = CompareNormal(n0, GetPackedNormal(p2b)) * half(0.0702702703);
+
+    half s = half(0.0);
+    s += GetPackedAO(p0) * w0;
+    s += GetPackedAO(p1a) * w1a;
+    s += GetPackedAO(p1b) * w1b;
+    s += GetPackedAO(p2a) * w2a;
+    s += GetPackedAO(p2b) * w2b;
+    s *= rcp(w0 + w1a + w1b + w2a + w2b);
+
+    return PackAONormal(s, n0);
+}
+
+float2 SampleMotionVectors(float2 uv)
+{
+    return SAMPLE_TEXTURE2D_X_LOD(_MotionVectorTexture, sampler_PointClamp, UnityStereoTransformScreenSpaceTex(uv), 0).xy;
+}
+
+half SampleHistory(float2 uv)
+{
+    return SAMPLE_TEXTURE2D_X_LOD(_SSAOHistoryTexture, sampler_LinearClamp, UnityStereoTransformScreenSpaceTex(uv), 0).r;
+}
+
+// Temporal filter -- takes explicit params so it does not read any globals.
+half4 ComputeTemporalFilter(float2 uv, half2 screenSize, half temporalScale, half temporalResponse)
+{
+    half2 velocity = SampleMotionVectors(uv);
+
+    half minColor = HALF_ZERO;
+    half maxColor = HALF_ONE;
+    half filterColor = HALF_ZERO;
+    ResolverAABB(temporalScale, uv, screenSize, minColor, maxColor, filterColor);
+
+    half currColor = filterColor;
+
+    half2 historyUV = uv - velocity;
+    half lastColor = SampleHistory(historyUV);
+    lastColor = clamp(lastColor, minColor, maxColor);
+
+    if (historyUV.x < 0 || historyUV.x > 1 || historyUV.y < 0 || historyUV.y > 1)
+    {
+        lastColor = filterColor;
+    }
+
+    half weight = saturate(clamp(temporalResponse, HALF_ZERO, half(0.98)) * (HALF_ONE - length(velocity) * half(8.0)));
+    half result = lerp(currColor, lastColor, weight);
+
+    return half4(result, result, result, HALF_ONE);
+}
+
+#define SSAO_GROUP_SIZE 8
+
+// ------------------------------------------------------------------
+// GTAO Compute Kernel
+// ------------------------------------------------------------------
+[numthreads(SSAO_GROUP_SIZE, SSAO_GROUP_SIZE, 1)]
+void GTAOCompute(uint3 dispatchThreadId : SV_DispatchThreadID)
+{
+    const uint2 pixelCoords = dispatchThreadId.xy;
+    if (any(pixelCoords >= DOWNSAMPLED_SCREEN_SIZE))
+        return;
+
+    half temporalRotation = 0;
+    uint temporalOffset   = 0u;
+#if defined(_TEMPORAL_FILTERING)
+    temporalRotation = _SSAOTemporalRotation;
+    temporalOffset   = _SSAOTemporalOffset;
+#endif
+
+    GTAOConfig config = CreateGTAOConfig(_SSAOParams, _SSAOParams2, _AODepthToViewParams, BlueNoiseScale, BlueNoiseOffset, temporalRotation, temporalOffset);
+
+    float2 positionSS = float2(pixelCoords) + 0.5;
+    float2 uv = positionSS * DOWNSAMPLED_TEXEL_SIZE;
+    uint2 fullResCoords = uint2(float2(pixelCoords) * rcp(config.downsample));
+
+    float rawDepth_o = LoadSceneDepth(fullResCoords);
+    float linearDepth_o = GetLinearEyeDepth(rawDepth_o);
+    half halfLinearDepth_o = half(linearDepth_o);
+    if (ShouldSkipAO(rawDepth_o, halfLinearDepth_o, config.falloff))
+    {
+        _AOOutput[pixelCoords] = PackAONormal(HALF_ZERO, HALF_ZERO);
+        return;
+    }
+
+    float3 positionVS = GetPositionVS(positionSS, rawDepth_o, config.depthToViewParams);
+    half3 V = normalize(-positionVS);
+    half3 normal_o = half3(LoadSceneNormals(fullResCoords));
+
+    _AOOutput[pixelCoords] = EvaluateGTAO(config, uv, positionSS, positionVS, V, normal_o, rawDepth_o, linearDepth_o, halfLinearDepth_o);
+}
+
+// ------------------------------------------------------------------
+// Bilateral Blur Horizontal Kernel
+// ------------------------------------------------------------------
+[numthreads(SSAO_GROUP_SIZE, SSAO_GROUP_SIZE, 1)]
+void BilateralBlurH(uint3 dispatchThreadId : SV_DispatchThreadID)
+{
+    const uint2 pixelCoords = dispatchThreadId.xy;
+    if (any(pixelCoords >= DOWNSAMPLED_SCREEN_SIZE))
+        return;
+
+    float2 uv = (float2(pixelCoords) + 0.5) * DOWNSAMPLED_TEXEL_SIZE;
+    float2 delta = float2(DOWNSAMPLED_TEXEL_SIZE.x, 0.0);
+    half4 result = ComputeBilateralBlur(uv, delta);
+    _BlurOutput[pixelCoords] = result;
+}
+
+// ------------------------------------------------------------------
+// Bilateral Blur Vertical Kernel
+// ------------------------------------------------------------------
+[numthreads(SSAO_GROUP_SIZE, SSAO_GROUP_SIZE, 1)]
+void BilateralBlurV(uint3 dispatchThreadId : SV_DispatchThreadID)
+{
+    const uint2 pixelCoords = dispatchThreadId.xy;
+    if (any(pixelCoords >= DOWNSAMPLED_SCREEN_SIZE))
+        return;
+
+    float2 uv = (float2(pixelCoords) + 0.5) * DOWNSAMPLED_TEXEL_SIZE;
+    float2 delta = float2(0.0, DOWNSAMPLED_TEXEL_SIZE.y);
+    half4 result = ComputeBilateralBlur(uv, delta);
+    _BlurOutput[pixelCoords] = result;
+}
+
+// ------------------------------------------------------------------
+// Temporal Filter Kernel
+// ------------------------------------------------------------------
+[numthreads(SSAO_GROUP_SIZE, SSAO_GROUP_SIZE, 1)]
+void TemporalFilter(uint3 dispatchThreadId : SV_DispatchThreadID)
+{
+    const uint2 pixelCoords = dispatchThreadId.xy;
+    if (any(pixelCoords >= DOWNSAMPLED_SCREEN_SIZE))
+        return;
+
+    float2 uv = (float2(pixelCoords) + 0.5) * DOWNSAMPLED_TEXEL_SIZE;
+    const half2 screenSize = half2(_SourceSize.xy * DOWNSAMPLE);
+    half4 result = ComputeTemporalFilter(uv, screenSize, _SSAOTemporalParams.x, _SSAOTemporalParams.y);
+    _TemporalOutput[pixelCoords] = result;
+}
+
+// ------------------------------------------------------------------
+// Copy History Kernel
+// ------------------------------------------------------------------
+[numthreads(SSAO_GROUP_SIZE, SSAO_GROUP_SIZE, 1)]
+void CopyHistory(uint3 dispatchThreadId : SV_DispatchThreadID)
+{
+    const uint2 pixelCoords = dispatchThreadId.xy;
+    if (any(pixelCoords >= DOWNSAMPLED_SCREEN_SIZE))
+        return;
+
+    float2 uv = (float2(pixelCoords) + 0.5) * DOWNSAMPLED_TEXEL_SIZE;
+    half4 result = SSAO_COMMON_SAMPLE_BASEMAP(uv);
+    _HistoryOutput[pixelCoords] = result;
+}
+
+// ------------------------------------------------------------------
+// Final Blit Kernel (Non-AfterOpaque)
+// Inverts AO and writes to final output texture at full resolution
+// ------------------------------------------------------------------
+[numthreads(SSAO_GROUP_SIZE, SSAO_GROUP_SIZE, 1)]
+void FinalBlit(uint3 dispatchThreadId : SV_DispatchThreadID)
+{
+    const uint2 pixelCoords = dispatchThreadId.xy;
+    const uint2 fullResScreenSize = uint2(_SourceSize.xy);
+
+    if (any(pixelCoords >= fullResScreenSize))
+        return;
+
+    // UV is in full resolution space, sample from downsampled AO texture
+    float2 uv = (float2(pixelCoords) + 0.5) * _SourceSize.zw;
+
+    // Invert AO to match fragment shader behavior (FinalBlur: HALF_ONE - ao)
+    half ao = SSAO_COMMON_SAMPLE_BASEMAP_R(uv);
+    ao = HALF_ONE - ao;
+
+    _FinalOutput[pixelCoords] = half4(ao, ao, ao, HALF_ONE);
+}
