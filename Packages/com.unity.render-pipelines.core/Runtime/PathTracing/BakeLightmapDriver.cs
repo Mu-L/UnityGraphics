@@ -61,6 +61,7 @@ namespace UnityEngine.PathTracing.Lightmapping
         {
             public uint AOSampleCount = 32;
             public uint DirectSampleCount = 32;
+            public uint DirectBRDFSampleCount = 32;
             public uint IndirectSampleCount = 512;
             public uint ValiditySampleCount = 512;
 
@@ -87,7 +88,9 @@ namespace UnityEngine.PathTracing.Lightmapping
                 {
                     case IntegratedOutputType.AO: return AOSampleCount;
                     case IntegratedOutputType.Direct: return DirectSampleCount;
+                    case IntegratedOutputType.DirectBRDF: return DirectBRDFSampleCount;
                     case IntegratedOutputType.DirectionalityDirect: return DirectSampleCount;
+                    case IntegratedOutputType.DirectionalityDirectBRDF: return DirectBRDFSampleCount;
                     case IntegratedOutputType.Indirect: return IndirectSampleCount;
                     case IntegratedOutputType.DirectionalityIndirect: return IndirectSampleCount;
                     case IntegratedOutputType.Validity: return ValiditySampleCount;
@@ -104,7 +107,9 @@ namespace UnityEngine.PathTracing.Lightmapping
                 {
                     case IntegratedOutputType.AO: return AOAntiAliasingType;
                     case IntegratedOutputType.Direct: return DirectAntiAliasingType;
+                    case IntegratedOutputType.DirectBRDF: return DirectAntiAliasingType;
                     case IntegratedOutputType.DirectionalityDirect: return DirectAntiAliasingType;
+                    case IntegratedOutputType.DirectionalityDirectBRDF: return DirectAntiAliasingType;
                     case IntegratedOutputType.Indirect: return IndirectAntiAliasingType;
                     case IntegratedOutputType.DirectionalityIndirect: return IndirectAntiAliasingType;
                     case IntegratedOutputType.Validity: return ValidityAntiAliasingType;
@@ -341,6 +346,33 @@ namespace UnityEngine.PathTracing.Lightmapping
                             lightmapBakeSettings.DirectRISCandidateCount,
                             lightmapBakeSettings.DirectLightSamplingMode,
                             (uint)lightmappingContext.World.PathTracingWorld.MaxLightsInAnyCell,
+                            newChunkStarted
+                        );
+                        break;
+                    }
+                    case IntegratedOutputType.DirectBRDF:
+                    case IntegratedOutputType.DirectionalityDirectBRDF:
+                    {
+                        lightmappingContext.IntegratorContext.LightmapDirectBRDFIntegrator.Accumulate(
+                            cmd,
+                            passSampleCount,
+                            bakeState.SampleIndex,
+                            instance.LocalToWorldMatrix,
+                            instance.LocalToWorldMatrixNormals,
+                            instanceGeometryIndex,
+                            instance.TexelSize,
+                            chunkOffset,
+                            lightmappingContext.World.PathTracingWorld,
+                            traceScratchBuffer,
+                            lightmappingContext.GBuffer,
+                            expandedSampleWidth,
+                            lightmappingContext.ExpandedOutput,
+                            expandedDirectional,
+                            lightmappingContext.CompactedTexelIndices,
+                            lightmappingContext.IntegratorContext.CompactedGBufferLength,
+                            instance.ReceiveShadows,
+                            lightmapBakeSettings.PushOff,
+                            lightmapBakeSettings.DirectRISCandidateCount,
                             newChunkStarted
                         );
                         break;

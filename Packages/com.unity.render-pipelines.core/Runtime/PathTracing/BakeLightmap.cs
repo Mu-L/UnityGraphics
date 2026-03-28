@@ -130,10 +130,12 @@ namespace UnityEngine.PathTracing.Lightmapping
     internal enum IntegratedOutputType
     {
         Direct,
+        DirectBRDF,
         Indirect,
         AO,
         Validity,
         DirectionalityDirect,
+        DirectionalityDirectBRDF,
         DirectionalityIndirect,
         ShadowMask
     }
@@ -142,6 +144,7 @@ namespace UnityEngine.PathTracing.Lightmapping
     {
         internal UVFallbackBufferBuilder UVFallbackBufferBuilder;
         internal LightmapDirectIntegrator LightmapDirectIntegrator;
+        internal LightmapDirectBRDFIntegrator LightmapDirectBRDFIntegrator;
         internal LightmapIndirectIntegrator LightmapIndirectIntegrator;
         internal LightmapAOIntegrator LightmapAOIntegrator;
         internal LightmapValidityIntegrator LightmapValidityIntegrator;
@@ -171,6 +174,8 @@ namespace UnityEngine.PathTracing.Lightmapping
             UVFallbackBufferBuilder = null;
             LightmapDirectIntegrator?.Dispose();
             LightmapDirectIntegrator = null;
+            LightmapDirectBRDFIntegrator?.Dispose();
+            LightmapDirectBRDFIntegrator = null;
             LightmapIndirectIntegrator?.Dispose();
             LightmapIndirectIntegrator = null;
             LightmapAOIntegrator?.Dispose();
@@ -200,6 +205,8 @@ namespace UnityEngine.PathTracing.Lightmapping
             UVFallbackBufferBuilder.Prepare(lightmapResourceLib.UVFallbackBufferGenerationMaterial);
             LightmapDirectIntegrator = new LightmapDirectIntegrator();
             LightmapDirectIntegrator.Prepare(lightmapResourceLib.DirectAccumulationShader, lightmapResourceLib.NormalizationShader, lightmapResourceLib.ExpansionHelpers, SamplingResources, _emptyExposureTexture);
+            LightmapDirectBRDFIntegrator = new LightmapDirectBRDFIntegrator();
+            LightmapDirectBRDFIntegrator.Prepare(lightmapResourceLib.DirectBRDFAccumulationShader, lightmapResourceLib.NormalizationShader, lightmapResourceLib.ExpansionHelpers, SamplingResources, _emptyExposureTexture);
             LightmapIndirectIntegrator = new LightmapIndirectIntegrator();
             LightmapIndirectIntegrator.Prepare(lightmapResourceLib.IndirectAccumulationShader, lightmapResourceLib.NormalizationShader, lightmapResourceLib.ExpansionHelpers, SamplingResources, _emptyExposureTexture);
             LightmapAOIntegrator = new LightmapAOIntegrator();
@@ -236,6 +243,7 @@ namespace UnityEngine.PathTracing.Lightmapping
         internal IRayTracingShader GBufferShader;
         internal ComputeShader NormalizationShader;
         internal IRayTracingShader DirectAccumulationShader;
+        internal IRayTracingShader DirectBRDFAccumulationShader;
         internal IRayTracingShader AOAccumulationShader;
         internal IRayTracingShader ValidityAccumulationShader;
         internal IRayTracingShader IndirectAccumulationShader;
@@ -261,6 +269,7 @@ namespace UnityEngine.PathTracing.Lightmapping
 
             NormalizationShader = AssetDatabase.LoadAssetAtPath<ComputeShader>(packageFolder + "Shaders/ResolveAccumulation.compute");
             DirectAccumulationShader = context.LoadRayTracingShader(packageFolder + "Shaders/LightmapDirectIntegration.urtshader");
+            DirectBRDFAccumulationShader = context.LoadRayTracingShader(packageFolder + "Shaders/LightmapDirectBRDFIntegration.urtshader");
             AOAccumulationShader = context.LoadRayTracingShader(packageFolder + "Shaders/LightmapAOIntegration.urtshader");
             ValidityAccumulationShader = context.LoadRayTracingShader(packageFolder + "Shaders/LightmapValidityIntegration.urtshader");
             IndirectAccumulationShader = context.LoadRayTracingShader(packageFolder + "Shaders/LightmapIndirectIntegration.urtshader");

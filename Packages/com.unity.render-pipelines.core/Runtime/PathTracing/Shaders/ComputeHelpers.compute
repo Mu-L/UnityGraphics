@@ -66,7 +66,7 @@ void ReferenceBoxFilter(uint3 id : SV_DispatchThreadID)
     {
         for (int x = -g_BoxFilterRadius; x <= g_BoxFilterRadius; ++x)
         {
-            float2 uv = (float2(id.xy) + float2(x, y)) / float2(g_TextureWidth, g_TextureHeight); 
+            float2 uv = (float2(id.xy) + float2(x, y)) / float2(g_TextureWidth, g_TextureHeight);
             sum += g_SourceTexture.SampleLevel(g_LinearClampSampler, uv, 0);
         }
     }
@@ -85,7 +85,7 @@ void ReferenceBoxFilterBlueChannel(uint3 id : SV_DispatchThreadID)
     {
         for (int x = -g_BoxFilterRadius; x <= g_BoxFilterRadius; ++x)
         {
-            float2 uv = (float2(id.xy) + float2(x, y)) / float2(g_TextureWidth, g_TextureHeight); 
+            float2 uv = (float2(id.xy) + float2(x, y)) / float2(g_TextureWidth, g_TextureHeight);
             sum += g_SourceTexture.SampleLevel(g_LinearClampSampler, uv, 0).b;
         }
     }
@@ -181,4 +181,15 @@ void CopyTextureAdditive(uint3 id : SV_DispatchThreadID)
     uint2 src = id.xy + uint2(uint(g_SourceX), uint(g_SourceY));
     uint2 dst = id.xy + uint2(uint(g_DestinationX), uint(g_DestinationY));
     g_DestinationTexture[dst] = g_DestinationTexture[dst] + g_SourceTexture[src];
+}
+
+#pragma kernel MaskAlphaChannel
+[numthreads(8,8,1)]
+void MaskAlphaChannel(uint3 id : SV_DispatchThreadID)
+{
+    if (id.x >= uint(g_TextureWidth) || id.y >= uint(g_TextureHeight))
+        return;
+    float4 val = g_TextureInOut[id.xy];
+    val.a = val.a > 0;
+    g_TextureInOut[id.xy] = val;
 }

@@ -239,11 +239,11 @@ bool IntersectSphericalConeWithSphere(float3 coneOrigin, float3 coneForward, flo
     const float d2 = dot(V, V);
 
     // Sphere outside of cone's bounding sphere
-    if (d2 >= (Cr + Sr) * (Cr + Sr))
+    UNITY_FLATTEN if (d2 >= (Cr + Sr) * (Cr + Sr))
         return false;
 
     // Cone center is inside the sphere
-    if (d2 < Sr2)
+    UNITY_FLATTEN if (d2 < Sr2)
         return true;
 
     // Compute the half angle β of the spherical sector that is spanned by the sphere
