@@ -438,20 +438,92 @@ namespace UnityEditor.Rendering.HighDefinition
         }
 
         /// <summary>
+        /// Gets the resolved default state for a volume component, which combines global and quality default profiles.
+        /// Use this to determine what values will be used for non-overridden parameters.
+        /// </summary>
+        /// <typeparam name="T">The type of volume component to retrieve</typeparam>
+        /// <returns>The volume component with resolved default state, or null if not initialized</returns>
+        internal static T GetVolumeComponentDefaultState<T>() where T : VolumeComponent
+        {
+            if (!VolumeManager.instance.isInitialized)
+                return null;
+
+            return VolumeManager.instance.GetVolumeComponentDefaultState(typeof(T)) as T;
+        }
+
+        /// <summary>
+        /// Gets the effective value of a volume parameter, considering override state and default fallback.
+        /// If the parameter is overridden, returns the local value. Otherwise, returns the value from
+        /// the default parameter (or the fallback if default is null).
+        /// </summary>
+        /// <typeparam name="T">The type of the parameter value</typeparam>
+        /// <param name="parameter">The volume parameter to get the value from</param>
+        /// <param name="defaultParameter">The default parameter to use when parameter is not overridden</param>
+        /// <param name="fallbackValue">Fallback value if default parameter is null</param>
+        /// <returns>The effective value considering override state and defaults</returns>
+        internal static T GetEffectiveParameterValue<T>(
+            VolumeParameter<T> parameter,
+            VolumeParameter<T> defaultParameter,
+            T fallbackValue)
+        {
+            if (parameter.overrideState)
+                return parameter.value;
+
+            return defaultParameter != null ? defaultParameter.value : fallbackValue;
+        }
+
+        /// <summary>
+        /// Finds which default volume profile (global or quality) is setting a parameter value.
+        /// Checks in precedence order: Quality profile overrides Global profile.
+        /// </summary>
+        /// <typeparam name="T">The type of volume component</typeparam>
+        /// <param name="parameterPredicate">Predicate which specifies the target</param>
+        /// <param name="sourceProfile">The volume profile that is setting the value, or null if not found</param>
+        /// <param name="sourceDescription">Human-readable description of the source (e.g., "Quality Profile in HDRenderPipelineAsset")</param>
+        /// <returns>True if a profile with the target parameter was found</returns>
+        internal static bool TryGetVolumeParameterSource<T>(
+            System.Func<T, bool> parameterPredicate,
+            out VolumeProfile sourceProfile,
+            out string sourceDescription) where T : VolumeComponent
+        {
+            sourceProfile = null;
+            sourceDescription = null;
+
+            if (!VolumeManager.instance.isInitialized)
+                return false;
+
+            // Check quality profile first (higher precedence)
+            if (VolumeManager.instance.qualityDefaultProfile != null &&
+                VolumeManager.instance.qualityDefaultProfile.TryGet<T>(out var qualityComponent) &&
+                qualityComponent.active && parameterPredicate(qualityComponent))
+            {
+                sourceProfile = VolumeManager.instance.qualityDefaultProfile;
+                var assetName = HDRenderPipeline.currentAsset != null ? HDRenderPipeline.currentAsset.name : "HDRP Asset";
+                sourceDescription = $"Quality Profile ({assetName})";
+                return true;
+            }
+
+            // Check global default profile (lower precedence)
+            if (VolumeManager.instance.globalDefaultProfile != null &&
+                VolumeManager.instance.globalDefaultProfile.TryGet<T>(out var globalComponent) &&
+                globalComponent.active && parameterPredicate(globalComponent))
+            {
+                sourceProfile = VolumeManager.instance.globalDefaultProfile;
+                sourceDescription = "Global Profile (Graphics Settings)";
+                return true;
+            }
+
+            return false;
+        }
+
+        /// <summary>
         /// Shows a platform-specific performance warning help box for a given feature.
         /// </summary>
-        /// <param name="targetPlatform">The build target platform to check and display</param>
         /// <param name="featureName">The name of the feature (e.g., "Ray Tracing", "Film Grain")</param>
         /// <param name="recommendation">Optional recommendation text. If null, uses default "is not recommended for this platform"</param>
-        internal static void ShowPlatformPerformanceWarning(BuildTarget targetPlatform, string featureName, string recommendation = null)
+        internal static void ShowFeatureOptimisationWarning(string featureName, string recommendation = null)
         {
-            if (EditorUserBuildSettings.activeBuildTarget != targetPlatform)
-                return;
-
-            var activeBuildTargetGroup = BuildPipeline.GetBuildTargetGroup(targetPlatform);
-            var namedBuildTarget = NamedBuildTarget.FromBuildTargetGroup(activeBuildTargetGroup);
-
-            string message = $"{featureName} is enabled for {namedBuildTarget.TargetName}. ";
+            string message = $"{featureName} is enabled for the active platform.\n";
 
             if (!string.IsNullOrEmpty(recommendation))
             {
@@ -459,10 +531,73 @@ namespace UnityEditor.Rendering.HighDefinition
             }
             else
             {
-                message += "This may significantly impact performance and is not recommended for this platform.";
+                message += HDRenderPipelineUI.Styles.featureNotRecommendedWarning;
             }
 
             EditorGUILayout.HelpBox(message, MessageType.Warning, wide: true);
+        }
+
+        /// <summary>
+        /// Shows a platform-specific performance warning help box for a given feature.
+        /// </summary>
+        /// <param name="featureName">The name of the feature (e.g., "Ray Tracing", "Film Grain")</param>
+        /// <param name="recommendation">Optional recommendation text. If null, uses default "is not recommended for this platform"</param>
+        internal static void ShowFeatureOptimisationWarning(string featureName, string sourceAssetName, Action onButtonClicked, string recommendation = null)
+        {
+            string message = $"{featureName} is enabled in {sourceAssetName} for the active platform.\n";
+
+            if (!string.IsNullOrEmpty(recommendation))
+            {
+                message += recommendation;
+            }
+            else
+            {
+                message += HDRenderPipelineUI.Styles.featureNotRecommendedWarning;
+            }
+
+            CoreEditorUtils.DrawFixMeBox(
+                message,
+                MessageType.Warning,
+                "Open",
+                onButtonClicked);
+        }
+
+        internal static void ShowFeatureParameterOptimisationWarning(string settingName, string settingValue, string recommendation = null)
+        {
+            EditorGUILayout.HelpBox(CreateParameterWarningMessage(settingName, settingValue, null, recommendation), MessageType.Warning, wide: true);
+        }
+
+        internal static void ShowFeatureParameterOptimisationWarning(string settingName, string settingValue, string sourceAssetName, Action onButtonClicked, string recommendation = null)
+        {
+            CoreEditorUtils.DrawFixMeBox(
+                CreateParameterWarningMessage(settingName, settingValue, sourceAssetName, recommendation),
+                MessageType.Warning,
+                "Open",
+                onButtonClicked);
+        }
+
+        internal static string CreateParameterWarningMessage(string settingName, string settingValue, string sourceAssetName = null, string recommendation = null)
+        {
+            string message = $"{settingName}: {settingValue} ";
+            if (sourceAssetName != null)
+            {
+                message += $"is set in {sourceAssetName}.";
+            }
+            else
+            {
+                message += $"is used for the active platform.";
+            }
+
+            if (!string.IsNullOrEmpty(recommendation))
+            {
+                message += '\n' + recommendation;
+            }
+            else
+            {
+                message += $"\nThis may impact performance and is not recommended for this platform.";
+            }
+
+            return message;
         }
 
         internal static bool IsInTestSuiteOrBatchMode()

@@ -127,6 +127,10 @@ namespace UnityEngine.Rendering.HighDefinition
             }
             set { m_VolumetricFogBudget.value = value; }
         }
+
+        /// <summary>The override state for the fog component's volumetric fog budget.</summary>
+        public bool volumetricFogBudgetOverrideState => m_VolumetricFogBudget.overrideState;
+
         [AdditionalProperty]
         [SerializeField, FormerlySerializedAs("volumetricFogBudget")]
         [Tooltip("Controls the performance to quality ratio of the volumetric fog. A value of 0 being the least resource-intensive and a value of 1 being the highest quality.")]
@@ -159,7 +163,7 @@ namespace UnityEngine.Rendering.HighDefinition
 
         /// <summary>Indicates at which fog density the lighting should be ignored. Every voxel containing less fog density than this value will be ignored by the volumetric lighting.</summary>
         [Tooltip("Improves performance by skipping the lighting evaluation in areas with low-density fog. When the value is above 0, HDRP skips calculating volumetric lighting in areas where the fog density is below this value.")]
-        public FloatParameter volumetricLightingDensityCutoff = new(0.0f);
+        public FloatParameter volumetricLightingDensityCutoff = new MinFloatParameter(0.0f, 0.0f);
 
         internal static bool IsFogEnabled(HDCamera hdCamera)
         {

@@ -96,6 +96,26 @@ namespace UnityEditor.Rendering.HighDefinition
                 validConfiguration &= config;
             }
 
+            {
+                bool config = ValidateVolumetricFogConfiguration(m_BuildData.renderPipelineAssets);
+                validConfiguration &= config;
+            }
+
+            {
+                bool config = ValidateVolumetricCloudsConfiguration(m_BuildData.renderPipelineAssets);
+                validConfiguration &= config;
+            }
+
+            {
+                bool config = ValidateHighQualityLineRenderingConfiguration(m_BuildData.renderPipelineAssets);
+                validConfiguration &= config;
+            }
+            
+            {
+                bool config = ValidateGraphicsCompositorConfiguration(m_BuildData.renderPipelineAssets);
+                validConfiguration &= config;
+            }
+
             return validConfiguration;
         }
 
@@ -158,7 +178,7 @@ namespace UnityEditor.Rendering.HighDefinition
                 return true; // No ray tracing enabled, skip validation
 
             var currentBuildTarget = EditorUserBuildSettings.activeBuildTarget;
-            if (HDRenderPipeline.PlatformHasRaytracingIssues(currentBuildTarget, out var warning))
+            if (HDRenderPipeline.CheckPlatformRaytracingCompatability(currentBuildTarget, out var warning))
             {
                 Debug.LogWarning($"HDRP Build Validation - Ray Tracing:{warning}");
                 return false;
@@ -169,74 +189,288 @@ namespace UnityEditor.Rendering.HighDefinition
 
         internal static bool ValidateSubsurfaceScatteringConfiguration(List<HDRenderPipelineAsset> assetsList)
         {
-            var currentBuildTarget = EditorUserBuildSettings.activeBuildTarget;
-
-            // Only validate for Switch 2
-            if (currentBuildTarget != BuildTarget.Switch2)
+            if (!EditorGraphicsSettings.ShouldValidateGraphicsForActiveBuildTarget())
                 return true;
 
-            // Check if any asset has Subsurface Scattering enabled
+            var validationSettings = HDProjectSettings.validationSettings;
+
             bool anyAssetHasSSSEnabled = false;
+            HDRenderPipelineAsset foundAsset = null;
             foreach (var hdrpAsset in assetsList)
             {
-                if (hdrpAsset != null && hdrpAsset.currentPlatformRenderPipelineSettings.supportSubsurfaceScattering)
+                if (hdrpAsset != null)
                 {
-                    anyAssetHasSSSEnabled = true;
-                    break;
+                    if (hdrpAsset.currentPlatformRenderPipelineSettings.supportSubsurfaceScattering && !validationSettings.k_SubsurfaceScattering_Recommended)
+                    {
+                        anyAssetHasSSSEnabled = true;
+                        foundAsset = hdrpAsset;
+
+                        break;
+                    }
                 }
             }
 
             if (!anyAssetHasSSSEnabled)
                 return true; // No SSS enabled, skip validation
 
-            var activeBuildTargetGroup = BuildPipeline.GetBuildTargetGroup(BuildTarget.Switch2);
-            var namedBuildTarget = NamedBuildTarget.FromBuildTargetGroup(activeBuildTargetGroup);
-            Debug.LogWarning($"HDRP Build Validation - Subsurface Scattering: Subsurface Scattering is enabled for {namedBuildTarget.TargetName}. For optimal performance, set the Downsample Level to the maximum value (2) for this platform.");
+            Debug.LogWarning($"HDRP Build Validation [{(foundAsset != null ? foundAsset.name : "")}] - {HDRenderPipelineUI.Styles.supportedSSSContent.text}: Enabled for the active platform. {HDRenderPipelineUI.Styles.featureNotRecommendedWarning}\nAsset: {AssetDatabase.GetAssetPath(foundAsset)}", foundAsset);
             return false;
         }
 
         internal static bool ValidateFilmGrainConfiguration(List<HDRenderPipelineAsset> assetsList)
         {
-            var currentBuildTarget = EditorUserBuildSettings.activeBuildTarget;
+            static bool CheckVolumeProfileValid(VolumeProfile volumeProfile, HDRenderPipelineAsset hdAsset = null)
+            {
+                if (volumeProfile.TryGet<FilmGrain>(out var filmGrain) && filmGrain.IsActive())
+                {
+                    var validationSettings = HDProjectSettings.validationSettings;
+                    var defaultFilmGrain = HDEditorUtils.GetVolumeComponentDefaultState<FilmGrain>();
 
-            // Only validate for Switch 2
-            if (currentBuildTarget != BuildTarget.Switch2)
+                    float effectiveIntensity = HDEditorUtils.GetEffectiveParameterValue(
+                        filmGrain.intensity, defaultFilmGrain?.intensity, 0.0f);
+
+                    if (effectiveIntensity > 0.0f && !validationSettings.k_FilmGrain_Recommended)
+                    {
+                        Debug.LogWarning($"HDRP Build Validation [{volumeProfile.name}] - Film Grain: Enabled for the active platform. {HDRenderPipelineUI.Styles.featureNotRecommendedWarning}\nAsset: {AssetDatabase.GetAssetPath(volumeProfile)}", volumeProfile);
+                        return false;
+                    }
+                }
+
+                return true;
+            }
+
+            if (!EditorGraphicsSettings.ShouldValidateGraphicsForActiveBuildTarget())
                 return true;
 
             // Check default volume profile from HDRP Global Settings
-            bool foundFilmGrain = false;
+            bool isValidConfiguration = true;
             var defaultVolumeProfileSettings = GraphicsSettings.GetRenderPipelineSettings<HDRPDefaultVolumeProfileSettings>();
             if (defaultVolumeProfileSettings?.volumeProfile != null)
             {
-                if (defaultVolumeProfileSettings.volumeProfile.TryGet<FilmGrain>(out var filmGrain) && filmGrain.intensity.value > 0)
+                isValidConfiguration &= CheckVolumeProfileValid(defaultVolumeProfileSettings.volumeProfile);
+            }
+
+            foreach (var hdrpAsset in assetsList)
+            {
+                if (hdrpAsset != null && hdrpAsset.volumeProfile != null)
                 {
-                    foundFilmGrain = true;
+                    isValidConfiguration &= CheckVolumeProfileValid(hdrpAsset.volumeProfile, hdrpAsset);
                 }
+            }
+
+            return isValidConfiguration;
+        }
+
+        internal static bool ValidateVolumetricFogConfiguration(List<HDRenderPipelineAsset> assetsList)
+        {
+            static bool CheckVolumeProfileValid(VolumeProfile volumeProfile, HDRenderPipelineAsset hdAsset = null)
+            {
+                if (volumeProfile.TryGet<Fog>(out var fog) && fog.active)
+                {
+                    var validationSettings = HDProjectSettings.validationSettings;
+                    Fog defaultFog = HDEditorUtils.GetVolumeComponentDefaultState<Fog>();
+
+                    // Check if fog is enabled (required for volumetric fog)
+                    bool effectiveEnabled = HDEditorUtils.GetEffectiveParameterValue(
+                        fog.enabled, defaultFog?.enabled, false);
+
+                    // Check if volumetric fog specifically is enabled
+                    bool effectiveVolumetricFogEnabled = HDEditorUtils.GetEffectiveParameterValue(
+                        fog.enableVolumetricFog, defaultFog?.enableVolumetricFog, false);
+
+                    // Only validate volumetric fog settings if both are enabled
+                    if (!effectiveEnabled || !effectiveVolumetricFogEnabled)
+                    {
+                        return true;
+                    }
+
+                    int effectiveQuality = HDEditorUtils.GetEffectiveParameterValue(
+                        fog.quality, defaultFog?.quality, 0);
+
+                    float effectiveDensityCutoff = HDEditorUtils.GetEffectiveParameterValue(
+                        fog.volumetricLightingDensityCutoff, defaultFog?.volumetricLightingDensityCutoff, 0.0f);
+
+                    float effectiveFogBudget = fog.volumetricFogBudget;
+                    const int k_CustomQuality = ScalableSettingLevelParameter.LevelCount;
+                    if (effectiveQuality == k_CustomQuality) // Custom quality tier
+                    {
+                        bool useDefaultFogBudget = !fog.volumetricFogBudgetOverrideState;
+                        effectiveFogBudget = useDefaultFogBudget
+                            ? (defaultFog?.volumetricFogBudget ?? 0.0f)
+                            : fog.volumetricFogBudget;
+                    }
+                    else if (hdAsset != null)
+                    {
+                        effectiveQuality = Math.Clamp(effectiveQuality, 0, hdAsset.currentPlatformRenderPipelineSettings.lightingQualitySettings.Fog_Budget.Length - 1);
+                        effectiveFogBudget = hdAsset.currentPlatformRenderPipelineSettings.lightingQualitySettings.Fog_Budget[effectiveQuality];
+                    }
+
+                    bool warningsFound = false;
+                    if (effectiveFogBudget >= validationSettings.k_Fog_MaximumFogBudget && fog.fogControlMode == FogControl.Balance)
+                    {
+                        string tierName = $"{(effectiveQuality == k_CustomQuality ? "Custom" : ((ScalableSettingLevelParameter.Level)effectiveQuality).ToString())} (Budget: {effectiveFogBudget})";
+                        string warningMessage = string.Format(HDRenderPipelineUI.Styles.maxFogBudgetWarning, validationSettings.k_Fog_MaximumFogBudget);
+                        Debug.LogWarning($"HDRP Build Validation [{volumeProfile.name}] - {HDRenderPipelineUI.Styles.FogSettingsSubTitle.text}: {HDEditorUtils.CreateParameterWarningMessage("Tier", tierName, null, warningMessage)}\nAsset: {AssetDatabase.GetAssetPath(volumeProfile)}", volumeProfile);
+                        warningsFound = true;
+                    }
+
+                    if (effectiveDensityCutoff <= 0.0f && effectiveFogBudget >= validationSettings.k_Fog_MinimumFogBudgetForCutoff && fog.fogControlMode == FogControl.Balance)
+                    {
+                        string warningMessage = string.Format(HDRenderPipelineUI.Styles.minFogBudgetForDensityCutoffWarning, validationSettings.k_Fog_MinimumFogBudgetForCutoff);
+                        Debug.LogWarning($"HDRP Build Validation [{volumeProfile.name}] - {HDRenderPipelineUI.Styles.FogSettingsSubTitle.text}: {HDEditorUtils.CreateParameterWarningMessage("Density Cutoff", "0", null, warningMessage)}\nAsset: {AssetDatabase.GetAssetPath(volumeProfile)}", volumeProfile);
+                        warningsFound = true;
+                    }
+
+                    return !warningsFound;
+                }
+
+                return true;
+            }
+
+            if (!EditorGraphicsSettings.ShouldValidateGraphicsForActiveBuildTarget())
+                return true;
+
+            // Check default volume profile from HDRP Global Settings
+            bool isValidConfiguration = true;
+            var defaultVolumeProfileSettings = GraphicsSettings.GetRenderPipelineSettings<HDRPDefaultVolumeProfileSettings>();
+            if (defaultVolumeProfileSettings?.volumeProfile != null)
+            {
+                isValidConfiguration &= CheckVolumeProfileValid(defaultVolumeProfileSettings.volumeProfile);
             }
 
             // Check volume profiles in each HDRP asset
-            if (!foundFilmGrain)
+            foreach (var hdrpAsset in assetsList)
             {
-                foreach (var hdrpAsset in assetsList)
+                if (hdrpAsset != null && hdrpAsset.volumeProfile != null && hdrpAsset.currentPlatformRenderPipelineSettings.supportVolumetrics)
                 {
-                    if (hdrpAsset != null && hdrpAsset.volumeProfile != null)
-                    {
-                        if (hdrpAsset.volumeProfile.TryGet<FilmGrain>(out var filmGrain) && filmGrain.intensity.value > 0)
-                        {
-                            foundFilmGrain = true;
-                            break;
-                        }
-                    }
+                    isValidConfiguration &= CheckVolumeProfileValid(hdrpAsset.volumeProfile, hdrpAsset);
                 }
             }
 
-            if (!foundFilmGrain)
-                return true; // No Film Grain with intensity > 0, skip validation
+            return isValidConfiguration;
+        }
 
-            var activeBuildTargetGroup = BuildPipeline.GetBuildTargetGroup(BuildTarget.Switch2);
-            var namedBuildTarget = NamedBuildTarget.FromBuildTargetGroup(activeBuildTargetGroup);
-            Debug.LogWarning($"HDRP Build Validation - Film Grain: Film Grain is enabled for {namedBuildTarget.TargetName}. This may significantly impact performance and should be disabled for this platform.");
-            return false;
+        internal static bool ValidateVolumetricCloudsConfiguration(List<HDRenderPipelineAsset> assetsList)
+        {
+            static bool CheckVolumeProfileValid(VolumeProfile volumeProfile, HDRenderPipelineAsset hdAsset = null)
+            {
+                if (volumeProfile.TryGet<VolumetricClouds>(out var clouds) && clouds.active)
+                {
+                    var validationSettings = HDProjectSettings.validationSettings;
+                    VolumetricClouds defaultClouds = HDEditorUtils.GetVolumeComponentDefaultState<VolumetricClouds>();
+
+                    bool effectiveEnabled = HDEditorUtils.GetEffectiveParameterValue(
+                        clouds.enable, defaultClouds?.enable, false);
+
+                    if (effectiveEnabled && !validationSettings.k_VolumetricClouds_Recommended)
+                    {
+                        Debug.LogWarning($"HDRP Build Validation [{volumeProfile.name}] - {HDRenderPipelineUI.Styles.volumetricCloudsSubTitle.text}: Enabled for the active platform. {HDRenderPipelineUI.Styles.featureNotRecommendedWarning}\nAsset: {AssetDatabase.GetAssetPath(volumeProfile)}", volumeProfile);
+                        return false;
+                    }
+                }
+
+                return true;
+            }
+
+            if (!EditorGraphicsSettings.ShouldValidateGraphicsForActiveBuildTarget())
+                return true;
+
+            // Check default volume profile from HDRP Global Settings
+            bool isValidConfiguration = true;
+            var defaultVolumeProfileSettings = GraphicsSettings.GetRenderPipelineSettings<HDRPDefaultVolumeProfileSettings>();
+            if (defaultVolumeProfileSettings?.volumeProfile != null)
+            {
+                isValidConfiguration &= CheckVolumeProfileValid(defaultVolumeProfileSettings.volumeProfile);
+            }
+
+            // Check volume profiles in each HDRP asset
+            foreach (var hdrpAsset in assetsList)
+            {
+                if (hdrpAsset != null && hdrpAsset.volumeProfile != null && hdrpAsset.currentPlatformRenderPipelineSettings.supportVolumetricClouds)
+                {
+                    isValidConfiguration &= CheckVolumeProfileValid(hdrpAsset.volumeProfile, hdrpAsset);
+                }
+            }
+
+            return isValidConfiguration;
+        }
+
+        internal static bool ValidateHighQualityLineRenderingConfiguration(List<HDRenderPipelineAsset> assetsList)
+        {
+            static bool CheckVolumeProfileValid(VolumeProfile volumeProfile, HDRenderPipelineAsset hdAsset = null)
+            {
+                if (volumeProfile.TryGet<HighQualityLineRenderingVolumeComponent>(out var hqLines) && hqLines.active)
+                {
+                    var validationSettings = HDProjectSettings.validationSettings;
+                    var defaultHQLines = HDEditorUtils.GetVolumeComponentDefaultState<HighQualityLineRenderingVolumeComponent>();
+
+                    bool effectiveEnable = HDEditorUtils.GetEffectiveParameterValue(
+                        hqLines.enable, defaultHQLines?.enable, false);
+
+                    bool warningsFound = false;
+                    if (effectiveEnable && !validationSettings.k_HighQualityLineRendering_Recommended)
+                    {
+                        Debug.LogWarning($"HDRP Build Validation [{volumeProfile.name}] - {HDRenderPipelineUI.Styles.highQualityLineRenderingSubTitle.text}: Enabled for the active platform. {HDRenderPipelineUI.Styles.featureNotRecommendedWarning}\nAsset: {AssetDatabase.GetAssetPath(volumeProfile)}", volumeProfile);
+                        warningsFound = true;
+                    }
+
+                    return !warningsFound;
+                }
+
+                return true;
+            }
+
+            if (!EditorGraphicsSettings.ShouldValidateGraphicsForActiveBuildTarget())
+                return true;
+
+            // Check default volume profile from HDRP Global Settings
+            bool isValidConfiguration = true;
+            var defaultVolumeProfileSettings = GraphicsSettings.GetRenderPipelineSettings<HDRPDefaultVolumeProfileSettings>();
+            if (GraphicsSettings.defaultRenderPipeline is HDRenderPipelineAsset hdAsset && defaultVolumeProfileSettings?.volumeProfile != null)
+            {
+                isValidConfiguration &= CheckVolumeProfileValid(defaultVolumeProfileSettings.volumeProfile, hdAsset);
+            }
+
+            // Check volume profiles in each HDRP asset
+            foreach (var hdrpAsset in assetsList)
+            {
+                if (hdrpAsset != null && hdrpAsset.volumeProfile != null && hdrpAsset.currentPlatformRenderPipelineSettings.supportHighQualityLineRendering)
+                {
+                    isValidConfiguration &= CheckVolumeProfileValid(hdrpAsset.volumeProfile, hdrpAsset);
+                }
+            }
+
+            return isValidConfiguration;
+        }
+
+        internal static bool ValidateGraphicsCompositorConfiguration(List<HDRenderPipelineAsset> assetsList)
+        {
+            static bool CheckHDAssetValid(HDRenderPipelineAsset hdAsset)
+            {
+                var validationSettings = HDProjectSettings.validationSettings;
+                if (!validationSettings.k_GraphicsCompositor_Recommended && hdAsset.compositorCustomVolumeComponentsList.Count > 0)
+                {
+                    Debug.LogWarning($"HDRP Build Validation - Graphics Compositor: Enabled for the active platform. {HDRenderPipelineUI.Styles.featureNotRecommendedWarning}\nMake sure no compositor components are remaining in the build scenes. Go to Window -> Rendering -> Graphics Compositor to disable & delete remaining components.");
+                    return false;
+                }
+
+                return true;
+            }
+
+            if (!EditorGraphicsSettings.ShouldValidateGraphicsForActiveBuildTarget())
+                return true;
+
+            // Check default volume profile from HDRP Global Settings
+            bool isValidConfiguration = true;
+            foreach (var hdrpAsset in assetsList)
+            {
+                if (hdrpAsset != null)
+                {
+                    isValidConfiguration &= CheckHDAssetValid(hdrpAsset);
+                }
+            }
+
+            return isValidConfiguration;
         }
 
         internal static void ConfigureMinimumMaxLoDValueForAllQualitySettings()
