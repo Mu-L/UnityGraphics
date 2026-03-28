@@ -7,6 +7,7 @@ using UnityEngine;
 namespace UnityEditor.Rendering.Universal.Tools
 {
     [Category("Graphics Tools")]
+    [Ignore("Disabled for Instability https://jira.unity3d.com/browse/UUM-138262")]
     class ConverterTests
     {
         class NotAConverterType
