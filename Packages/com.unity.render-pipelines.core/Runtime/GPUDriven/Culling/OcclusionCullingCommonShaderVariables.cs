@@ -1,3 +1,4 @@
+#if !UNITY_WEBGL_RENDERER_ONLY
 namespace UnityEngine.Rendering
 {
     // TODO make consistent with InstanceOcclusionCullerShaderVariables
@@ -87,3 +88,5 @@ namespace UnityEngine.Rendering
         }
     }
 }
+
+#endif // !UNITY_WEBGL_RENDERER_ONLY

@@ -24,6 +24,19 @@ namespace UnityEngine.Rendering.Universal.Internal
         private bool m_IssuedMessageAboutRemovedShadowSlices;
         private static bool m_IssuedMessageAboutPointLightHardShadowResolutionTooSmall;
         private static bool m_IssuedMessageAboutPointLightSoftShadowResolutionTooSmall;
+
+#if UNITY_EDITOR
+        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterAssembliesLoaded)]
+        static void ResetStaticsOnLoad()
+        {
+            m_IssuedMessageAboutPointLightHardShadowResolutionTooSmall = false;
+            m_IssuedMessageAboutPointLightSoftShadowResolutionTooSmall = false;
+            s_EmptyAdditionalShadowFadeParams = default;
+            s_EmptyAdditionalLightIndexToShadowParams = new[] { c_DefaultShadowParams };
+            isAdditionalShadowParamsDirty = false;
+        }
+#endif
+
         private readonly bool m_UseStructuredBuffer;
         private float m_MaxShadowDistanceSq;
         private float m_CascadeBorder;
@@ -770,7 +783,7 @@ namespace UnityEngine.Rendering.Universal.Internal
 
             bool additionalLightHasSoftShadows = false;
 
-            using (new ProfilingScope(cmd, ProfilingSampler.Get(URPProfileId.AdditionalLightsShadow)))
+            using (new ProfilingScope(cmd, URPProfilingSamplers.AdditionalLightsShadow))
             {
                 bool anyShadowSliceRenderer = false;
                 int shadowSlicesCount = m_ShadowSliceToAdditionalLightIndex.Count;

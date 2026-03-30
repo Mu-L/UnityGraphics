@@ -1,5 +1,4 @@
 #pragma only_renderers d3d11 playstation xboxone xboxseries vulkan metal glcore ps5
-
 #pragma kernel Allocate
 
 #define PATCH_UTIL_USE_RW_IRRADIANCE_BUFFER
@@ -14,13 +13,12 @@
 
 RWStructuredBuffer<uint> _RingConfigBuffer;
 RWStructuredBuffer<PatchUtil::PatchGeometry> _PatchGeometries;
-RWStructuredBuffer<uint> _PatchCellIndices;
 RWStructuredBuffer<PatchUtil::PatchStatisticsSet> _PatchStatistics;
 RWStructuredBuffer<SphericalHarmonics::RGBL1> _PatchIrradiances0;
 RWStructuredBuffer<SphericalHarmonics::RGBL1> _PatchIrradiances1;
 RWStructuredBuffer<uint> _CellAllocationMarks;
 RWStructuredBuffer<uint> _CellPatchIndices;
-
+RWStructuredBuffer<uint> _PatchCellIndices;
 StructuredBuffer<int3> _CascadeOffsets;
 
 Texture2D<float> _CurrentFullResScreenDepths;
@@ -117,7 +115,14 @@ void Allocate(uint2 lowResPixelPos : SV_DispatchThreadID)
     const float3 sourceWorldPosition = ComputeWorldSpacePosition(sourceUvPos, ndcDepth, _CurrentClipToWorldTransform);
     const float3 sourceWorldFlatNormal = _CurrentFullResScreenFlatNormals[fullResPixelPos];
 
-    PatchUtil::VolumePositionResolution patchPosResolution = PatchUtil::ResolveVolumePosition(sourceWorldPosition, _VolumeTargetPos, _VolumeSpatialResolution, _CascadeOffsets, _CascadeCount, _VolumeVoxelMinSize);
+    PatchUtil::VolumeParamSet volumeParams;
+    volumeParams.targetPos = _VolumeTargetPos;
+    volumeParams.spatialResolution = _VolumeSpatialResolution;
+    volumeParams.voxelMinSize = _VolumeVoxelMinSize;
+    volumeParams.cascadeOffsets = _CascadeOffsets;
+    volumeParams.cascadeCount = _CascadeCount;
+
+    PatchUtil::VolumePositionResolution patchPosResolution = PatchUtil::ResolveVolumePosition(sourceWorldPosition, volumeParams);
 
     if (patchPosResolution.isValid())
     {
@@ -129,6 +134,7 @@ void Allocate(uint2 lowResPixelPos : SV_DispatchThreadID)
             _RingConfigBuffer,
             _RingConfigOffset,
             _CellPatchIndices,
+            _PatchCellIndices,
             _CellAllocationMarks,
             cellIdx);
 
@@ -138,12 +144,14 @@ void Allocate(uint2 lowResPixelPos : SV_DispatchThreadID)
             geo.position = sourceWorldPosition;
             geo.normal = sourceWorldFlatNormal;
             _PatchGeometries[resolutionResult.patchIdx] = geo;
+
+            // with this, we allow patches that were spawn from a hit bounce to, in turn, triger bounce allocation
+            // once they are seen again by the camera
+            _PatchStatistics[resolutionResult.patchIdx].rank = 0;
         }
 
         if (resolutionResult.code == PatchUtil::patchIndexResolutionCodeAllocationSuccess)
         {
-            _PatchCellIndices[resolutionResult.patchIdx] = cellIdx;
-
             PatchUtil::PatchCounterSet counterSet;
             PatchUtil::Reset(counterSet);
             PatchUtil::SetLastAccessFrame(counterSet, _FrameIdx);
@@ -225,6 +233,7 @@ void Allocate(uint2 lowResPixelPos : SV_DispatchThreadID)
             stats.mean = irradianceSeed.l0;
             stats.variance = 0;
             stats.patchCounters = counterSet;
+            stats.rank = 0;
             _PatchStatistics[resolutionResult.patchIdx] = stats;
         }
     }

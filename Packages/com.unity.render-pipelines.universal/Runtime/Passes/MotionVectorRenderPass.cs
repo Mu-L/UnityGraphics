@@ -23,7 +23,7 @@ namespace UnityEngine.Rendering.Universal
         internal MotionVectorRenderPass(RenderPassEvent evt, Material cameraMaterial, LayerMask opaqueLayerMask)
 
         {
-            profilingSampler = ProfilingSampler.Get(URPProfileId.DrawMotionVectors);
+            profilingSampler = URPProfilingSamplers.DrawMotionVectors;
             renderPassEvent = evt;
             m_CameraMaterial = cameraMaterial;
             m_FilteringSettings = new FilteringSettings(RenderQueueRange.opaque,opaqueLayerMask);

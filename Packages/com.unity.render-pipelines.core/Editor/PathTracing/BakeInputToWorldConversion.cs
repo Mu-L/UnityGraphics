@@ -11,6 +11,8 @@ using UnityEngine.Rendering.Sampling;
 using UnityEngine.Rendering.UnifiedRayTracing;
 using InputExtraction = UnityEngine.LightTransport.InputExtraction;
 using Material = UnityEngine.Material;
+using Unity.Collections;
+using Unity.Collections.LowLevel.Unsafe;
 
 namespace UnityEditor.PathTracing.LightBakerBridge
 {
@@ -19,7 +21,63 @@ namespace UnityEditor.PathTracing.LightBakerBridge
 
     internal static class BakeInputToWorldConversion
     {
-        private static Mesh MeshDataToMesh(in MeshData meshData)
+        private static bool CanBulkCopy(VertexData vertexData, (VertexAttribute attr, int attributeIndex)[] attributeMapping, NativeArray<byte> destination)
+        {
+            bool canBulkCopy = vertexData.data.Length == destination.Length;
+            if (canBulkCopy)
+            {
+                // Calculate destination stride (size of one vertex with all attributes)
+                int destStride = destination.Length / (int)vertexData.vertexCount;
+
+                // Verify that all attributes use the same stride (interleaved) and offsets match Unity's layout
+                int expectedOffset = 0;
+                for (int a = 0; a < attributeMapping.Length; a++)
+                {
+                    int attributeIndex = attributeMapping[a].attributeIndex;
+                    int srcStride = (int)vertexData.stride[attributeIndex];
+                    int srcOffset = (int)vertexData.offsets[attributeIndex];
+                    int dimension = (int)vertexData.dimensions[attributeIndex];
+                    int attributeSize = dimension * sizeof(float);
+
+                    if (srcStride != destStride || srcOffset != expectedOffset)
+                    {
+                        canBulkCopy = false;
+                        break;
+                    }
+                    expectedOffset += attributeSize;
+                }
+            }
+            return canBulkCopy;
+        }
+
+        private static void CopyVertexData(VertexData vertexData, (VertexAttribute attr, int attributeIndex)[] attributeMapping, NativeArray<byte> destination)
+        {
+            int destStride = destination.Length / (int)vertexData.vertexCount;
+            // Copy each vertex's attributes using stride/offset information
+            for (int v = 0; v < vertexData.vertexCount; v++)
+            {
+                int destAttributeOffset = 0;
+                // Copy all attributes for the vertex - use attributeMapping to find the right source attribute and where it should go in the destination vertex layout
+                for (int a = 0; a < attributeMapping.Length; a++)
+                {
+                    int attributeIndex = attributeMapping[a].attributeIndex;
+                    int srcStride = (int)vertexData.stride[attributeIndex];
+                    int srcBaseOffset = (int)vertexData.offsets[attributeIndex];
+                    int dimension = (int)vertexData.dimensions[attributeIndex];
+                    int attributeSize = dimension * sizeof(float);
+                    int srcIndex = srcBaseOffset + v * srcStride;
+                    int destIndex = v * destStride + destAttributeOffset;
+
+                    // Copy attribute data
+                    for (int b = 0; b < attributeSize; b++)
+                        destination[destIndex + b] = vertexData.data[srcIndex + b];
+
+                    destAttributeOffset += attributeSize;
+                }
+            }
+        }
+
+        internal static Mesh MeshDataToMesh(in MeshData meshData)
         {
             ref readonly VertexData vertexData = ref meshData.vertexData;
 
@@ -28,17 +86,51 @@ namespace UnityEditor.PathTracing.LightBakerBridge
             var outRawMesh = outRawMeshArray[0];
 
             int vertexCount = (int)vertexData.vertexCount;
+
+            // Build attribute list with correct dimensions from vertexData
             List<VertexAttributeDescriptor> vertexLayout = new();
+            List<(VertexAttribute attr, int attributeIndex)> attributeMapping = new();
+            int attributeIndex = 0;
+
             if (vertexData.meshShaderChannelMask.HasFlag(MeshShaderChannelMask.Vertex))
-                vertexLayout.Add(new VertexAttributeDescriptor(VertexAttribute.Position, VertexAttributeFormat.Float32, 3));
+            {
+                int dimension = (int)vertexData.dimensions[attributeIndex];
+                vertexLayout.Add(new VertexAttributeDescriptor(VertexAttribute.Position, VertexAttributeFormat.Float32, dimension));
+                attributeMapping.Add((VertexAttribute.Position, attributeIndex));
+                attributeIndex++;
+            }
             if (vertexData.meshShaderChannelMask.HasFlag(MeshShaderChannelMask.Normal))
-                vertexLayout.Add(new VertexAttributeDescriptor(VertexAttribute.Normal, VertexAttributeFormat.Float32, 3));
+            {
+                int dimension = (int)vertexData.dimensions[attributeIndex];
+                vertexLayout.Add(new VertexAttributeDescriptor(VertexAttribute.Normal, VertexAttributeFormat.Float32, dimension));
+                attributeMapping.Add((VertexAttribute.Normal, attributeIndex));
+                attributeIndex++;
+            }
             if (vertexData.meshShaderChannelMask.HasFlag(MeshShaderChannelMask.TexCoord0))
-                vertexLayout.Add(new VertexAttributeDescriptor(VertexAttribute.TexCoord0, VertexAttributeFormat.Float32, 2));
+            {
+                int dimension = (int)vertexData.dimensions[attributeIndex];
+                vertexLayout.Add(new VertexAttributeDescriptor(VertexAttribute.TexCoord0, VertexAttributeFormat.Float32, dimension));
+                attributeMapping.Add((VertexAttribute.TexCoord0, attributeIndex));
+                attributeIndex++;
+            }
             if (vertexData.meshShaderChannelMask.HasFlag(MeshShaderChannelMask.TexCoord1))
-                vertexLayout.Add(new VertexAttributeDescriptor(VertexAttribute.TexCoord1, VertexAttributeFormat.Float32, 2));
+            {
+                int dimension = (int)vertexData.dimensions[attributeIndex];
+                vertexLayout.Add(new VertexAttributeDescriptor(VertexAttribute.TexCoord1, VertexAttributeFormat.Float32, dimension));
+                attributeMapping.Add((VertexAttribute.TexCoord1, attributeIndex));
+                attributeIndex++;
+            }
             outRawMesh.SetVertexBufferParams(vertexCount, vertexLayout.ToArray());
-            outRawMesh.GetVertexData<byte>().CopyFrom(vertexData.data);
+
+            // Copy vertex data respecting source stride and offset
+            var destVertexData = outRawMesh.GetVertexData<byte>();
+
+            // Check if source data layout matches Unity's expected layout for a fast bulk copy
+            bool canBulkCopy = CanBulkCopy(vertexData, attributeMapping.ToArray(), destVertexData);
+            if (canBulkCopy)
+                destVertexData.CopyFrom(vertexData.data); // Fast path: source layout matches destination, do bulk copy
+            else
+                CopyVertexData(vertexData, attributeMapping.ToArray(), destVertexData);
 
             outRawMesh.SetIndexBufferParams(meshData.indexBuffer.Length, IndexFormat.UInt32);
             outRawMesh.GetIndexData<uint>().CopyFrom(meshData.indexBuffer);

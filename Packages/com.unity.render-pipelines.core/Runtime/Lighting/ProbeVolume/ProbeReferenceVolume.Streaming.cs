@@ -619,7 +619,7 @@ namespace UnityEngine.Rendering
         {
             if (!isInitialized || m_CurrentBakingSet == null) return;
 
-            using (new ProfilingScope(ProfilingSampler.Get(CoreProfileId.APVCellStreamingUpdate)))
+            using (new ProfilingScope(CoreProfilingSamplers.APVCellStreamingUpdate))
             {
                 var cameraPosition = camera.transform.position;
                 if (!probeVolumeDebug.freezeStreaming)
@@ -805,7 +805,7 @@ namespace UnityEngine.Rendering
             // Handle cell streaming for blending
             if (supportScenarioBlending)
             {
-                using (new ProfilingScope(cmd, ProfilingSampler.Get(CoreProfileId.APVScenarioBlendingUpdate)))
+                using (new ProfilingScope(cmd, CoreProfilingSamplers.APVScenarioBlendingUpdate))
                     UpdateBlendingCellStreaming(cmd);
             }
         }
@@ -839,7 +839,7 @@ namespace UnityEngine.Rendering
                 return 0;
         }
 
-        static DynamicArray<Cell>.SortComparer s_BlendingComparer = BlendingComparer;
+        static readonly DynamicArray<Cell>.SortComparer s_BlendingComparer = BlendingComparer;
 
         void UpdateBlendingCellStreaming(CommandBuffer cmd)
         {
@@ -964,7 +964,7 @@ namespace UnityEngine.Rendering
             else return 0;
         }
 
-        static DynamicArray<Cell>.SortComparer s_DefragComparer = DefragComparer;
+        static readonly DynamicArray<Cell>.SortComparer s_DefragComparer = DefragComparer;
 
         void StartIndexDefragmentation()
         {
@@ -985,7 +985,7 @@ namespace UnityEngine.Rendering
 
         void UpdateIndexDefragmentation()
         {
-            using (new ProfilingScope(ProfilingSampler.Get(CoreProfileId.APVIndexDefragUpdate)))
+            using (new ProfilingScope(CoreProfilingSamplers.APVIndexDefragUpdate))
             {
                 m_TempIndexDefragCells.Clear();
 
@@ -1411,7 +1411,7 @@ namespace UnityEngine.Rendering
             if (!diskStreamingEnabled)
                 return;
 
-            using (new ProfilingScope(ProfilingSampler.Get(CoreProfileId.APVDiskStreamingUpdate)))
+            using (new ProfilingScope(CoreProfilingSamplers.APVDiskStreamingUpdate))
             {
                 AllocateScratchBufferPoolIfNeeded();
                 ProcessNewRequests();

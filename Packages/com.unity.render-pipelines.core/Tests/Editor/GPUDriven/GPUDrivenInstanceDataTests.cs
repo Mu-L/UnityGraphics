@@ -1,3 +1,4 @@
+#if !UNITY_WEBGL_RENDERER_ONLY
 using NUnit.Framework;
 using NUnit.Framework.Internal;
 using System;
@@ -68,7 +69,7 @@ namespace UnityEngine.Rendering.Tests
         {
             for(int i = 0; i < GPUArchetypeManager.kMaxComponentsCount; ++i)
                 m_ArchetypeMgr.CreateComponent<int>(Shader.PropertyToID($"Component{i}"), isPerInstance: true);
-            
+
             var components = new NativeList<GPUComponentHandle>(Allocator.Temp);
             components.Add(m_ArchetypeMgr.FindComponent(Shader.PropertyToID($"Component0")));
             components.Add(m_ArchetypeMgr.FindComponent(Shader.PropertyToID($"Component3")));
@@ -940,3 +941,4 @@ namespace UnityEngine.Rendering.Tests
         }
     }
 }
+#endif

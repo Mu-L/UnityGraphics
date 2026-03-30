@@ -1,3 +1,4 @@
+#if !UNITY_WEBGL_RENDERER_ONLY
 using System;
 
 namespace UnityEngine.Rendering
@@ -16,3 +17,5 @@ namespace UnityEngine.Rendering
         public uint _OcclusionCullingDebugPad1;
     }
 }
+
+#endif // !UNITY_WEBGL_RENDERER_ONLY

@@ -1,3 +1,4 @@
+#if !UNITY_WEBGL_RENDERER_ONLY
 using UnityEditor;
 
 namespace UnityEngine.Rendering
@@ -75,3 +76,4 @@ namespace UnityEngine.Rendering
         }
     }
 }
+#endif

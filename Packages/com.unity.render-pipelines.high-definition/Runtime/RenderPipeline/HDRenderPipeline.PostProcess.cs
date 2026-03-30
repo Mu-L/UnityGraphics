@@ -4135,6 +4135,7 @@ namespace UnityEngine.Rendering.HighDefinition
         TextureHandle LensFlareScreenSpacePass(RenderGraph renderGraph, HDCamera hdCamera, in TextureHandle source, in TextureHandle originalBloomTexture, in TextureHandle screenSpaceLensFlareBloomMipTexture)
         {
             TextureHandle result = renderGraph.defaultResources.blackTextureXR;
+            TextureHandle debugTexture = renderGraph.defaultResources.blackTextureXR;
 
             int ratio = (int)m_LensFlareScreenSpace.resolution.value;
             Color tintColor = m_LensFlareScreenSpace.tintColor.value;
@@ -4199,9 +4200,11 @@ namespace UnityEngine.Rendering.HighDefinition
                             data.parameters.debugView);
                     });
 
-                PushFullScreenDebugTexture(renderGraph, passData.result, hdCamera.postProcessRTScales, FullScreenDebugMode.LensFlareScreenSpace);
+                debugTexture = passData.result;
                 result = passData.originalBloomTexture;
             }
+
+            PushFullScreenDebugTexture(renderGraph, debugTexture, hdCamera.postProcessRTScales, FullScreenDebugMode.LensFlareScreenSpace);
             return result;
         }
 

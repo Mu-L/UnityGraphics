@@ -1287,6 +1287,11 @@ namespace UnityEngine.Rendering.Universal
             if (needTransparencyPass)
 #endif
             {
+#if URP_SCREEN_SPACE_REFLECTION
+                var ssrSettings = VolumeManager.instance.stack.GetComponent<ScreenSpaceReflectionVolumeSettings>();
+                m_RenderTransparentForwardPass.shouldTransparentsReceiveSSR = ssrSettings.ShouldRenderTransparents();
+#endif
+
                 m_RenderTransparentForwardPass.m_ShouldTransparentsReceiveShadows = !m_TransparentSettingsPass.Setup();
                 m_RenderTransparentForwardPass.Render(
                     renderGraph,

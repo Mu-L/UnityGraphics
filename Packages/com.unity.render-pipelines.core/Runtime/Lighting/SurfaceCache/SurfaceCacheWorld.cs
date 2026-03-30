@@ -439,6 +439,7 @@ namespace UnityEngine.Rendering
             return instance;
         }
 
+#if ENABLE_TERRAIN_MODULE
         public InstanceHandle AddInstance(
             Terrain terrain,
             MaterialHandle material,
@@ -462,6 +463,7 @@ namespace UnityEngine.Rendering
             _rayTracingAccelerationStructure.AddInstance(instance.Value, comp, masks, materialIndices, isOpaque, terrain.renderingLayerMask);
             return instance;
         }
+#endif
 
         public void UpdateInstanceTransform(InstanceHandle instance, Matrix4x4 localToWorldMatrix)
         {

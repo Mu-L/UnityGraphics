@@ -207,7 +207,7 @@ namespace UnityEngine.PathTracing.Integration
             if (newChunkStarted)
             {
                 // Its time to repopulate the indirect dispatch buffers (as a new instance has started). Use the compacted size for this.
-                ExpansionHelpers.PopulateAccumulationIndirectDispatch(cmd, _accumulationShader, _expansionHelpers, _populateAccumulationDispatchKernel, expandedSampleWidth, compactedGbufferLength, _accumulationDispatchBuffer);
+                ExpansionHelpers.PopulateAccumulationIndirectDispatch(cmd, _expansionHelpers, _populateAccumulationDispatchKernel, expandedSampleWidth, compactedGbufferLength, _accumulationDispatchBuffer);
             }
 
             // accumulate (expanded)
@@ -245,6 +245,133 @@ namespace UnityEngine.PathTracing.Integration
             cmd.SetComputeIntParam(_normalizationShader, LightmapIntegratorShaderIDs.TextureHeight, directionalInOut.height);
             _normalizationShader.GetKernelThreadGroupSizes(_directionalNormalizationKernel, out uint x, out uint y, out uint _);
             cmd.DispatchCompute(_normalizationShader, _directionalNormalizationKernel, GraphicsHelpers.DivUp(directionalInOut.width, x), GraphicsHelpers.DivUp(directionalInOut.height, y), 1);
+        }
+    }
+
+    internal class LightmapDirectBRDFIntegrator : System.IDisposable
+    {
+        private IRayTracingShader _accumulationShader;
+        private ComputeShader _normalizationShader;
+        private int _normalizationKernel;
+        private SamplingResources _samplingResources;
+        private RTHandle _emptyTexture;
+        private GraphicsBuffer _accumulationDispatchBuffer;
+        private ComputeShader _expansionHelpers;
+        private int _populateAccumulationDispatchKernel;
+
+        public void Dispose()
+        {
+            _accumulationDispatchBuffer?.Dispose();
+        }
+
+        public void SetupLightSamplingKeywords(CommandBuffer cmd, EmissiveSamplingMode emissiveSamplingMode)
+        {
+            Util.SetEmissiveSamplingKeyword(cmd, _accumulationShader, emissiveSamplingMode);
+        }
+
+        public void Prepare(IRayTracingShader accumulationShader, ComputeShader normalizationShader, ComputeShader expansionHelpers, SamplingResources samplingResources, RTHandle emptyExposureTexture)
+        {
+            _accumulationShader = accumulationShader;
+            Debug.Assert(_accumulationShader != null);
+
+            _normalizationShader = normalizationShader;
+            Debug.Assert(_normalizationShader != null);
+            _normalizationKernel = _normalizationShader.FindKernel("NormalizeRadiance");
+
+            _samplingResources = samplingResources;
+            _emptyTexture = emptyExposureTexture;
+
+            _expansionHelpers = expansionHelpers;
+            _populateAccumulationDispatchKernel = _expansionHelpers.FindKernel("PopulateAccumulationDispatch");
+            _accumulationDispatchBuffer = RayTracingHelper.CreateDispatchIndirectBuffer();
+        }
+
+        public void Accumulate(
+            CommandBuffer cmd,
+            uint sampleCountToTakePerTexel,
+            uint currentSampleCountPerTexel,
+            Matrix4x4 shaderLocalToWorld,
+            Matrix4x4 shaderLocalToWorldNormals,
+            int instanceGeometryIndex,
+            Vector2Int instanceTexelSize,
+            uint2 chunkOffset,
+            World world,
+            GraphicsBuffer traceScratchBuffer,
+            GraphicsBuffer gBuffer,
+            uint expandedSampleWidth,
+            GraphicsBuffer expandedOutput,
+            GraphicsBuffer expandedDirectional,
+            GraphicsBuffer compactedTexelIndices,
+            GraphicsBuffer compactedGbufferLength,
+            bool receiveShadows,
+            float pushOff,
+            uint risCandidateCount,
+            bool newChunkStarted)
+        {
+            bool doDirectional = expandedDirectional != null;
+            int instanceWidth = instanceTexelSize.x;
+            int instanceHeight = instanceTexelSize.y;
+            Debug.Assert(math.ispow2(expandedSampleWidth));
+            Debug.Assert(gBuffer.count == expandedOutput.count);
+            Debug.Assert(sampleCountToTakePerTexel <= expandedSampleWidth);
+            Debug.Assert(sampleCountToTakePerTexel > 0);
+
+            // path tracing inputs
+            bool preExpose = false;
+            float environmentIntensityMultiplier = 1.0f;
+            Util.BindPathTracingInputs(cmd, _accumulationShader, risCandidateCount, preExpose, 0, environmentIntensityMultiplier, RenderedGameObjectsFilter.OnlyStatic, _samplingResources, _emptyTexture);
+            Util.BindWorld(cmd, _accumulationShader, world);
+
+            var requiredSizeInBytes = _accumulationShader.GetTraceScratchBufferRequiredSizeInBytes((uint)expandedOutput.count, 1, 1);
+            if (requiredSizeInBytes > 0)
+            {
+                var actualScratchBufferSize = (ulong)(traceScratchBuffer.count * traceScratchBuffer.stride);
+                Debug.Assert(traceScratchBuffer.stride == sizeof(uint));
+                Debug.Assert(requiredSizeInBytes <= actualScratchBufferSize);
+            }
+
+            // inputs for main accumulation kernel
+            _accumulationShader.SetMatrixParam(cmd, LightmapIntegratorShaderIDs.ShaderLocalToWorld, shaderLocalToWorld);
+            _accumulationShader.SetMatrixParam(cmd, LightmapIntegratorShaderIDs.ShaderLocalToWorldNormals, shaderLocalToWorldNormals);
+            _accumulationShader.SetIntParam(cmd, LightmapIntegratorShaderIDs.InstanceGeometryIndex, instanceGeometryIndex);
+            _accumulationShader.SetIntParam(cmd, LightmapIntegratorShaderIDs.ReceiveShadows, receiveShadows ? 1 : 0);
+            _accumulationShader.SetFloatParam(cmd, LightmapIntegratorShaderIDs.PushOff, pushOff);
+            _accumulationShader.SetIntParam(cmd, LightmapIntegratorShaderIDs.InstanceWidth, instanceWidth);
+
+            _accumulationShader.SetIntParam(cmd, LightmapIntegratorShaderIDs.AccumulateDirectional, doDirectional ? 1 : 0);
+            _accumulationShader.SetBufferParam(cmd, LightmapIntegratorShaderIDs.GBuffer, gBuffer);
+            _accumulationShader.SetBufferParam(cmd, LightmapIntegratorShaderIDs.CompactedGBuffer, compactedTexelIndices);
+            _accumulationShader.SetBufferParam(cmd, LightmapIntegratorShaderIDs.ExpandedOutput, expandedOutput);
+            if (doDirectional)
+                _accumulationShader.SetBufferParam(cmd, LightmapIntegratorShaderIDs.ExpandedDirectional, expandedDirectional);
+            _accumulationShader.SetIntParam(cmd, LightmapIntegratorShaderIDs.ExpandedTexelSampleWidth, (int)expandedSampleWidth);
+            _accumulationShader.SetIntParam(cmd, LightmapIntegratorShaderIDs.ChunkOffsetX, (int)chunkOffset.x);
+            _accumulationShader.SetIntParam(cmd, LightmapIntegratorShaderIDs.ChunkOffsetY, (int)chunkOffset.y);
+
+            if (newChunkStarted)
+            {
+                // Its time to repopulate the indirect dispatch buffers (as a new instance has started). Use the compacted size for this.
+                ExpansionHelpers.PopulateAccumulationIndirectDispatch(cmd, _expansionHelpers, _populateAccumulationDispatchKernel, expandedSampleWidth, compactedGbufferLength, _accumulationDispatchBuffer);
+            }
+
+            // accumulate (expanded)
+            {
+                _accumulationShader.SetIntParam(cmd, LightmapIntegratorShaderIDs.SampleOffset, (int)currentSampleCountPerTexel);
+                _accumulationShader.SetIntParam(cmd, LightmapIntegratorShaderIDs.MaxLocalSampleCount, (int)sampleCountToTakePerTexel);
+
+                cmd.BeginSample("Accumulation (Expanded)");
+                _accumulationShader.Dispatch(cmd, traceScratchBuffer, _accumulationDispatchBuffer);
+                cmd.EndSample("Accumulation (Expanded)");
+            }
+        }
+
+        public void Normalize(CommandBuffer cmd, RenderTexture lightmapInOut)
+        {
+            cmd.SetComputeTextureParam(_normalizationShader, _normalizationKernel, LightmapIntegratorShaderIDs.LightmapInOut, lightmapInOut);
+            cmd.SetComputeIntParam(_normalizationShader, LightmapIntegratorShaderIDs.TextureWidth, lightmapInOut.width);
+            cmd.SetComputeIntParam(_normalizationShader, LightmapIntegratorShaderIDs.TextureHeight, lightmapInOut.height);
+            _normalizationShader.GetKernelThreadGroupSizes(_normalizationKernel, out uint x, out uint y, out _);
+            cmd.DispatchCompute(_normalizationShader, _normalizationKernel, GraphicsHelpers.DivUp(lightmapInOut.width, x), GraphicsHelpers.DivUp(lightmapInOut.height, y), 1);
         }
     }
 
@@ -354,7 +481,7 @@ namespace UnityEngine.PathTracing.Integration
             if (newChunkStarted)
             {
                 // Its time to repopulate the indirect dispatch buffers (as a new instance has started). Use the compacted size for this.
-                ExpansionHelpers.PopulateAccumulationIndirectDispatch(cmd, _accumulationShader, _expansionHelpers, _populateAccumulationDispatchKernel, expandedSampleWidth, compactedGbufferLength, _accumulationDispatchBuffer);
+                ExpansionHelpers.PopulateAccumulationIndirectDispatch(cmd, _expansionHelpers, _populateAccumulationDispatchKernel, expandedSampleWidth, compactedGbufferLength, _accumulationDispatchBuffer);
             }
 
             // accumulate (expanded)
@@ -481,7 +608,7 @@ namespace UnityEngine.PathTracing.Integration
             if (newChunkStarted)
             {
                 // Its time to repopulate the indirect dispatch buffers (as a new instance has started). Use the compacted size for this.
-                ExpansionHelpers.PopulateAccumulationIndirectDispatch(cmd, _accumulationShader, _expansionHelpers, _populateAccumulationDispatchKernel, expandedSampleWidth, compactedGbufferLength, _accumulationDispatchBuffer);
+                ExpansionHelpers.PopulateAccumulationIndirectDispatch(cmd, _expansionHelpers, _populateAccumulationDispatchKernel, expandedSampleWidth, compactedGbufferLength, _accumulationDispatchBuffer);
             }
 
             // accumulate (expanded)
@@ -594,7 +721,7 @@ namespace UnityEngine.PathTracing.Integration
             if (newChunkStarted)
             {
                 // Its time to repopulate the indirect dispatch buffers (as a new instance has started). Use the compacted size for this.
-                ExpansionHelpers.PopulateAccumulationIndirectDispatch(cmd, _accumulationShader, _expansionHelpers, _populateAccumulationDispatchKernel, expandedSampleWidth, compactedGbufferLength, _accumulationDispatchBuffer);
+                ExpansionHelpers.PopulateAccumulationIndirectDispatch(cmd, _expansionHelpers, _populateAccumulationDispatchKernel, expandedSampleWidth, compactedGbufferLength, _accumulationDispatchBuffer);
             }
 
             // accumulate (expanded)
@@ -710,7 +837,7 @@ namespace UnityEngine.PathTracing.Integration
             if (newChunkStarted)
             {
                 // Its time to repopulate the indirect dispatch buffers (as a new instance has started). Use the compacted size for this.
-                ExpansionHelpers.PopulateAccumulationIndirectDispatch(cmd, _accumulationShader, _expansionHelpers, _populateAccumulationDispatchKernel, expandedSampleWidth, compactedGbufferLength, _accumulationDispatchBuffer);
+                ExpansionHelpers.PopulateAccumulationIndirectDispatch(cmd, _expansionHelpers, _populateAccumulationDispatchKernel, expandedSampleWidth, compactedGbufferLength, _accumulationDispatchBuffer);
             }
 
             // accumulate (expanded)
@@ -784,7 +911,7 @@ namespace UnityEngine.PathTracing.Integration
             _accumulationShader.SetBufferParam(cmd, LightmapIntegratorShaderIDs.LightmapSamplesExpanded, lightmapSamplesExpanded);
 
             // Its time to repopulate the indirect dispatch buffers. Use the compacted size for this.
-            ExpansionHelpers.PopulateAccumulationIndirectDispatch(cmd, _accumulationShader, _expansionHelpers, _populateAccumulationDispatchKernel, expandedSampleWidth, compactedGbufferLength, _accumulationDispatchBuffer);
+            ExpansionHelpers.PopulateAccumulationIndirectDispatch(cmd, _expansionHelpers, _populateAccumulationDispatchKernel, expandedSampleWidth, compactedGbufferLength, _accumulationDispatchBuffer);
             cmd.BeginSample("GBuffer Debug");
             _accumulationShader.Dispatch(cmd, null, _accumulationDispatchBuffer);
             cmd.EndSample("GBuffer Debug");

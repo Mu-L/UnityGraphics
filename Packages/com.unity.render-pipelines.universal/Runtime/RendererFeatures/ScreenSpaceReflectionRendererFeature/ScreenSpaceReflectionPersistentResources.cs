@@ -6,6 +6,7 @@ namespace UnityEngine.Rendering.Universal
     [SupportedOnRenderPipeline(typeof(UniversalRenderPipelineAsset))]
     [Categorization.CategoryInfo(Name = "R: SSR Resources", Order = 1010)]
     [Categorization.ElementInfo(Order = 0)]
+    [HideInInspector]
     class ScreenSpaceReflectionPersistentResources : IRenderPipelineResources
     {
         [SerializeField] [ResourcePath("Shaders/Utils/ComputeScreenSpaceReflection.shader")]

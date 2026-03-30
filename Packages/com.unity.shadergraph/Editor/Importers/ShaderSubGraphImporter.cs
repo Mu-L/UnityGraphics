@@ -28,9 +28,9 @@ namespace UnityEditor.ShaderGraph
         private string documentationPath;
 
         public const string Extension = "shadersubgraph";
-        const string IconBasePath = "Packages/com.unity.shadergraph/Editor/Resources/Icons/sg_subgraph_icon.png";
+        const string IconPath = "Packages/com.unity.shadergraph/Editor/Resources/Icons/sg_subgraph_icon@2x.png";
 
-        public static Texture2D GetIcon() => EditorGUIUtility.IconContent(IconBasePath)?.image as Texture2D;
+        public static Texture2D GetIcon() => AssetDatabase.LoadAssetAtPath<Texture2D>(IconPath);
 
         [SuppressMessage("ReSharper", "UnusedMember.Local")]
         static string[] GatherDependenciesFromSourceFile(string assetPath)
@@ -40,7 +40,11 @@ namespace UnityEditor.ShaderGraph
                 AssetCollection assetCollection = new AssetCollection();
                 MinimalGraphData.GatherMinimalDependenciesFromFile(assetPath, assetCollection);
 
-                List<string> dependencyPaths = new List<string>();
+                List<string> dependencyPaths = new List<string>
+                {
+                    IconPath
+                };
+
                 foreach (var asset in assetCollection.assets)
                 {
                     // only artifact dependencies need to be declared in GatherDependenciesFromSourceFile

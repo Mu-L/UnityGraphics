@@ -34,16 +34,6 @@ namespace UnityEngine.Rendering.UnifiedRayTracing
             return new AsyncTerrainToMeshRequest(job, jobHandle);
         }
 
-        static public AsyncTerrainToMeshRequest ConvertAsync(Terrain terrain)
-        {
-            TerrainData terrainData = terrain.terrainData;
-            int width = terrainData.heightmapTexture.width;
-            int height = terrainData.heightmapTexture.height;
-            float[,] heightmap = terrain.terrainData.GetHeights(0, 0, width, height);
-            bool[,] holes = terrain.terrainData.GetHoles(0, 0, width - 1, height - 1);
-            return MakeAsyncTerrainToMeshRequest(width, height, terrainData.heightmapScale, heightmap, holes);
-        }
-
         static public AsyncTerrainToMeshRequest ConvertAsync(int heightmapWidth, int heightmapHeight, short[] heightmapData, Vector3 heightmapScale, int holeWidth, int holeHeight, byte[] holedata)
         {
             float[,] heightmap = new float[heightmapWidth,heightmapHeight];
@@ -66,12 +56,6 @@ namespace UnityEngine.Rendering.UnifiedRayTracing
             }
             return MakeAsyncTerrainToMeshRequest(heightmapWidth, heightmapHeight, heightmapScale, heightmap, holes);
         }
-        static public Mesh Convert(Terrain terrain)
-        {
-            var request = ConvertAsync(terrain);
-            request.WaitForCompletion();
-            return request.GetMesh();
-        }
 
         static public Mesh Convert(int heightmapWidth, int heightmapHeight, short[] heightmapData, Vector3 heightmapScale, int holeWidth, int holeHeight, byte[] holedata)
         {
@@ -79,6 +63,25 @@ namespace UnityEngine.Rendering.UnifiedRayTracing
             request.WaitForCompletion();
             return request.GetMesh();
         }
+
+#if ENABLE_TERRAIN_MODULE
+        static public AsyncTerrainToMeshRequest ConvertAsync(Terrain terrain)
+        {
+            TerrainData terrainData = terrain.terrainData;
+            int width = terrainData.heightmapTexture.width;
+            int height = terrainData.heightmapTexture.height;
+            float[,] heightmap = terrain.terrainData.GetHeights(0, 0, width, height);
+            bool[,] holes = terrain.terrainData.GetHoles(0, 0, width - 1, height - 1);
+            return MakeAsyncTerrainToMeshRequest(width, height, terrainData.heightmapScale, heightmap, holes);
+        }
+
+        static public Mesh Convert(Terrain terrain)
+        {
+            var request = ConvertAsync(terrain);
+            request.WaitForCompletion();
+            return request.GetMesh();
+        }
+#endif
     }
 
     internal struct AsyncTerrainToMeshRequest

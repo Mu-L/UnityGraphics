@@ -61,6 +61,7 @@ namespace UnityEngine.Rendering.Universal
             internal static readonly int _CameraProjections = Shader.PropertyToID("_CameraProjections");
             internal static readonly int _CameraInverseProjections = Shader.PropertyToID("_CameraInverseProjections");
             internal static readonly int _CameraInverseViewProjections = Shader.PropertyToID("_CameraInverseViewProjections");
+            internal static readonly int _CameraViewProjections = Shader.PropertyToID("_CameraViewProjections");
             internal static readonly int _CameraViews = Shader.PropertyToID("_CameraViews");
             internal static readonly int _CameraColorTexture = Shader.PropertyToID("_CameraColorTexture");
             internal static readonly int _CameraDepthTexture = Shader.PropertyToID("_CameraDepthTexture");
@@ -96,7 +97,7 @@ namespace UnityEngine.Rendering.Universal
             }
         };
 
-        readonly ProfilingSampler m_ProfilingSampler = ProfilingSampler.Get(URPProfileId.SSR);
+        readonly ProfilingSampler m_ProfilingSampler = URPProfilingSamplers.SSR;
         readonly ProfilingSampler m_DepthPyramidSampler = new("SSR - Depth Pyramid Generation");
         readonly ProfilingSampler m_UpscalingSampler = new("SSR - Upscaling");
         readonly ProfilingSampler m_FinalBlitSampler = new("SSR - Final Blit");
@@ -139,10 +140,6 @@ namespace UnityEngine.Rendering.Universal
                 renderPassEvent = m_AfterOpaque ? (settings.ShouldRenderTransparents() ? RenderPassEvent.AfterRenderingTransparents + 25 : RenderPassEvent.AfterRenderingSkybox + 25) : RenderPassEvent.AfterRenderingPrePasses + 5;
 
                 requiredInputs = ScriptableRenderPassInput.Depth | ScriptableRenderPassInput.Normal;
-
-                // Deferred rendering before opaques, need to generate smoothness in depth normals prepass as GBuffer isn't ready yet.
-                if (!m_AfterOpaque)
-                    renderingData.writesSmoothnessToDepthNormalsAlpha = true;
             }
             else
             {
@@ -150,10 +147,10 @@ namespace UnityEngine.Rendering.Universal
 
                 // Request DepthNormals texture.
                 requiredInputs = ScriptableRenderPassInput.Depth | ScriptableRenderPassInput.Normal;
-
-                // With forward rendering, we are forced to generate a smoothness in depth normals prepass.
-                renderingData.writesSmoothnessToDepthNormalsAlpha = true;
             }
+
+            // Write smoothness to alpha of depth normals texture so we can sample it in SSR pass.
+            renderingData.writesSmoothnessToDepthNormalsAlpha = true;
 
             // Before opaque needs motion vectors for reprojection.
             if (!m_AfterOpaque && (cameraType == CameraType.VR || cameraType == CameraType.Game))
@@ -170,6 +167,7 @@ namespace UnityEngine.Rendering.Universal
             // Camera data. This is not expected to change during a frame.
             internal UniversalCameraData cameraData;
             internal Matrix4x4[] cameraInverseViewProjections = new Matrix4x4[2];
+            internal Matrix4x4[] cameraViewProjections = new Matrix4x4[2];
             internal Matrix4x4[] cameraProjections = new Matrix4x4[2];
             internal Matrix4x4[] cameraInverseProjections = new Matrix4x4[2];
             internal Matrix4x4[] cameraViews = new Matrix4x4[2];
@@ -349,14 +347,6 @@ namespace UnityEngine.Rendering.Universal
                         }
                     }
 
-                    // If running before opaque pass, we need to export the SSR texture as a global uniform,
-                    // so it can be sampled in the opaque pass.
-                    if (!passData.afterOpaque)
-                    {
-                        builder.UseTexture(finalTexture, AccessFlags.ReadWrite);
-                        builder.SetGlobalTextureAfterPass(finalTexture, ShaderConstants._ScreenSpaceReflectionFinalTexture);
-                    }
-
                     builder.SetRenderFunc<ScreenSpaceReflectionPassData>(static (ssrData, rgContext) =>
                     {
                         SetupKeywordsAndParameters(ref ssrData);
@@ -383,7 +373,6 @@ namespace UnityEngine.Rendering.Universal
                         if (!ssrData.afterOpaque)
                         {
                             // We only want URP shaders to sample SSR if After Opaque is disabled...
-                            cmd.SetKeyword(ShaderGlobalKeywords.ScreenSpaceReflection, true);
                             cmd.SetGlobalVector(ShaderConstants._ReflectionParam, new Vector4(1f, ssrData.minimumSmoothness, ssrData.smoothnessFadeStart, 0f));
                         }
                     });
@@ -452,6 +441,12 @@ namespace UnityEngine.Rendering.Universal
                     }
                 }
             }
+
+            // Set global texture so subsequent passes can read it.
+            if (m_AfterOpaque)
+                resourceData.ssrTexture = TextureHandle.nullHandle;
+            else
+                resourceData.ssrTexture = finalTexture;
         }
 
         static void SetupKeywordsAndParameters(ref ScreenSpaceReflectionPassData data)
@@ -469,7 +464,8 @@ namespace UnityEngine.Rendering.Universal
                 data.cameraProjections[eyeIndex] = proj;
                 data.cameraInverseProjections[eyeIndex] = proj.inverse;
                 data.cameraViews[eyeIndex] = view;
-                data.cameraInverseViewProjections[eyeIndex] = (proj * view).inverse;
+                data.cameraViewProjections[eyeIndex] = proj * view;
+                data.cameraInverseViewProjections[eyeIndex] = data.cameraViewProjections[eyeIndex].inverse;
             }
 
             data.material.SetVector(ShaderConstants._ProjectionParams2, new Vector4(1.0f / cameraData.camera.nearClipPlane, 0.0f, 0.0f, 0.0f));
@@ -477,6 +473,7 @@ namespace UnityEngine.Rendering.Universal
             data.material.SetMatrixArray(ShaderConstants._CameraInverseProjections, data.cameraInverseProjections);
             data.material.SetMatrixArray(ShaderConstants._CameraViews, data.cameraViews);
             data.material.SetMatrixArray(ShaderConstants._CameraInverseViewProjections, data.cameraInverseViewProjections);
+            data.material.SetMatrixArray(ShaderConstants._CameraViewProjections, data.cameraViewProjections);
             data.material.SetVector(ShaderConstants._MinimumSmoothnessAndFadeStart, new Vector4(data.minimumSmoothness, data.smoothnessFadeStart));
             data.material.SetVector(ShaderConstants._ScreenEdgeFadeAndViewConeDot, new Vector4(data.screenEdgeFade, 1.0f - data.screenEdgeFade, 2.0f * data.normalFade - 1.0f));
             data.material.SetInteger(ShaderConstants._ReflectSky, data.reflectSky ? 1 : 0);
@@ -621,16 +618,6 @@ namespace UnityEngine.Rendering.Universal
             }
             else
                 depthPyramidTexture = TextureHandle.nullHandle;
-        }
-
-        /// <inheritdoc/>
-        public override void OnCameraCleanup(CommandBuffer cmd)
-        {
-            if (cmd == null)
-                throw new ArgumentNullException(nameof(cmd));
-
-            if (!m_AfterOpaque)
-                cmd.SetKeyword(ShaderGlobalKeywords.ScreenSpaceReflection, false);
         }
     }
 }

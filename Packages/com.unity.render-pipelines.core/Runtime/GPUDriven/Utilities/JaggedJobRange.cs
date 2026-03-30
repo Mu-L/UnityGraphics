@@ -1,3 +1,4 @@
+#if !UNITY_WEBGL_RENDERER_ONLY
 using Unity.Burst;
 using Unity.Collections;
 using Unity.Collections.LowLevel.Unsafe;
@@ -73,3 +74,5 @@ namespace UnityEngine.Rendering
         }
     }
 }
+
+#endif // !UNITY_WEBGL_RENDERER_ONLY

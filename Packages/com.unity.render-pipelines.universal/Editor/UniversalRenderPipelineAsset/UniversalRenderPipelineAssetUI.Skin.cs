@@ -141,6 +141,8 @@ namespace UnityEditor.Rendering.Universal
                 EditorGUIUtility.TrTextContent("Some Graphics API(s) in the Player Graphics APIs list are incompatible with Light Layers.  Switching to these Graphics APIs at runtime can cause issues: ");
             public static GUIContent rendererUnsupportedAPIMessage =
                 EditorGUIUtility.TrTextContent("Some Renderer(s) in the Renderer List are incompatible with the Player Graphics APIs list.  Switching to these renderers at runtime can cause issues.\n\n");
+            public static GUIContent webGL2GpuResidentDrawerErrorMessage =
+                EditorGUIUtility.TrTextContent("GPU Resident Drawer is not supported with the WebGL2 Graphics API.");
             public static GUIContent brgShaderStrippingErrorMessage =
                 EditorGUIUtility.TrTextContent("\"BatchRendererGroup Variants\" setting must be \"Keep All\". To fix, modify Graphics settings and set \"BatchRendererGroup Variants\" to \"Keep All\".");
             public static GUIContent staticBatchingInfoMessage =

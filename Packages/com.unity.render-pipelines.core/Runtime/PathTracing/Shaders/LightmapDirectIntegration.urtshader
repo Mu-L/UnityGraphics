@@ -1,4 +1,5 @@
 #pragma only_renderers d3d11 vulkan metal glcore
+#pragma exclude_renderers switch switch2
 
 #pragma multi_compile _ LIGHT_SAMPLING_UNIFORM LIGHT_SAMPLING_RIS LIGHT_SAMPLING_ROUND_ROBIN
 #pragma multi_compile _ EMISSIVE_SAMPLING_LIGHT EMISSIVE_SAMPLING_BRDF EMISSIVE_SAMPLING_MIS
@@ -9,8 +10,6 @@
 
 #include "PathTracing.hlsl"
 #include "LightmapIntegrationHelpers.hlsl"
-
-#pragma exclude_renderers switch switch2
 
 uint g_LightIndexInCell;
 int g_AccumulateDirectional;
@@ -78,78 +77,6 @@ void EstimateMISWeightedIrradianceUsingDirectSampling(
     }
 }
 
-// Sample a random cosine weighted direction, weight with MIS.
-// Assumes 2 sampling strategies, the other being direct sampling of points on each light.
-// Used to avoid extra noise when light sampling is undesirable.
-void EstimateMISWeightedIrradianceUsingCosineSampling(
-    UnifiedRT::DispatchInfo dispatchInfo,
-    UnifiedRT::RayTracingAccelStruct accelStruct,
-    StructuredBuffer<UnifiedRT::InstanceData> instanceList,
-    float3 origin,
-    float3 normal,
-    inout PathTracingSampler rngState,
-    inout float4 irradiance,
-    inout float4 directional)
-{
-    UnifiedRT::Ray ray;
-    ray.origin = origin;
-    ray.direction = CosineSample(rngState.GetSample2D(RAND_DIM_SURF_SCATTER), normal);
-    ray.tMin = 0;
-    ray.tMax = FLT_MAX;
-
-    float sampleDensity = dot(normal, ray.direction) / PI;
-    float lightDensity = 0.f;
-    float3 emission = 0.f;
-    float3 attenuation = 1.0f;
-
-    for (uint i = 0; i < MAX_TRANSMISSION_BOUNCES; i++)
-    {
-        UnifiedRT::Hit hitResult = TraceRayClosestHit(dispatchInfo, accelStruct, RayMask(true), ray, 0);
-        if (hitResult.IsValid()) // Hit something, possibly emissive
-        {
-            UnifiedRT::InstanceData instance = UnifiedRT::GetInstance(hitResult.instanceID);
-            PTHitGeom geometry = GetHitGeomInfo(instance, hitResult);
-            geometry.FixNormals(ray.direction);
-            MaterialProperties material = LoadMaterialProperties(instance, geometry.uv0, geometry.uv1);
-
-            // Transmissive material, either continue or terminate ray, then apply attenuation.
-            if (ShouldTransmitRay(rngState, material))
-            {
-                attenuation *= saturate(material.transmission);
-                ray.origin = geometry.NextTransmissionRayOrigin();
-                rngState.NextBounce();
-                continue;
-            }
-            // Hit emissive frontface
-            else if (!ShouldTreatAsBackface(hitResult, material) && any(material.emission))
-            {
-                lightDensity = ComputeEmissiveTriangleDensity(instanceList, geometry, hitResult.instanceID, ray.origin);
-                lightDensity /= GetNumLights(ray.origin);
-                emission = material.emission;
-            }
-            break;
-        }
-        else // Hit skybox, so stop
-        {
-            GetEnvironmentLightEmissionAndDensity(ray.direction, emission, lightDensity);
-            lightDensity /= GetNumLights(ray.origin);
-            break;
-        }
-    }
-
-    // Tint the emissiom by the transmissive attenuation before accumulating
-    emission *= attenuation;
-
-    // MIS - Cosine weighted sampling
-    float sampleMISWeight = EmissiveMISWeightForBrdfRay(lightDensity, sampleDensity);
-
-    // f(x)/p(x) = (Li * cos(theta)) / (cos(theta) / PI) = Li * PI
-    float3 e = emission * PI * sampleMISWeight;
-
-    irradiance.rgb += e;
-    directional += float4(ray.direction, 1.f) * Luminance(e);
-}
-
 void AccumulateInternal(UnifiedRT::DispatchInfo dispatchInfo)
 {
     float3 worldPosition = 0.f;
@@ -167,8 +94,8 @@ void AccumulateInternal(UnifiedRT::DispatchInfo dispatchInfo)
 
     float3 origin = OffsetRayOrigin(worldPosition, worldFaceNormal, g_PushOff);
 
-    float4 irradianceDirect = 0.f, irradianceBrdf = 0.f;
-    float4 directionalDirect = 0.f, directionalBrdf = 0.f;
+    float4 irradiance = 0.f;
+    float4 directional = 0.f;
 
     PathTracingSampler rngState;
     rngState.Init(instanceTexelPos, sampleOffset);
@@ -181,37 +108,33 @@ void AccumulateInternal(UnifiedRT::DispatchInfo dispatchInfo)
     options.numLightCandidates = min(g_LightEvaluations, MAX_LIGHT_EVALUATIONS);
 
     uint numLightsInCell = GetNumLights(origin);
-    // If there are no lights to sample, continuing is a waste of time.
-    [branch] if (numLightsInCell == 0)
-    {
-        // We still want to write 1 into the alpha channel, as it is used as an occupancy mask for post processing.
-        if (localSampleOffset == 0)
-            g_ExpandedOutput[dispatchInfo.dispatchThreadID.x] = float4(0,0,0,1);
-        return;
-    }
 
     // Sample a light using direct sampling, weight with MIS.
     #ifdef LIGHT_SAMPLING_ROUND_ROBIN
     // If we have already sampled every light in the cell, skip this sample to avoid needing to normalize per-light.
     [branch] if (g_LightIndexInCell >= numLightsInCell)
-        return;
+	{
+    	g_ExpandedOutput[dispatchInfo.dispatchThreadID.x] += float4(0,0,0,g_LightIndexInCell==0);
+		return;
+	}
 
     LightSample lightSample;
-    EstimateMISWeightedIrradianceForSpecificLightUsingDirectSampling(dispatchInfo, accelStruct, g_AccelStructInstanceList, origin, worldNormal, options, g_LightIndexInCell, rngState, irradianceDirect, directionalDirect, lightSample);
+    EstimateMISWeightedIrradianceForSpecificLightUsingDirectSampling(dispatchInfo, accelStruct, g_AccelStructInstanceList, origin, worldNormal, options, g_LightIndexInCell, rngState, irradiance, directional, lightSample);
     #else
     LightSample lightSample;
-    EstimateMISWeightedIrradianceUsingDirectSampling(dispatchInfo, accelStruct, g_AccelStructInstanceList, origin, worldNormal, options, rngState, irradianceDirect, directionalDirect, lightSample);
+    EstimateMISWeightedIrradianceUsingDirectSampling(dispatchInfo, accelStruct, g_AccelStructInstanceList, origin, worldNormal, options, rngState, irradiance, directional, lightSample);
     #endif
 
-    // TODO: Decouple BRDF samples from direct light samples in a separate kernel (https://jira.unity3d.com/browse/GFXLIGHT-2107)
-    // Sample a light with BRDF sampling, weight with MIS.
-    #ifndef EMISSIVE_SAMPLING_LIGHT
-    EstimateMISWeightedIrradianceUsingCosineSampling(dispatchInfo, accelStruct, g_AccelStructInstanceList, origin, worldNormal, rngState, irradianceBrdf, directionalBrdf);
-    #endif
+	// With round-robin, we take (numLights*sampleCount) samples instead of just (sampleCount).
+    // To keep normalization consistent with the other strategies, we keep the same effective
+    // sample count in the alpha channel of the output, but divide each sample by (numLights).
+	#ifdef LIGHT_SAMPLING_ROUND_ROBIN
+	irradiance /= numLightsInCell;
+	directional /= numLightsInCell;
+	#endif
 
     // Store new accumulated irradiance
-    g_ExpandedOutput[dispatchInfo.dispatchThreadID.x] += float4(irradianceDirect.rgb + irradianceBrdf.rgb, 1.0f);
+    g_ExpandedOutput[dispatchInfo.dispatchThreadID.x] += float4(irradiance.rgb,g_LightIndexInCell==0);
     if (g_AccumulateDirectional > 0)
-        g_ExpandedDirectional[dispatchInfo.dispatchThreadID.x] += directionalDirect + directionalBrdf;
+        g_ExpandedDirectional[dispatchInfo.dispatchThreadID.x] += directional;
 }
-

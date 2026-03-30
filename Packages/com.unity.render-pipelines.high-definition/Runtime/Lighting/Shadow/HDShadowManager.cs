@@ -652,6 +652,14 @@ namespace UnityEngine.Rendering.HighDefinition
 
         internal NativeList<HDShadowResolutionRequest> shadowResolutionRequestStorage => m_ShadowResolutionRequestStorage;
 
+#if UNITY_EDITOR
+        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterAssembliesLoaded)]
+        static void ResetStaticsOnLoad()
+        {
+            s_Instance = new HDShadowManager();
+        }
+#endif
+
         private HDShadowManager()
         {
 #if UNITY_EDITOR
@@ -911,9 +919,6 @@ namespace UnityEngine.Rendering.HighDefinition
         {
             if (m_ShadowRequestCount >= m_MaxShadowRequests)
             {
-#if UNITY_EDITOR || DEVELOPMENT_BUILD
-                Debug.LogWarning("Max shadow requests count reached, dropping all exceeding requests. You can increase this limit by changing the Maximum Shadows on Screen property in the HDRP asset.");
-#endif
                 return -1;
             }
 

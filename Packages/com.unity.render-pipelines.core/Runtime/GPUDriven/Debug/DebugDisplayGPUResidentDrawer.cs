@@ -15,6 +15,7 @@ namespace UnityEngine.Rendering
     [Serializable]
     public class DebugDisplayGPUResidentDrawer : IDebugDisplaySettingsData, ISerializedDebugDisplaySettings
     {
+#if !UNITY_WEBGL_RENDERER_ONLY
         const string k_FormatString = "{0}";
         const float k_RefreshRate = 1f / 5f;
         const int k_MaxViewCount = 32;
@@ -538,5 +539,26 @@ namespace UnityEngine.Rendering
         }
 
         #endregion
+#else
+        public bool occluderDebugViewEnable = false;
+
+        public bool AreAnySettingsActive => false;
+        public bool IsPostProcessingAllowed => true;
+        public bool IsLightingActive => true;
+        public bool TryGetScreenClearColor(ref Color color) => false;
+
+        IDebugDisplaySettingsPanelDisposable IDebugDisplaySettingsData.CreatePanel()
+        {
+            return new EmptySettingsPanel();
+        }
+
+        private class EmptySettingsPanel : IDebugDisplaySettingsPanelDisposable
+        {
+            public string PanelName => string.Empty;
+            public DebugUI.Widget[] Widgets => Array.Empty<DebugUI.Widget>();
+            public DebugUI.Flags Flags => DebugUI.Flags.None;
+            public void Dispose() {}
+        }
+#endif
     }
 }

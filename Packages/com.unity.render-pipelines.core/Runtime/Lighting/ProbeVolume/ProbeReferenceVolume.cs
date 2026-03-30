@@ -24,7 +24,8 @@ namespace UnityEngine.Rendering
 {
     internal static class SceneExtensions
     {
-        static PropertyInfo s_SceneGUID = typeof(Scene).GetProperty("guid", BindingFlags.NonPublic | BindingFlags.Instance);
+        static readonly PropertyInfo s_SceneGUID = typeof(Scene).GetProperty("guid", BindingFlags.NonPublic | BindingFlags.Instance);
+
         public static string GetGUID(this Scene scene)
         {
             Debug.Assert(s_SceneGUID != null, "Reflection for scene GUID failed");
@@ -850,7 +851,7 @@ namespace UnityEngine.Rendering
                 m_CurrentBakingSet.BlendLightingScenario(otherScenario, blendingFactor);
         }
 
-        internal static string defaultLightingScenario = "Default";
+        internal static readonly string defaultLightingScenario = "Default";
 
         /// <summary>
         /// Get the memory budget for the Probe Volume system.
@@ -858,6 +859,19 @@ namespace UnityEngine.Rendering
         public ProbeVolumeTextureMemoryBudget memoryBudget => m_MemoryBudget;
 
         static ProbeReferenceVolume s_Instance = new ProbeReferenceVolume();
+
+#if UNITY_EDITOR
+        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterAssembliesLoaded)]
+        static void ResetStaticsOnLoad()
+        {
+            s_Instance = new ProbeReferenceVolume();
+            // From ProbeReferenceVolume.Debug.cs
+            probeSamplingDebugData = new ProbeSamplingDebugData();
+#if PROBEREFERENCEVOLUME_DEBUG
+            Array.Clear(s_BoundsArray, 0, s_BoundsArray.Length);
+#endif
+        }
+#endif
 
         internal List<ProbeVolumePerSceneData> perSceneDataList { get; private set; } = new List<ProbeVolumePerSceneData>();
 
@@ -1455,11 +1469,13 @@ namespace UnityEngine.Rendering
             }
 
             // Remove bricks and empty cells
-            foreach (var cellIndex in cellList)
+            if (cellList != null)
             {
-                RemoveCell(cellIndex);
+                foreach (var cellIndex in cellList)
+                {
+                    RemoveCell(cellIndex);
+                }
             }
-
             ClearDebugData();
             ComputeCellGlobalInfo();
         }

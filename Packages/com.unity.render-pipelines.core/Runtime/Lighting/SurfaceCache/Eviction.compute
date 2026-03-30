@@ -1,11 +1,10 @@
 #pragma only_renderers d3d11 playstation xboxone xboxseries vulkan metal glcore ps5
-
 #pragma kernel Evict
 
 #include "PatchUtil.hlsl"
 
 StructuredBuffer<uint> _RingConfigBuffer;
-StructuredBuffer<PatchUtil::PatchStatisticsSet> _PatchStatistics;
+RWStructuredBuffer<PatchUtil::PatchStatisticsSet> _PatchStatistics;
 RWStructuredBuffer<uint> _CellAllocationMarks;
 RWStructuredBuffer<uint> _CellPatchIndices;
 RWStructuredBuffer<uint> _PatchCellIndices;
@@ -25,6 +24,12 @@ void Evict(uint patchIdx : SV_DispatchThreadID)
     if (!RingBuffer::IsPositionInUse(_RingConfigBuffer, _RingConfigOffset, patchIdx))
         return;
 
+    const uint evictionThreshold = _PatchStatistics[patchIdx].rank == 0 ? 60 * 4 : 60 * 1; // patches allocated from bounce hits are evicted sooner
+
+    // Reset all patches rank to 1 (that is not allowed to spawn more patches on bounces hit)
+    // Rank will be updated to 0 by the PatchAllocation.compute shader for patches that are seen from the camera
+    _PatchStatistics[patchIdx].rank = 1;
+
     const uint cellIdx = _PatchCellIndices[patchIdx];
     if (cellIdx == PatchUtil::invalidCellIndex)
         return;
@@ -37,7 +42,6 @@ void Evict(uint patchIdx : SV_DispatchThreadID)
     const uint modulo = 65536; // 2^16
     const uint frameSinceLastUse = ModuloDistance(_FrameIdx % modulo, lastAccessFrameIdx, modulo);
 
-    const uint evictionThreshold = 60 * 4;
     if (evictionThreshold < frameSinceLastUse)
     {
         _PatchCellIndices[patchIdx] = PatchUtil::invalidCellIndex;

@@ -857,6 +857,9 @@ namespace UnityEngine.Rendering.Universal
         public static readonly int hdrOutputGradingParams = Shader.PropertyToID("_HDROutputGradingParams");
         public static readonly int offscreenUIViewportParams = Shader.PropertyToID("_OffscreenUIViewportParams");
         public static readonly int screenSpaceIrradiance = Shader.PropertyToID("_ScreenSpaceIrradiance");
+#if URP_SCREEN_SPACE_REFLECTION
+        public static readonly int screenSpaceReflection = Shader.PropertyToID("_ScreenSpaceReflectionTexture");
+#endif
     }
 
     /// <summary>
@@ -1921,89 +1924,12 @@ namespace UnityEngine.Rendering.Universal
         }
     }
 
-    // URP Profile Id
-    // - Scopes using this enum are automatically picked up by the performance testing framework.
-    // - You can use [HideInDebugUI] attribute to hide a given id from the Detailed Stats section of Rendering Debugger.
+    [System.Obsolete("Use URPProfilingSamplers static fields instead.")]
     internal enum URPProfileId
     {
-        // CPU
         UniversalRenderTotal,
-        UpdateVolumeFramework,
-        RenderCameraStack,
-
-        // GPU
-        AdditionalLightsShadow,
-        ColorGradingLUT,
-        CopyColor,
-        CopyDepth,
-        DrawDepthNormalPrepass,
-        DepthPrepass,
-        UpdateReflectionProbeAtlas,
-
-        // DrawObjectsPass
         DrawOpaqueObjects,
-        DrawTransparentObjects,
-        DrawScreenSpaceUI,
-
-        //Full Record Render Graph
         RecordRenderGraph,
-
-        // RenderObjectsPass
-        //RenderObjects,
-
-        LightCookies,
-
-        MainLightShadow,
-        ResolveShadows,
-        SSAO,
-        SSR,
-
-        // PostProcessPass
-        StopNaNs,
-        SMAA,
-        GaussianDepthOfField,
-        BokehDepthOfField,
-        TemporalAA,
-        MotionBlur,
-        PaniniProjection,
-        UberPostProcess,
-        Bloom,
-        LensFlareDataDrivenComputeOcclusion,
-        LensFlareDataDriven,
-        LensFlareScreenSpace,
-        DrawMotionVectors,
-        DrawFullscreen,
-
-        // PostProcessPass RenderGraph
-        [HideInDebugUI] RG_SetupPostFX,
-        [HideInDebugUI] RG_StopNaNs,
-        [HideInDebugUI] RG_SMAAMaterialSetup,
-        [HideInDebugUI] RG_SMAAEdgeDetection,
-        [HideInDebugUI] RG_SMAABlendWeight,
-        [HideInDebugUI] RG_SMAANeighborhoodBlend,
-        [HideInDebugUI] RG_SetupDoF,
-        [HideInDebugUI] RG_DOFComputeCOC,
-        [HideInDebugUI] RG_DOFDownscalePrefilter,
-        [HideInDebugUI] RG_DOFBlurH,
-        [HideInDebugUI] RG_DOFBlurV,
-        [HideInDebugUI] RG_DOFBlurBokeh,
-        [HideInDebugUI] RG_DOFPostFilter,
-        [HideInDebugUI] RG_DOFComposite,
-        [HideInDebugUI] RG_TAA,
-        [HideInDebugUI] RG_TAACopyHistory,
-        [HideInDebugUI] RG_MotionBlur,
-        [HideInDebugUI] RG_BloomSetup,
-        [HideInDebugUI] RG_BloomPrefilter,
-        [HideInDebugUI] RG_BloomDownsample,
-        [HideInDebugUI] RG_BloomUpsample,
-        [HideInDebugUI] RG_UberPostSetupBloomPass,
-        [HideInDebugUI] RG_UberPost,
-        [HideInDebugUI] RG_FinalSetup,
-        [HideInDebugUI] RG_FinalFSRScale,
-        [HideInDebugUI] RG_FinalBlit,
-
-        BlitFinalToBackBuffer,
-        DrawSkybox
     }
 
     // Internal class to detect and cache runtime platform information.

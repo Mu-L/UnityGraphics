@@ -14,7 +14,7 @@ namespace UnityEngine.Rendering.HighDefinition
         //    • roughness = ( <roughnessIndex> / 63 )^2  (the table is indexed by perceptual roughness)
         //    • cosTheta = 1 - ( <thetaIndex> / 63 )^2
         //
-        internal static ushort[] s_LtcMatrixData_BRDF_CookTorrance = new ushort[64 * 64 * 4]
+        internal static readonly ushort[] s_LtcMatrixData_BRDF_CookTorrance = new ushort[64 * 64 * 4]
         {
             // Cos (theta) = 1
             23591, 0, 23591, 0,              // alpha = 0.001
@@ -4244,5 +4244,6 @@ namespace UnityEngine.Rendering.HighDefinition
         // NOTE: Formerly, we needed to also export and create a table for the BRDF's amplitude factor + fresnel coefficient
         //    but it turns out these 2 factors are actually already precomputed and available in the FGD table corresponding
         //    to the BRDF_CookTorrance BRDF, therefore they are no longer exported...
+
     }
 }

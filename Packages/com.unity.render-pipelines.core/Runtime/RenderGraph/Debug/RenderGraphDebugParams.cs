@@ -29,42 +29,35 @@ namespace UnityEngine.Rendering.RenderGraphModule
             public static readonly NameAndTooltip DisablePassMerging = new() { name = "Disable Pass Merging", tooltip = "Enable to temporarily disable pass merging to diagnose issues or analyze performance." };
         }
 
-        internal List<DebugUI.Widget> GetWidgetList(string name)
+        internal List<DebugUI.Widget> GetWidgetList()
         {
             var list = new List<DebugUI.Widget>
             {
-                new DebugUI.Container
+                new DebugUI.BoolField
                 {
-                    displayName = $"{name} Render Graph",
-                    children =
-                    {
-                        new DebugUI.BoolField
-                        {
-                            nameAndTooltip = Strings.ClearRenderTargetsAtCreation,
-                            getter = () => clearRenderTargetsAtCreation,
-                            setter = value => clearRenderTargetsAtCreation = value
-                        },
-                        new DebugUI.BoolField
-                        {
-                            nameAndTooltip = Strings.ClearRenderTargetsAtFree,
-                            getter = () => clearRenderTargetsAtRelease,
-                            setter = value => clearRenderTargetsAtRelease = value
-                        },
-                        // We cannot expose this option as it will change the active render target and the debug menu won't know where to render itself anymore.
-                        //    list.Add(new DebugUI.BoolField { displayName = "Clear Render Targets at release", getter = () => clearRenderTargetsAtRelease, setter = value => clearRenderTargetsAtRelease = value });
-                        new DebugUI.BoolField
-                        {
-                            nameAndTooltip = Strings.DisablePassCulling,
-                            getter = () => disablePassCulling,
-                            setter = value => disablePassCulling = value
-                        },
-                        new DebugUI.BoolField
-                        {
-                            nameAndTooltip = Strings.DisablePassMerging,
-                            getter = () => disablePassMerging,
-                            setter = value => disablePassMerging = value,
-                        }
-                    }
+                    nameAndTooltip = Strings.ClearRenderTargetsAtCreation,
+                    getter = () => clearRenderTargetsAtCreation,
+                    setter = value => clearRenderTargetsAtCreation = value
+                },
+                new DebugUI.BoolField
+                {
+                    nameAndTooltip = Strings.ClearRenderTargetsAtFree,
+                    getter = () => clearRenderTargetsAtRelease,
+                    setter = value => clearRenderTargetsAtRelease = value
+                },
+                // We cannot expose this option as it will change the active render target and the debug menu won't know where to render itself anymore.
+                //    list.Add(new DebugUI.BoolField { displayName = "Clear Render Targets at release", getter = () => clearRenderTargetsAtRelease, setter = value => clearRenderTargetsAtRelease = value });
+                new DebugUI.BoolField
+                {
+                    nameAndTooltip = Strings.DisablePassCulling,
+                    getter = () => disablePassCulling,
+                    setter = value => disablePassCulling = value
+                },
+                new DebugUI.BoolField
+                {
+                    nameAndTooltip = Strings.DisablePassMerging,
+                    getter = () => disablePassMerging,
+                    setter = value => disablePassMerging = value,
                 }
             };
 
@@ -73,9 +66,9 @@ namespace UnityEngine.Rendering.RenderGraphModule
 
         public void RegisterDebug(string name, DebugUI.Panel debugPanel = null)
         {
-            var list = GetWidgetList(name);
+            var list = GetWidgetList();
             m_DebugItems = list.ToArray();
-            m_DebugPanel = debugPanel != null ? debugPanel : DebugManager.instance.GetPanel(name.Length == 0 ? "Rendering" : name, true);
+            m_DebugPanel = debugPanel ?? DebugManager.instance.GetPanel(name.Length == 0 ? "Rendering" : name, true);
 
             var foldout = new DebugUI.Foldout() { displayName = name, };
             foldout.children.Add(m_DebugItems);

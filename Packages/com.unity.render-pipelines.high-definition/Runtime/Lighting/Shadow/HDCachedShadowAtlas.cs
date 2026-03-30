@@ -11,7 +11,7 @@ namespace UnityEngine.Rendering.HighDefinition
 {
     class HDCachedShadowAtlas : HDShadowAtlas
     {
-        static private int s_InitialCapacity = 256;
+        const int k_InitialCapacity = 256;
 
         // Constants.
         private const int m_MaxShadowsPerLight = 6;
@@ -72,17 +72,17 @@ namespace UnityEngine.Rendering.HighDefinition
         {
             m_ShadowType = type;
 
-            m_PlacedShadows = new NativeParallelHashMap<int, CachedShadowRecord>(s_InitialCapacity, Allocator.Persistent);
-            m_ShadowsPendingRendering = new NativeParallelHashMap<int, CachedShadowRecord>(s_InitialCapacity, Allocator.Persistent);
-            m_ShadowsWithValidData = new NativeParallelHashMap<int, int>(s_InitialCapacity, Allocator.Persistent);
+            m_PlacedShadows = new NativeParallelHashMap<int, CachedShadowRecord>(k_InitialCapacity, Allocator.Persistent);
+            m_ShadowsPendingRendering = new NativeParallelHashMap<int, CachedShadowRecord>(k_InitialCapacity, Allocator.Persistent);
+            m_ShadowsWithValidData = new NativeParallelHashMap<int, int>(k_InitialCapacity, Allocator.Persistent);
 
-            m_TempListForPlacement = new NativeList<CachedShadowRecord>(s_InitialCapacity, Allocator.Persistent);
-            m_TempListForLightDataIndices = new NativeList<int>(s_InitialCapacity, Allocator.Persistent);
+            m_TempListForPlacement = new NativeList<CachedShadowRecord>(k_InitialCapacity, Allocator.Persistent);
+            m_TempListForLightDataIndices = new NativeList<int>(k_InitialCapacity, Allocator.Persistent);
 
-            m_RegisteredLightDataPendingPlacement = new NativeParallelHashMap<int, HDLightRenderEntity>(s_InitialCapacity, Allocator.Persistent);
-            m_RecordsPendingPlacement = new NativeParallelHashMap<int, CachedShadowRecord>(s_InitialCapacity, Allocator.Persistent);
+            m_RegisteredLightDataPendingPlacement = new NativeParallelHashMap<int, HDLightRenderEntity>(k_InitialCapacity, Allocator.Persistent);
+            m_RecordsPendingPlacement = new NativeParallelHashMap<int, CachedShadowRecord>(k_InitialCapacity, Allocator.Persistent);
 
-            m_TransformCaches = new NativeParallelHashMap<int, CachedTransform>(s_InitialCapacity / 2, Allocator.Persistent);
+            m_TransformCaches = new NativeParallelHashMap<int, CachedTransform>(k_InitialCapacity / 2, Allocator.Persistent);
         }
 
         public override void InitAtlas(HDShadowAtlasInitParameters atlasInitParams)

@@ -1,3 +1,4 @@
+#if !UNITY_WEBGL_RENDERER_ONLY
 using System;
 using Unity.Collections;
 using Unity.Mathematics;
@@ -264,3 +265,5 @@ namespace UnityEngine.Rendering
         }
     }
 }
+
+#endif // !UNITY_WEBGL_RENDERER_ONLY

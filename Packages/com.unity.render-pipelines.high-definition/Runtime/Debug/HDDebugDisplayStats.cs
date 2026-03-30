@@ -7,11 +7,11 @@ namespace UnityEngine.Rendering.HighDefinition
     /// <summary>
     /// HDRP Rendering Debugger Display Stats.
     /// </summary>
-    class HDDebugDisplayStats : DebugDisplayStats<HDProfileId>
+    class HDDebugDisplayStats : DebugDisplayStats
     {
         private DebugFrameTiming m_DebugFrameTiming = new();
 
-        private List<HDProfileId> m_RecordedSamplers = new();
+        private List<ProfilingSampler> m_RecordedSamplers = new();
 
         private bool raytracingEnabled => HDRenderPipeline.isReady &&
                                           HDRenderPipeline.currentAsset.currentPlatformRenderPipelineSettings
@@ -20,8 +20,9 @@ namespace UnityEngine.Rendering.HighDefinition
         /// <summary>Display ray tracing ray count per frame.</summary>
         public bool countRays = false;
 
-        List<HDProfileId> GetDefaultProfileIds() => new ()
-        {
+        // Bridge: returns ProfilingSamplers via ProfilingSampler.Get(HDProfileId.X).
+        // Replace with HDRPProfilerMarkers direct field references once HDRPProfilerMarkers is created.
+        List<ProfilingSampler> GetDefaultSamplers() => GetSamplers(
             HDProfileId.HDRenderPipelineAllRenderRequest,
             HDProfileId.VolumeUpdate,
             HDProfileId.RenderShadowMaps,
@@ -41,10 +42,9 @@ namespace UnityEngine.Rendering.HighDefinition
             HDProfileId.ColorPyramid,
             HDProfileId.DepthPyramid,
             HDProfileId.PostProcessing
-        };
+        );
 
-        List<HDProfileId> GetRayTracingProfileIds() => new()
-        {
+        List<ProfilingSampler> GetRayTracingSamplers() => GetSamplers(
             HDProfileId.RaytracingBuildCluster,
             HDProfileId.RaytracingCullLights,
             HDProfileId.RaytracingBuildAccelerationStructure,
@@ -75,24 +75,36 @@ namespace UnityEngine.Rendering.HighDefinition
             HDProfileId.RayTracingRecursiveRendering,
             HDProfileId.RayTracingDepthPrepass,
             HDProfileId.RayTracingFlagMask,
-            HDProfileId.RaytracingDeferredLighting,
-        };
+            HDProfileId.RaytracingDeferredLighting
+        );
+
+        static List<ProfilingSampler> GetSamplers(params HDProfileId[] ids)
+        {
+            var result = new List<ProfilingSampler>(ids.Length);
+            foreach (var id in ids)
+            {
+                var sampler = ProfilingSampler.Get(id);
+                if (sampler != null)
+                    result.Add(sampler);
+            }
+            return result;
+        }
 
         /// <inheritdoc/>
         public override void EnableProfilingRecorders()
         {
             Debug.Assert(m_RecordedSamplers.Count == 0);
 
-            m_RecordedSamplers.AddRange(GetDefaultProfileIds());
+            m_RecordedSamplers.AddRange(GetDefaultSamplers());
             if (raytracingEnabled)
-                m_RecordedSamplers.AddRange(GetRayTracingProfileIds());
+                m_RecordedSamplers.AddRange(GetRayTracingSamplers());
         }
 
         /// <inheritdoc/>
         public override void DisableProfilingRecorders()
         {
             foreach (var sampler in m_RecordedSamplers)
-                ProfilingSampler.Get(sampler).enableRecording = false;
+                sampler.enableRecording = false;
 
             m_RecordedSamplers.Clear();
         }
@@ -123,7 +135,7 @@ namespace UnityEngine.Rendering.HighDefinition
                     }
                 }
             };
-            detailedStatsFoldout.children.Add(BuildDetailedStatsList("Profiling Scopes", GetDefaultProfileIds()));
+            detailedStatsFoldout.children.Add(BuildDetailedStatsList("Profiling Scopes", GetDefaultSamplers()));
 
             if (raytracingEnabled)
             {
@@ -137,7 +149,7 @@ namespace UnityEngine.Rendering.HighDefinition
                     };
                 }
 
-                detailedStatsFoldout.children.Add(BuildDetailedStatsList("Ray Tracing Profiling Scopes", GetRayTracingProfileIds()));
+                detailedStatsFoldout.children.Add(BuildDetailedStatsList("Ray Tracing Profiling Scopes", GetRayTracingSamplers()));
                 detailedStatsFoldout.children.Add(new DebugUI.BoolField { displayName = "Count Rays (MRays/Frame)", getter = () => countRays, setter = value => countRays = value });
                 detailedStatsFoldout.children.Add(new DebugUI.Container
                 {

@@ -96,7 +96,7 @@ namespace UnityEngine.Rendering
             if (!blitMips)
                 mipCount = 1;
 
-            using (new ProfilingScope(cmd, ProfilingSampler.Get(CoreProfileId.BlitTextureInPotAtlas)))
+            using (new ProfilingScope(cmd, CoreProfilingSamplers.BlitTextureInPotAtlas, texture))
             {
                 for (int mipLevel = 0; mipLevel < mipCount; mipLevel++)
                 {

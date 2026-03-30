@@ -1,3 +1,4 @@
+#if !UNITY_WEBGL_RENDERER_ONLY
 using System;
 using Unity.Collections;
 
@@ -114,3 +115,5 @@ namespace UnityEngine.Rendering
         public OcclusionCullingDebugShaderVariables cb;
     }
 }
+
+#endif // !UNITY_WEBGL_RENDERER_ONLY

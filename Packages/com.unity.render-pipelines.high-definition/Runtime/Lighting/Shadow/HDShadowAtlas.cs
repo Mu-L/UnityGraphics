@@ -426,7 +426,15 @@ namespace UnityEngine.Rendering.HighDefinition
             cmd.SetGlobalDepthBias(0.0f, 0.0f);             // Reset depth bias.
         }
 
-        public static Vector4[] frustumPlanesScratchpad = new Vector4[HDShadowRequest.frustumPlanesCount];
+        public static readonly Vector4[] frustumPlanesScratchpad = new Vector4[HDShadowRequest.frustumPlanesCount];
+
+#if UNITY_EDITOR
+        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterAssembliesLoaded)]
+        static void ResetStaticsOnLoad()
+        {
+            Array.Clear(frustumPlanesScratchpad, 0, frustumPlanesScratchpad.Length);
+        }
+#endif
         internal unsafe TextureHandle RenderShadowMaps(RenderGraph renderGraph, ScriptableRenderContext renderContext, CullingResults cullResults, in ShaderVariablesGlobal globalCBData, FrameSettings frameSettings, string shadowPassName)
         {
             TextureHandle atlasTexture;

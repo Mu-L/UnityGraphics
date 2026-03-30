@@ -16,7 +16,7 @@ namespace UnityEngine.Rendering.Universal
         /// <seealso cref="RenderPassEvent"/>
         public DrawScreenSpaceUIPass(RenderPassEvent evt)
         {
-            profilingSampler = ProfilingSampler.Get(URPProfileId.DrawScreenSpaceUI);
+            profilingSampler = URPProfilingSamplers.DrawScreenSpaceUI;
             renderPassEvent = evt;
         }
 

@@ -1,3 +1,4 @@
+#if !UNITY_WEBGL_RENDERER_ONLY
 namespace UnityEngine.Rendering
 {
     [GenerateHLSL(needAccessors = false, generateCBuffer = true)]
@@ -26,3 +27,5 @@ namespace UnityEngine.Rendering
         public uint _SilhouettePlaneCount;
     }
 }
+
+#endif // !UNITY_WEBGL_RENDERER_ONLY

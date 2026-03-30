@@ -1,3 +1,4 @@
+#if !UNITY_WEBGL_RENDERER_ONLY
 using Unity.Collections;
 
 namespace UnityEngine.Rendering
@@ -15,12 +16,12 @@ namespace UnityEngine.Rendering
         public static readonly int unity_WorldBoundingSphere = Shader.PropertyToID("unity_WorldBoundingSphere");
         public static readonly int unity_RendererUserValuesPropertyEntry = Shader.PropertyToID("unity_RendererUserValuesPropertyEntry");
 
-        public static readonly int[] DOTS_ST_WindParams = new int[(int)SpeedTreeWindParamIndex.MaxWindParamsCount];
-        public static readonly int[] DOTS_ST_WindHistoryParams = new int[(int)SpeedTreeWindParamIndex.MaxWindParamsCount];
+        public static readonly int[] DOTS_ST_WindParams = new int[InstanceDataSystem.k_STMaxWindParamsCount];
+        public static readonly int[] DOTS_ST_WindHistoryParams = new int[InstanceDataSystem.k_STMaxWindParamsCount];
 
         static DefaultShaderPropertyID()
         {
-            for (int i = 0; i < (int)SpeedTreeWindParamIndex.MaxWindParamsCount; ++i)
+            for (int i = 0; i < InstanceDataSystem.k_STMaxWindParamsCount; ++i)
             {
                 DOTS_ST_WindParams[i] = Shader.PropertyToID($"DOTS_ST_WindParam{i}");
                 DOTS_ST_WindHistoryParams[i] = Shader.PropertyToID($"DOTS_ST_WindHistoryParam{i}");
@@ -63,12 +64,12 @@ namespace UnityEngine.Rendering
                 ? archetypeManager.CreateComponent<Vector4>(DefaultShaderPropertyID.unity_WorldBoundingSphere, true)
                 : default;
 
-            speedTreeWind = new NativeArray<GPUComponentHandle>((int)SpeedTreeWindParamIndex.MaxWindParamsCount, Allocator.Persistent);
-            speedTreeWindHistory = new NativeArray<GPUComponentHandle>((int)SpeedTreeWindParamIndex.MaxWindParamsCount, Allocator.Persistent);
+            speedTreeWind = new NativeArray<GPUComponentHandle>(InstanceDataSystem.k_STMaxWindParamsCount, Allocator.Persistent);
+            speedTreeWindHistory = new NativeArray<GPUComponentHandle>(InstanceDataSystem.k_STMaxWindParamsCount, Allocator.Persistent);
 
-            for (int i = 0; i < (int)SpeedTreeWindParamIndex.MaxWindParamsCount; ++i)
+            for (int i = 0; i < InstanceDataSystem.k_STMaxWindParamsCount; ++i)
                 speedTreeWind[i] = archetypeManager.CreateComponent<Vector4>(DefaultShaderPropertyID.DOTS_ST_WindParams[i], true);
-            for (int i = 0; i < (int)SpeedTreeWindParamIndex.MaxWindParamsCount; ++i)
+            for (int i = 0; i < InstanceDataSystem.k_STMaxWindParamsCount; ++i)
                 speedTreeWindHistory[i] = archetypeManager.CreateComponent<Vector4>(DefaultShaderPropertyID.DOTS_ST_WindHistoryParams[i], true);
 
             //@ Investigate how to avoid uploading the previous matrices for everything.
@@ -113,3 +114,5 @@ namespace UnityEngine.Rendering
         }
     }
 }
+
+#endif // !UNITY_WEBGL_RENDERER_ONLY

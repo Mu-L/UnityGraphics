@@ -1,3 +1,4 @@
+#if !UNITY_WEBGL_RENDERER_ONLY
 using System;
 using Unity.Collections;
 using Unity.Collections.LowLevel.Unsafe;
@@ -11,6 +12,10 @@ namespace UnityEngine.Rendering
 {
     internal partial class InstanceDataSystem : IDisposable
     {
+        // NOTE: Hard-coded, separate declaration to avoid pulling Terrain module dependency because of a single value.
+        //       Kept in sync with SpeedTreeWindParamIndex.MaxWindParamsCount through GPUDrivenRenderingTests.
+        internal const int k_STMaxWindParamsCount = 16;
+
         private NativeReference<GPUArchetypeManager> m_ArchetypeManager;
         private DefaultGPUComponents m_DefaultGPUComponents;
         private GPUInstanceDataBuffer m_InstanceDataBuffer;
@@ -37,7 +42,7 @@ namespace UnityEngine.Rendering
 
         private bool m_EnableBoundingSpheres;
 
-        private readonly int[] m_ScratchWindParamAddressArray = new int[(int)SpeedTreeWindParamIndex.MaxWindParamsCount * 4];
+        private readonly int[] m_ScratchWindParamAddressArray = new int[k_STMaxWindParamsCount * 4];
 
         public NativeReference<GPUArchetypeManager> archetypeManager => m_ArchetypeManager;
         public ref DefaultGPUComponents defaultGPUComponents => ref m_DefaultGPUComponents;
@@ -332,10 +337,10 @@ namespace UnityEngine.Rendering
             Profiler.EndSample();
 
             m_WindDataUpdateCS.SetInt(InstanceWindDataUpdateIDs._WindDataQueueCount, instancesCount);
-            for (int i = 0; i < (int)SpeedTreeWindParamIndex.MaxWindParamsCount; ++i)
+            for (int i = 0; i < k_STMaxWindParamsCount; ++i)
                 m_ScratchWindParamAddressArray[i * 4] = m_InstanceDataBuffer.GetComponentGPUAddress(m_DefaultGPUComponents.speedTreeWind[i]);
             m_WindDataUpdateCS.SetInts(InstanceWindDataUpdateIDs._WindParamAddressArray, m_ScratchWindParamAddressArray);
-            for (int i = 0; i < (int)SpeedTreeWindParamIndex.MaxWindParamsCount; ++i)
+            for (int i = 0; i < k_STMaxWindParamsCount; ++i)
                 m_ScratchWindParamAddressArray[i * 4] = m_InstanceDataBuffer.GetComponentGPUAddress(m_DefaultGPUComponents.speedTreeWindHistory[i]);
             m_WindDataUpdateCS.SetInts(InstanceWindDataUpdateIDs._WindHistoryParamAddressArray, m_ScratchWindParamAddressArray);
 
@@ -972,3 +977,5 @@ namespace UnityEngine.Rendering
         }
     }
 }
+
+#endif // !UNITY_WEBGL_RENDERER_ONLY

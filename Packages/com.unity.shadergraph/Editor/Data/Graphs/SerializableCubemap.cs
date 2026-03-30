@@ -92,7 +92,12 @@ namespace UnityEditor.ShaderGraph.Internal
 
         public void OnBeforeSerialize()
         {
-            m_SerializedCubemap = EditorJsonUtility.ToJson(new CubemapHelper { cubemap = cubemap }, false);
+            // If m_Cubemap is null, the data is still in serialized form
+            // (m_SerializedCubemap or m_Guid) and doesn't need to be re-serialized.
+            // We must not use the cubemap property getter here because it would
+            // force-load the asset, which is not safe in all contexts (e.g. domain backup).
+            if (m_Cubemap != null)
+                m_SerializedCubemap = EditorJsonUtility.ToJson(new CubemapHelper { cubemap = m_Cubemap }, false);
         }
 
         public void OnAfterDeserialize()

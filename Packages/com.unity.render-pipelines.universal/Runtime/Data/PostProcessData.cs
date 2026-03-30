@@ -239,19 +239,7 @@ namespace UnityEngine.Rendering.Universal
             /// <summary>
             /// Film Grain textures.
             /// </summary>
-            [ResourcePaths(new[]
-            {
-                "Textures/FilmGrain/Thin01.png",
-                "Textures/FilmGrain/Thin02.png",
-                "Textures/FilmGrain/Medium01.png",
-                "Textures/FilmGrain/Medium02.png",
-                "Textures/FilmGrain/Medium03.png",
-                "Textures/FilmGrain/Medium04.png",
-                "Textures/FilmGrain/Medium05.png",
-                "Textures/FilmGrain/Medium06.png",
-                "Textures/FilmGrain/Large01.png",
-                "Textures/FilmGrain/Large02.png"
-            })]
+            [Obsolete("Film grain textures have been moved to FilmGrainResources in GraphicsSettings. This field is no longer used. #from(6000.6)", false)]
             public Texture2D[] filmGrainTex;
 
             /// <summary>

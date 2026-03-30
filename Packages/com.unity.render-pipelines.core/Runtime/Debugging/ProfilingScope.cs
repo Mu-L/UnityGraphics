@@ -238,7 +238,11 @@ namespace UnityEngine.Rendering
                 {
                     const ProfilerRecorderOptions recorderDefaultOptions =
                         ProfilerRecorderOptions.WrapAroundWhenCapacityReached |
-                        ProfilerRecorderOptions.SumAllSamplesInFrame;
+                        ProfilerRecorderOptions.SumAllSamplesInFrame |
+                        // TODO: Shared recorder flag. Remove once we transition fully from Enums to static ProfilerSamplers.
+                        // Allows to reuse the same underlying recorder for multiple ProfilingSampler instances with the same marker,
+                        // which is important to avoid disruptions in Graphics Performance Tests during transition.
+                        (ProfilerRecorderOptions)(1 << 7);
                     if (!m_Recorder.Valid)
                     {
                         m_Recorder = new ProfilerRecorder(m_Marker, 1, recorderDefaultOptions);

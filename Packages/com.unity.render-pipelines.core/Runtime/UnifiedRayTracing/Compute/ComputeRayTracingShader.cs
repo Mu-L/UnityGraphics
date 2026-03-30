@@ -165,7 +165,7 @@ namespace UnityEngine.Rendering.UnifiedRayTracing
             cmd.SetKeyword(m_Shader, keyword, value);
         }
 
-        public LocalKeyword CreateKeyword(string name)
+        public LocalKeyword CreateLocalKeyword(string name)
         {
             return new LocalKeyword(m_Shader, name);
         }

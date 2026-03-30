@@ -8,6 +8,7 @@ namespace UnityEngine.Rendering
 {
     public partial class GPUResidentDrawer
     {
+#if !UNITY_WEBGL_RENDERER_ONLY
         static class Strings
         {
             public static readonly string drawerModeDisabled = $"{nameof(GPUResidentDrawer)} Drawer mode is disabled. Enable it on your current {nameof(RenderPipelineAsset)}";
@@ -122,5 +123,27 @@ namespace UnityEngine.Rendering
                     break;
             }
         }
+#else
+        internal static bool IsProjectSupported()
+        {
+            return false;
+        }
+
+        internal static bool IsProjectSupported(out string message, out LogType severity)
+        {
+            message = string.Empty;
+            severity = LogType.Log;
+            return false;
+        }
+
+        internal static bool IsGPUResidentDrawerSupportedBySRP(GPUResidentDrawerSettings settings, out string message, out LogType severity)
+        {
+            message = string.Empty;
+            severity = LogType.Log;
+            return false;
+        }
+
+        internal static void LogMessage(string message, LogType severity) {}
+#endif
     }
 }

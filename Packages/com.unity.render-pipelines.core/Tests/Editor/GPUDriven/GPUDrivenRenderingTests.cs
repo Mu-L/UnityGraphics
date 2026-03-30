@@ -1,3 +1,4 @@
+#if !UNITY_WEBGL_RENDERER_ONLY
 using NUnit.Framework;
 using System.Collections.Generic;
 using Unity.Collections;
@@ -145,6 +146,14 @@ namespace UnityEngine.Rendering.Tests
             m_GPUResidentDrawer.Dispose();
             m_GPUResidentDrawer = null;
         }
+
+#if ENABLE_TERRAIN_MODULE
+        [Test]
+        public void TestInstanceDataSystemWindParamsCountIsInSyncWithTerrainModule()
+        {
+            Assert.AreEqual((int)SpeedTreeWindParamIndex.MaxWindParamsCount, InstanceDataSystem.k_STMaxWindParamsCount);
+        }
+#endif
 
         [Test, ConditionalIgnore("IgnoreGfxAPI", "Graphics API Not Supported.")]
         public void TestInstanceCullingBatcherAddRemove()
@@ -527,7 +536,7 @@ namespace UnityEngine.Rendering.Tests
         {
             if (Coverage.enabled)
                 Assert.Ignore("Test disabled for code coverage runs.");
-                
+
             var expectedMeshIDs = new List<uint>();
             var expectedFlags = new List<BatchDrawCommandFlags>();
             var expectedDrawCommandCount = new BoxedCounter();
@@ -733,7 +742,7 @@ namespace UnityEngine.Rendering.Tests
             }
 
             m_MeshRendererProcessor.ProcessGameObjectChanges(instanceIDs.AsArray());
-            
+
             var cameraObject = new GameObject("myCamera");
             var mainCamera = cameraObject.AddComponent<Camera>();
             mainCamera.fieldOfView = 60;
@@ -1164,3 +1173,4 @@ namespace UnityEngine.Rendering.Tests
         }
     }
 }
+#endif

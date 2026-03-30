@@ -339,7 +339,7 @@ namespace UnityEngine.Rendering.HighDefinition.LTC
             else
                 sourceCode += "        //    • theta = ( <thetaIndex> / " + (tableResolution - 1) + " )\n";
             sourceCode += "        //\n"
-                + "        internal static ushort[] " + tableName + " = new ushort[" + tableResolution + " * " + tableResolution + " * 4]\n"
+                + "        internal static readonly ushort[] " + tableName + " = new ushort[" + tableResolution + " * " + tableResolution + " * 4]\n"
                 + "        {";
 
             string lotsOfSpaces = "                                                                                                                            ";

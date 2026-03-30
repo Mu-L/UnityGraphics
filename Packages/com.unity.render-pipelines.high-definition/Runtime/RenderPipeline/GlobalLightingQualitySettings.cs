@@ -8,7 +8,7 @@ namespace UnityEngine.Rendering.HighDefinition
     [Serializable]
     public sealed class GlobalLightingQualitySettings
     {
-        static int s_QualitySettingCount = Enum.GetNames(typeof(ScalableSettingLevelParameter.Level)).Length;
+        static readonly int s_QualitySettingCount = Enum.GetNames(typeof(ScalableSettingLevelParameter.Level)).Length;
 
         internal GlobalLightingQualitySettings()
         {
@@ -266,5 +266,6 @@ namespace UnityEngine.Rendering.HighDefinition
 
         // TODO: Shadows. This needs to be discussed further as there is an idiosyncracy here as we have different level of quality settings,
         //some for resolution per light (4 levels) some per volume (which are 3 levels everywhere). This needs to be discussed more.
+
     }
 }

@@ -19,18 +19,18 @@ namespace UnityEngine.Rendering.Universal.Internal
     {
         static class LightConstantBuffer
         {
-            public static int _MainLightPosition;   // DeferredLights.LightConstantBuffer also refers to the same ShaderPropertyID - TODO: move this definition to a common location shared by other UniversalRP classes
-            public static int _MainLightColor;      // DeferredLights.LightConstantBuffer also refers to the same ShaderPropertyID - TODO: move this definition to a common location shared by other UniversalRP classes
-            public static int _MainLightOcclusionProbesChannel;    // Deferred?
-            public static int _MainLightLayerMask;
+            public static readonly int _MainLightPosition = Shader.PropertyToID("_MainLightPosition");   // DeferredLights.LightConstantBuffer also refers to the same ShaderPropertyID - TODO: move this definition to a common location shared by other UniversalRP classes
+            public static readonly int _MainLightColor = Shader.PropertyToID("_MainLightColor");         // DeferredLights.LightConstantBuffer also refers to the same ShaderPropertyID - TODO: move this definition to a common location shared by other UniversalRP classes
+            public static readonly int _MainLightOcclusionProbesChannel = Shader.PropertyToID("_MainLightOcclusionProbes");
+            public static readonly int _MainLightLayerMask = Shader.PropertyToID("_MainLightLayerMask");
 
-            public static int _AdditionalLightsCount;
-            public static int _AdditionalLightsPosition;
-            public static int _AdditionalLightsColor;
-            public static int _AdditionalLightsAttenuation;
-            public static int _AdditionalLightsSpotDir;
-            public static int _AdditionalLightOcclusionProbeChannel;
-            public static int _AdditionalLightsLayerMasks;
+            public static readonly int _AdditionalLightsCount = Shader.PropertyToID("_AdditionalLightsCount");
+            public static readonly int _AdditionalLightsPosition = Shader.PropertyToID("_AdditionalLightsPosition");
+            public static readonly int _AdditionalLightsColor = Shader.PropertyToID("_AdditionalLightsColor");
+            public static readonly int _AdditionalLightsAttenuation = Shader.PropertyToID("_AdditionalLightsAttenuation");
+            public static readonly int _AdditionalLightsSpotDir = Shader.PropertyToID("_AdditionalLightsSpotDir");
+            public static readonly int _AdditionalLightOcclusionProbeChannel = Shader.PropertyToID("_AdditionalLightsOcclusionProbes");
+            public static readonly int _AdditionalLightsLayerMasks = Shader.PropertyToID("_AdditionalLightsLayerMasks");
         }
 
         int m_AdditionalLightsBufferId;
@@ -105,12 +105,6 @@ namespace UnityEngine.Rendering.Universal.Internal
             m_UseStructuredBuffer = RenderingUtils.useStructuredBuffer;
             m_UseForwardPlus = initParams.forwardPlus;
 
-            LightConstantBuffer._MainLightPosition = Shader.PropertyToID("_MainLightPosition");
-            LightConstantBuffer._MainLightColor = Shader.PropertyToID("_MainLightColor");
-            LightConstantBuffer._MainLightOcclusionProbesChannel = Shader.PropertyToID("_MainLightOcclusionProbes");
-            LightConstantBuffer._MainLightLayerMask = Shader.PropertyToID("_MainLightLayerMask");
-            LightConstantBuffer._AdditionalLightsCount = Shader.PropertyToID("_AdditionalLightsCount");
-
             if (m_UseStructuredBuffer)
             {
                 m_AdditionalLightsBufferId = Shader.PropertyToID("_AdditionalLightsBuffer");
@@ -118,13 +112,6 @@ namespace UnityEngine.Rendering.Universal.Internal
             }
             else
             {
-                LightConstantBuffer._AdditionalLightsPosition = Shader.PropertyToID("_AdditionalLightsPosition");
-                LightConstantBuffer._AdditionalLightsColor = Shader.PropertyToID("_AdditionalLightsColor");
-                LightConstantBuffer._AdditionalLightsAttenuation = Shader.PropertyToID("_AdditionalLightsAttenuation");
-                LightConstantBuffer._AdditionalLightsSpotDir = Shader.PropertyToID("_AdditionalLightsSpotDir");
-                LightConstantBuffer._AdditionalLightOcclusionProbeChannel = Shader.PropertyToID("_AdditionalLightsOcclusionProbes");
-                LightConstantBuffer._AdditionalLightsLayerMasks = Shader.PropertyToID("_AdditionalLightsLayerMasks");
-
                 int maxLights = UniversalRenderPipeline.maxVisibleAdditionalLights;
                 m_AdditionalLightPositions = new Vector4[maxLights];
                 m_AdditionalLightColors = new Vector4[maxLights];
@@ -443,7 +430,8 @@ namespace UnityEngine.Rendering.Universal.Internal
             }
         }
 
-        static ProfilingSampler s_SetupForwardLights = new ProfilingSampler("Setup Forward Lights");
+        static readonly ProfilingSampler s_SetupForwardLights = new ProfilingSampler("Setup Forward Lights");
+
         private class SetupLightPassData
         {
             internal UniversalRenderingData renderingData;

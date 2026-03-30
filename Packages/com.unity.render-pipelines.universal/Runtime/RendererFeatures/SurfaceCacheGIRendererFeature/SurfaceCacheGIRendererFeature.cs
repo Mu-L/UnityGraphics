@@ -440,6 +440,7 @@ namespace UnityEngine.Rendering.Universal
                         EstimationParams = new SurfaceCacheEstimationParameterSet
                         {
                             MultiBounce = volume.multiBounce,
+                            BouncePatchAllocation = volume.bouncePatchAllocation,
                             SampleCount = (uint)volume.sampleCount,
                         },
                         PatchFilteringParams = new SurfaceCachePatchFilteringParameterSet
@@ -471,6 +472,7 @@ namespace UnityEngine.Rendering.Universal
                         EstimationParams = new SurfaceCacheEstimationParameterSet
                         {
                             MultiBounce = true,
+                            BouncePatchAllocation = false,
                             SampleCount = DEFAULT_ESTIMATION_SAMPLE_COUNT,
                         },
                         PatchFilteringParams = new SurfaceCachePatchFilteringParameterSet

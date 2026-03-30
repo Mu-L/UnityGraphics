@@ -19,7 +19,7 @@ namespace UnityEngine.Rendering.Universal
         private Vector4[] m_CameraZExtent = new Vector4[2];
         private BlurTypes m_BlurType = BlurTypes.Bilateral;
         private Matrix4x4[] m_CameraViewProjections = new Matrix4x4[2];
-        private ProfilingSampler m_ProfilingSampler = ProfilingSampler.Get(URPProfileId.SSAO);
+        private ProfilingSampler m_ProfilingSampler = URPProfilingSamplers.SSAO;
         private RenderTextureDescriptor m_AOPassDescriptor;
         private ScreenSpaceAmbientOcclusionSettings m_CurrentSettings;
 

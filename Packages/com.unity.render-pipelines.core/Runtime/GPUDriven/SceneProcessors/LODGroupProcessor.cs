@@ -1,3 +1,4 @@
+#if !UNITY_WEBGL_RENDERER_ONLY
 using Unity.Collections;
 using Unity.Mathematics;
 using UnityEngine.Assertions;
@@ -87,3 +88,5 @@ namespace UnityEngine.Rendering
         }
     }
 }
+
+#endif // !UNITY_WEBGL_RENDERER_ONLY

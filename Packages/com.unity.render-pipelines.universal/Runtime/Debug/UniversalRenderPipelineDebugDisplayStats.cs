@@ -1,30 +1,29 @@
-using System;
 using System.Collections.Generic;
-using System.Linq;
 
 namespace UnityEngine.Rendering.Universal
 {
     /// <summary>
     /// URP Rendering Debugger Display Stats.
     /// </summary>
-    class UniversalRenderPipelineDebugDisplayStats : DebugDisplayStats<URPProfileId>
+    class UniversalRenderPipelineDebugDisplayStats : DebugDisplayStats
     {
         private DebugFrameTiming m_DebugFrameTiming = new();
 
-        private List<URPProfileId> m_RecordedSamplers = new();
+        private List<ProfilingSampler> m_RecordedSamplers = new();
 
         /// <inheritdoc/>
         public override void EnableProfilingRecorders()
         {
             Debug.Assert(m_RecordedSamplers.Count == 0);
-            m_RecordedSamplers = GetProfilerIdsToDisplay();
+            m_RecordedSamplers = GetProfilingSamplersToDisplay(typeof(CoreProfilingSamplers));
+            m_RecordedSamplers.AddRange(GetProfilingSamplersToDisplay(typeof(URPProfilingSamplers)));
         }
 
         /// <inheritdoc/>
         public override void DisableProfilingRecorders()
         {
             foreach (var sampler in m_RecordedSamplers)
-                ProfilingSampler.Get(sampler).enableRecording = false;
+                sampler.enableRecording = false;
 
             m_RecordedSamplers.Clear();
         }

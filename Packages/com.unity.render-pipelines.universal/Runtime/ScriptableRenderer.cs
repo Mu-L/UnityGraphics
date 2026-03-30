@@ -913,7 +913,7 @@ namespace UnityEngine.Rendering.Universal
         /// <param name="renderingData"></param>
         internal void RecordRenderGraph(RenderGraph renderGraph, ScriptableRenderContext context)
         {
-            using (new ProfilingScope(ProfilingSampler.Get(URPProfileId.RecordRenderGraph)))
+            using (new ProfilingScope(URPProfilingSamplers.RecordRenderGraph))
             {
                 OnBeginRenderGraphFrame();
 

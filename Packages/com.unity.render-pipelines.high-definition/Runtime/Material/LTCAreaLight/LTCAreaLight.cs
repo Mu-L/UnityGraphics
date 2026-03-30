@@ -68,6 +68,14 @@ namespace UnityEngine.Rendering.HighDefinition
             }
         }
 
+#if UNITY_EDITOR
+        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterAssembliesLoaded)]
+        static void ResetStaticsOnLoad()
+        {
+            s_Instance = null;
+        }
+#endif
+
         int m_refCounting;
 
         // For area lighting - We pack all texture inside a texture array to reduce the number of resource required

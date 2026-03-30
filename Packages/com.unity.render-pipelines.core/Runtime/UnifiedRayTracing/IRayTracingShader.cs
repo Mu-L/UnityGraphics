@@ -141,6 +141,21 @@ namespace UnityEngine.Rendering.UnifiedRayTracing
         /// </summary>
         /// <returns>Thread group size in the X,Y and Z directions.</returns>
         uint3 GetThreadGroupSizes();
+
+        /// <summary>
+        /// Adds a command in cmd to set a shader keyword on or off.
+        /// </summary>
+        /// <param name="cmd">CommandBuffer to register the command to.</param>
+        /// <param name="keyword">The local keyword to enable or disable.</param>
+        /// <param name="value">True to enable the keyword, false to disable it.</param>
+        void SetKeyword(CommandBuffer cmd, in LocalKeyword keyword, bool value);
+
+        /// <summary>
+        /// Creates a local keyword for this shader.
+        /// </summary>
+        /// <param name="name">The name of the keyword.</param>
+        /// <returns>A local keyword that can be used with SetKeyword.</returns>
+        LocalKeyword CreateLocalKeyword(string name);
     }
 }
 

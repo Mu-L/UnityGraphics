@@ -39,7 +39,7 @@ namespace UnityEngine.PathTracing.Lightmapping
 
     internal static class ExpansionHelpers
     {
-        static internal int PopulateAccumulationIndirectDispatch(CommandBuffer cmd, IRayTracingShader accumulationShader, ComputeShader populateShader, int populateKernel, uint expandedSampleWidth, GraphicsBuffer compactedGbufferLength, GraphicsBuffer accumulationDispatchBuffer)
+        static internal int PopulateAccumulationIndirectDispatch(CommandBuffer cmd, ComputeShader populateShader, int populateKernel, uint expandedSampleWidth, GraphicsBuffer compactedGbufferLength, GraphicsBuffer accumulationDispatchBuffer)
         {
             cmd.SetComputeIntParam(populateShader, ExpansionShaderIDs.ExpandedTexelSampleWidth, (int)expandedSampleWidth);
             cmd.SetComputeBufferParam(populateShader, populateKernel, ExpansionShaderIDs.CompactedGBufferLength, compactedGbufferLength);

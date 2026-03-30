@@ -175,6 +175,8 @@ namespace UnityEditor.Rendering.Universal
             var brgStrippingError = EditorGraphicsSettings.batchRendererGroupShaderStrippingMode != BatchRendererGroupStrippingMode.KeepAll;
             var lightingModeError = !HasCorrectLightingModes(serialized.asset);
             var staticBatchingWarning = PlayerSettings.GetStaticBatchingForPlatform(EditorUserBuildSettings.activeBuildTarget);
+            var webGL2TargetError = Array.Exists(PlayerSettings.GetGraphicsAPIs(EditorUserBuildSettings.activeBuildTarget),
+                api => api == GraphicsDeviceType.OpenGLES3);
 
             if ((GPUResidentDrawerMode)serialized.gpuResidentDrawerMode.intValue != GPUResidentDrawerMode.Disabled)
             {
@@ -184,6 +186,8 @@ namespace UnityEditor.Rendering.Universal
                 DisplayTileOnlyHelpBox(serialized.gpuResidentDrawerEnableOcclusionCullingInCameras, p => p.boolValue, Styles.gpuResidentDrawerEnableOcclusionCullingInCameras);
                 --EditorGUI.indentLevel;
 
+                if (webGL2TargetError)
+                    EditorGUILayout.HelpBox(Styles.webGL2GpuResidentDrawerErrorMessage.text, MessageType.Warning, true);
                 if (brgStrippingError)
                 {
                     EditorGUILayout.HelpBox(Styles.brgShaderStrippingErrorMessage.text, MessageType.Warning, true);

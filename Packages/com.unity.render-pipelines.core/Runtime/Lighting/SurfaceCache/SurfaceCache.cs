@@ -79,7 +79,7 @@ namespace UnityEngine.Rendering
             _irradiances[1] = new GraphicsBuffer(GraphicsBuffer.Target.Structured, capacityInt, irradianceStride);
             _irradiances[2] = new GraphicsBuffer(GraphicsBuffer.Target.Structured, capacityInt, irradianceStride);
 
-            _statistics = new GraphicsBuffer(GraphicsBuffer.Target.Structured, capacityInt, sizeof(float) * 3 * 2 + sizeof(uint));
+            _statistics = new GraphicsBuffer(GraphicsBuffer.Target.Structured, capacityInt, sizeof(float) * 3 * 2 + sizeof(uint) + sizeof(uint));
         }
 
         public void Dispose()
@@ -154,6 +154,7 @@ namespace UnityEngine.Rendering
     internal struct SurfaceCacheEstimationParameterSet
     {
         public bool MultiBounce;
+        public bool BouncePatchAllocation;
         public uint SampleCount;
     }
 
@@ -183,6 +184,7 @@ namespace UnityEngine.Rendering
 
         internal IRayTracingShader PunctualLightSamplingShader;
         internal IRayTracingShader EstimationShader;
+        internal LocalKeyword EstimationBounceAllocKeyword;
 
         internal ComputeShader SpatialFilteringShader;
         internal int SpatialFilteringKernel;
@@ -245,6 +247,7 @@ namespace UnityEngine.Rendering
 
             PunctualLightSamplingShader = rtContext.CreateRayTracingShader(punctualLightSamplingUnifiedObj);
             EstimationShader = rtContext.CreateRayTracingShader(estimationUnifiedObj);
+            EstimationBounceAllocKeyword = EstimationShader.CreateLocalKeyword("BOUNCE_PATCH_ALLOCATION");
 
             return true;
         }
@@ -333,6 +336,8 @@ namespace UnityEngine.Rendering
             internal GraphicsBuffer PatchGeometries;
             internal GraphicsBuffer PatchStatistics;
             internal GraphicsBuffer CellPatchIndices;
+            internal GraphicsBuffer PatchCellIndices;
+            internal GraphicsBuffer CellAllocationMarks;
             internal GraphicsBuffer CascadeOffsets;
             internal GraphicsBuffer PunctualLightSamples;
             internal uint PunctualLightSampleCount;
@@ -341,6 +346,8 @@ namespace UnityEngine.Rendering
             internal uint FrameIdx;
             internal uint CascadeCount;
             internal bool MultiBounce;
+            internal bool BouncePatchAllocation;
+            internal LocalKeyword EstimationBounceAllocKeyword;
             internal float ShortHysteresis;
             internal uint RingConfigOffset;
             internal uint SampleCount;
@@ -604,6 +611,8 @@ namespace UnityEngine.Rendering
                 passData.PunctualLightSampleCount = (uint)PunctualLightSamples.count;
                 passData.World = world;
                 passData.CellPatchIndices = Volume.CellPatchIndices;
+                passData.PatchCellIndices = Patches.CellIndices;
+                passData.CellAllocationMarks = Volume.CellAllocationMarks;
                 passData.VolumeTargetPos = Volume.TargetPos;
                 passData.FrameIdx = frameIdx;
                 passData.AlbedoBoost = _albedoBoost;
@@ -611,6 +620,8 @@ namespace UnityEngine.Rendering
                 passData.CascadeOffsets = Volume.CascadeOffsetBuffer;
                 passData.CascadeCount = Volume.CascadeCount;
                 passData.MultiBounce = _estimationParams.MultiBounce;
+                passData.BouncePatchAllocation = _estimationParams.BouncePatchAllocation;
+                passData.EstimationBounceAllocKeyword = _resources.EstimationBounceAllocKeyword;
                 passData.ShortHysteresis = _shortHysteresis;
                 passData.RingConfigOffset = RingConfig.OffsetA;
                 passData.SampleCount = _estimationParams.SampleCount;
@@ -687,6 +698,7 @@ namespace UnityEngine.Rendering
 
             {
                 var shader = data.EstimationShader;
+                shader.SetKeyword(cmd, data.EstimationBounceAllocKeyword, data.BouncePatchAllocation);
                 shader.SetBufferParam(cmd, ShaderIDs._PunctualLights, punctualLightBuffer);
                 shader.SetBufferParam(cmd, ShaderIDs._RingConfigBuffer, data.RingConfigBuffer);
                 shader.SetBufferParam(cmd, ShaderIDs._PunctualLightSamples, data.PunctualLightSamples);
@@ -704,6 +716,8 @@ namespace UnityEngine.Rendering
                 shader.SetFloatParam(cmd, ShaderIDs._ShortHysteresis, data.ShortHysteresis);
                 shader.SetIntParam(cmd, ShaderIDs._RingConfigOffset, (int)data.RingConfigOffset);
                 shader.SetBufferParam(cmd, ShaderIDs._CellPatchIndices, data.CellPatchIndices);
+                shader.SetBufferParam(cmd, ShaderIDs._PatchCellIndices, data.PatchCellIndices);
+                shader.SetBufferParam(cmd, ShaderIDs._CellAllocationMarks, data.CellAllocationMarks);
                 shader.SetVectorParam(cmd, ShaderIDs._VolumeTargetPos, data.VolumeTargetPos);
                 shader.SetTextureParam(cmd, ShaderIDs._EnvironmentCubemap, data.World.GetEnvironmentTexture());
                 shader.SetBufferParam(cmd, ShaderIDs._MaterialEntries, data.World.GetMaterialListBuffer());
@@ -720,6 +734,7 @@ namespace UnityEngine.Rendering
                 data.World.GetAccelerationStructure().Bind(cmd, "_RayTracingAccelerationStructure", shader);
 
                 shader.Dispatch(cmd, data.TraceScratchBuffer, data.PatchCapacity, 1, 1);
+                shader.SetKeyword(cmd, data.EstimationBounceAllocKeyword, false);
             }
         }
 

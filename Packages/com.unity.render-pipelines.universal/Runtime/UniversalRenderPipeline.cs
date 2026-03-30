@@ -556,7 +556,7 @@ namespace UnityEngine.Rendering.Universal
 
             // TODO: Would be better to add Profiling name hooks into RenderPipelineManager.
             // C#8 feature, only in >= 2020.2
-            using var profScope = new ProfilingScope(ProfilingSampler.Get(URPProfileId.UniversalRenderTotal));
+            using var profScope = new ProfilingScope(URPProfilingSamplers.UniversalRenderTotal);
 
             using (new ContextRenderingScope(renderContext, cameras))
             {
@@ -1037,7 +1037,7 @@ namespace UnityEngine.Rendering.Universal
         /// <param name="isLastBaseCamera">True if this is the last base camera.</param>
         static void RenderCameraStack(ScriptableRenderContext context, Camera baseCamera, bool isLastBaseCamera)
         {
-            using var profScope = new ProfilingScope(ProfilingSampler.Get(URPProfileId.RenderCameraStack), baseCamera);
+            using var profScope = new ProfilingScope(URPProfilingSamplers.RenderCameraStack, baseCamera);
 
             baseCamera.TryGetComponent<UniversalAdditionalCameraData>(out var baseCameraAdditionalData);
 
@@ -1339,7 +1339,7 @@ namespace UnityEngine.Rendering.Universal
 
         static void UpdateVolumeFramework(Camera camera, UniversalAdditionalCameraData additionalCameraData)
         {
-            using var profScope = new ProfilingScope(ProfilingSampler.Get(URPProfileId.UpdateVolumeFramework));
+            using var profScope = new ProfilingScope(URPProfilingSamplers.UpdateVolumeFramework);
 
             // We update the volume framework for:
             // * All cameras in the editor when not in playmode

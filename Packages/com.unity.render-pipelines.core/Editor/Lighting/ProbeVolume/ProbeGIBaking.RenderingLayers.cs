@@ -130,12 +130,14 @@ namespace UnityEngine.Rendering
                     accelStruct.AddInstance(EntityId.ToULong(renderer.component.GetEntityId()), renderer.component, perSubMeshMask, matIndices, perSubMeshOpaqueness, 1);
                 }
 
+#if ENABLE_TERRAIN_MODULE
                 foreach (var terrain in contributors.terrains)
                 {
                     uint mask = GetInstanceMask(terrain.component.shadowCastingMode);
                     uint materialID = terrain.component.renderingLayerMask; // repurpose the material id as we don't need it here
                     accelStruct.AddInstance(EntityId.ToULong(terrain.component.GetEntityId()), terrain.component, new uint[1] { mask }, new uint[1] { materialID }, new bool[1] { true }, 1);
                 }
+#endif
 
                 return accelStruct;
             }

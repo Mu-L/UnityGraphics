@@ -62,7 +62,12 @@
             "name": "com.unity.2d.common",
             "expression": "13.0.0",
             "define": "USING_2DCOMMON"
-        }        
+        },
+        {
+            "name": "com.unity.modules.terrain",
+            "expression": "1.0.0",
+            "define": "ENABLE_TERRAIN_MODULE"
+        }
     ],
     "noEngineReferences": false
 }

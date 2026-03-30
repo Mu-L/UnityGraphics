@@ -99,40 +99,39 @@ namespace UnityEngine.Rendering.HighDefinition
     [GenerateHLSL]
     class LightDefinitions
     {
-        public static float s_ViewportScaleZ = 1.0f;
-        public static int s_UseLeftHandCameraSpace = 1;
+        public static readonly float s_ViewportScaleZ = 1.0f;
+        public static readonly int s_UseLeftHandCameraSpace = 1;
 
-        public static int s_TileSizeFptl = 16;
-        public static int s_TileSizeClustered = 32;
-        public static int s_TileSizeBigTile = 64;
+        public static readonly int s_TileSizeFptl = 16;
+        public static readonly int s_TileSizeClustered = 32;
+        public static readonly int s_TileSizeBigTile = 64;
 
         // Tile indexing constants for indirect dispatch deferred pass : [2 bits for eye index | 15 bits for tileX | 15 bits for tileY]
-        public static int s_TileIndexMask = 0x7FFF;
-        public static int s_TileIndexShiftX = 0;
-        public static int s_TileIndexShiftY = 15;
-        public static int s_TileIndexShiftEye = 30;
+        public static readonly int s_TileIndexMask = 0x7FFF;
+        public static readonly int s_TileIndexShiftX = 0;
+        public static readonly int s_TileIndexShiftY = 15;
+        public static readonly int s_TileIndexShiftEye = 30;
 
         // feature variants
-        public static int s_NumFeatureVariants = 29;
+        public static readonly int s_NumFeatureVariants = 29;
 
         // Following define the maximum number of bits use in each feature category.
-        public static uint s_LightFeatureMaskFlags = 0xFFF000;
-        public static uint s_LightFeatureMaskFlagsOpaque = 0xFFF000 & ~((uint)LightFeatureFlags.SSRefraction); // Opaque don't support screen space refraction
-        public static uint s_LightFeatureMaskFlagsTransparent = 0xFFF000 & ~((uint)LightFeatureFlags.SSReflection); // Transparent don't support screen space reflection
-        public static uint s_MaterialFeatureMaskFlags = 0x000FFF;   // don't use all bits just to be safe from signed and/or float conversions :/
+        public static readonly uint s_LightFeatureMaskFlags = 0xFFF000;
+        public static readonly uint s_LightFeatureMaskFlagsOpaque = 0xFFF000 & ~((uint)LightFeatureFlags.SSRefraction); // Opaque don't support screen space refraction
+        public static readonly uint s_LightFeatureMaskFlagsTransparent = 0xFFF000 & ~((uint)LightFeatureFlags.SSReflection); // Transparent don't support screen space reflection
+        public static readonly uint s_MaterialFeatureMaskFlags = 0x000FFF;   // don't use all bits just to be safe from signed and/or float conversions :/
 
         // Screen space shadow flags
-        public static uint s_RayTracedScreenSpaceShadowFlag = 0x1000;
-        public static uint s_ScreenSpaceColorShadowFlag = 0x100;
-        public static uint s_InvalidScreenSpaceShadow = 0xff;
-        public static uint s_ScreenSpaceShadowIndexMask = 0xff;
+        public static readonly uint s_RayTracedScreenSpaceShadowFlag = 0x1000;
+        public static readonly uint s_ScreenSpaceColorShadowFlag = 0x100;
+        public static readonly uint s_InvalidScreenSpaceShadow = 0xff;
+        public static readonly uint s_ScreenSpaceShadowIndexMask = 0xff;
 
         //Contact shadow bit definitions
-        public static int s_ContactShadowFadeBits = 8;
-        public static int s_ContactShadowMaskBits = 32 - s_ContactShadowFadeBits;
-        public static int s_ContactShadowFadeMask = (1 << s_ContactShadowFadeBits) - 1;
-        public static int s_ContactShadowMaskMask = (1 << s_ContactShadowMaskBits) - 1;
-
+        public static readonly int s_ContactShadowFadeBits = 8;
+        public static readonly int s_ContactShadowMaskBits = 32 - s_ContactShadowFadeBits;
+        public static readonly int s_ContactShadowFadeMask = (1 << s_ContactShadowFadeBits) - 1;
+        public static readonly int s_ContactShadowMaskMask = (1 << s_ContactShadowMaskBits) - 1;
     }
 
     [GenerateHLSL]
@@ -526,32 +525,29 @@ namespace UnityEngine.Rendering.HighDefinition
             Count = 3,
         }
 
-        static string[,] s_ClusterKernelNames = new string[(int)ClusterPrepassSource.Count, (int)ClusterDepthSource.Count]
+        static readonly string[,] s_ClusterKernelNames = new string[(int)ClusterPrepassSource.Count, (int)ClusterDepthSource.Count]
         {
             { "TileLightListGen_NoDepthRT", "TileLightListGen_DepthRT", "TileLightListGen_DepthRT_MSAA" },
             { "TileLightListGen_NoDepthRT_SrcBigTile", "TileLightListGen_DepthRT_SrcBigTile", "TileLightListGen_DepthRT_MSAA_SrcBigTile" }
         };
-        static string[,] s_ClusterObliqueKernelNames = new string[(int)ClusterPrepassSource.Count, (int)ClusterDepthSource.Count]
+        static readonly string[,] s_ClusterObliqueKernelNames = new string[(int)ClusterPrepassSource.Count, (int)ClusterDepthSource.Count]
         {
             { "TileLightListGen_NoDepthRT", "TileLightListGen_DepthRT_Oblique", "TileLightListGen_DepthRT_MSAA_Oblique" },
             { "TileLightListGen_NoDepthRT_SrcBigTile", "TileLightListGen_DepthRT_SrcBigTile_Oblique", "TileLightListGen_DepthRT_MSAA_SrcBigTile_Oblique" }
         };
 
         static int s_GenListPerTileKernel;
-        static int[,] s_ClusterKernels = new int[(int)ClusterPrepassSource.Count, (int)ClusterDepthSource.Count];
-        static int[,] s_ClusterObliqueKernels = new int[(int)ClusterPrepassSource.Count, (int)ClusterDepthSource.Count];
+        static readonly int[,] s_ClusterKernels = new int[(int)ClusterPrepassSource.Count, (int)ClusterDepthSource.Count];
+        static readonly int[,] s_ClusterObliqueKernels = new int[(int)ClusterPrepassSource.Count, (int)ClusterDepthSource.Count];
         static int s_ClearVoxelAtomicKernel;
         static int s_ClearDispatchIndirectKernel;
         static int s_BuildIndirectKernel;
         static int s_BuildMaterialFlagsWriteKernel;
-        static int s_BuildMaterialFlagsOrKernel;
 
         static int s_shadeOpaqueDirectFptlKernel;
         static int s_shadeOpaqueDirectFptlDebugDisplayKernel;
-        static int s_shadeOpaqueDirectShadowMaskFptlKernel;
-        static int s_shadeOpaqueDirectShadowMaskFptlDebugDisplayKernel;
 
-        static int[] s_shadeOpaqueIndirectFptlKernels = new int[LightDefinitions.s_NumFeatureVariants];
+        static readonly int[] s_shadeOpaqueIndirectFptlKernels = new int[LightDefinitions.s_NumFeatureVariants];
 
         static int s_deferredContactShadowKernel;
 
@@ -569,6 +565,35 @@ namespace UnityEngine.Rendering.HighDefinition
 
         static DebugLightVolumes s_lightVolumes = null;
 
+#if UNITY_EDITOR
+        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterAssembliesLoaded)]
+        static void ResetStaticsOnLoad()
+        {
+            s_GenListPerTileKernel = -1;
+            for (int i = 0; i < s_ClusterKernels.GetLength(0); i++)
+                for (int j = 0; j < s_ClusterKernels.GetLength(1); j++)
+                    s_ClusterKernels[i, j] = -1;
+            for (int i = 0; i < s_ClusterObliqueKernels.GetLength(0); i++)
+                for (int j = 0; j < s_ClusterObliqueKernels.GetLength(1); j++)
+                    s_ClusterObliqueKernels[i, j] = -1;
+            s_ClearVoxelAtomicKernel = -1;
+            s_ClearDispatchIndirectKernel = -1;
+            s_BuildIndirectKernel = -1;
+            s_BuildMaterialFlagsWriteKernel = -1;
+            s_shadeOpaqueDirectFptlKernel = -1;
+            s_shadeOpaqueDirectFptlDebugDisplayKernel = -1;
+            Array.Fill(s_shadeOpaqueIndirectFptlKernels, -1);
+            s_deferredContactShadowKernel = -1;
+            s_GenListPerBigTileKernel = -1;
+            s_lightVolumes = null;
+            // From HDRenderPipeline.LightLoop.cs
+            s_BigTileVolumetricLightListKeyword = default;
+            // From HDRenderPipeline.ProbeHelpers.cs
+            Array.Clear(m_PackedCoeffsProbe, 0, m_PackedCoeffsProbe.Length);
+            // From HDRenderPipeline.ScreenSpaceShadows.cs
+            s_ScreenSpaceShadowsMat = null;
+        }
+#endif
 
         ContactShadows m_ContactShadows = null;
         bool m_SupportContactShadow = true;

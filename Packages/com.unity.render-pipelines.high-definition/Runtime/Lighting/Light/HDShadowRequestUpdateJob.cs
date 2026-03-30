@@ -681,13 +681,13 @@ namespace UnityEngine.Rendering.HighDefinition
 
     internal class ShadowRequestUpdateProfiling
     {
-        internal static ProfilerMarker dynamicDirectionalRequestsMarker = new ProfilerMarker("UpdateDynamicDirectionalRequests");
-        internal static ProfilerMarker dynamicPointRequestsMarker = new ProfilerMarker("UpdateDynamicPointRequests");
-        internal static ProfilerMarker dynamicSpotRequestsMarker = new ProfilerMarker("UpdateDynamicSpotRequests");
-        internal static ProfilerMarker dynamicAreaRectangleRequestsMarker = new ProfilerMarker("UpdateDynamicAreaRectangleRequests");
-        internal static ProfilerMarker cachedDirectionalRequestsMarker = new ProfilerMarker("UpdateCachedDirectionalRequests");
-        internal static ProfilerMarker cachedPointRequestsMarker = new ProfilerMarker("UpdateCachedPointRequests");
-        internal static ProfilerMarker cachedSpotRequestsMarker = new ProfilerMarker("UpdateCachedSpotRequests");
-        internal static ProfilerMarker cachedAreaRectangleRequestsMarker = new ProfilerMarker("UpdateCachedAreaRectangleRequests");
+        internal static readonly ProfilerMarker dynamicDirectionalRequestsMarker = new ProfilerMarker("UpdateDynamicDirectionalRequests");
+        internal static readonly ProfilerMarker dynamicPointRequestsMarker = new ProfilerMarker("UpdateDynamicPointRequests");
+        internal static readonly ProfilerMarker dynamicSpotRequestsMarker = new ProfilerMarker("UpdateDynamicSpotRequests");
+        internal static readonly ProfilerMarker dynamicAreaRectangleRequestsMarker = new ProfilerMarker("UpdateDynamicAreaRectangleRequests");
+        internal static readonly ProfilerMarker cachedDirectionalRequestsMarker = new ProfilerMarker("UpdateCachedDirectionalRequests");
+        internal static readonly ProfilerMarker cachedPointRequestsMarker = new ProfilerMarker("UpdateCachedPointRequests");
+        internal static readonly ProfilerMarker cachedSpotRequestsMarker = new ProfilerMarker("UpdateCachedSpotRequests");
+        internal static readonly ProfilerMarker cachedAreaRectangleRequestsMarker = new ProfilerMarker("UpdateCachedAreaRectangleRequests");
     }
 }

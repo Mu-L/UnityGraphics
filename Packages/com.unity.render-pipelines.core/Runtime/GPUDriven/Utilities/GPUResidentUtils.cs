@@ -1,3 +1,4 @@
+#if !UNITY_WEBGL_RENDERER_ONLY
 using Unity.Collections;
 using Unity.Collections.LowLevel.Unsafe;
 using Unity.Jobs;
@@ -116,3 +117,5 @@ namespace UnityEngine.Rendering
         public static bool AffectsLightmaps(int lightmapIndex) => ((short)lightmapIndex) >= 0 || ((short)lightmapIndex) == LightmapIndexInfluenceOnly;
     }
 }
+
+#endif // !UNITY_WEBGL_RENDERER_ONLY

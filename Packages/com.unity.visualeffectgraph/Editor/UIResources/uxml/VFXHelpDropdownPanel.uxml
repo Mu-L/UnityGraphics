@@ -1,4 +1,3 @@
-<?xml version="1.0" encoding="Windows-1252"?>
 <UXML xmlns:ui="UnityEngine.UIElements">
     <ui:Box class="section">
         <ui:Label text="Install Additional Samples" class="category" />

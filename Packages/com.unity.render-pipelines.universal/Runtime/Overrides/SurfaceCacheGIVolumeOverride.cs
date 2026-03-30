@@ -66,6 +66,18 @@ namespace UnityEngine.Rendering.Universal
         private BoolParameter m_MultiBounce = new BoolParameter(true);
 
         /// <summary>
+        /// Bounce Patch Allocation. When enabled, new patches are allocated at ray hit locations when multi-bounce cache lookups fail.
+        /// </summary>
+        [Tooltip("When enabled, new patches are allocated at ray hit locations when multi-bounce cache lookups fail.")]
+        public bool bouncePatchAllocation
+        {
+            get => m_BouncePatchAllocation.value;
+            set => m_BouncePatchAllocation.value = value;
+        }
+        [SerializeField]
+        private BoolParameter m_BouncePatchAllocation = new BoolParameter(true);
+
+        /// <summary>
         /// Number of samples used for GI estimation. Higher values improve quality at performance cost.
         /// </summary>
         public int sampleCount

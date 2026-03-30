@@ -99,6 +99,11 @@ namespace ShaderStrippingAndPrefiltering
                 ShaderBuildPreprocessor.GetEveryVolumeFeatures(ref volumeFeatures);
             }
 
+            internal void GetSupportedFeaturesFromVolumes(List<VolumeProfile> volumeProfiles, ref VolumeFeatures volumeFeatures)
+            {
+                ShaderBuildPreprocessor.GetSupportedFeaturesFromVolumes(volumeProfiles, ref volumeFeatures);
+            }
+
             internal void GetEveryShaderFeatureAndPrefilteringData(List<ShaderFeatures> rendererFeaturesList, ref UniversalRenderPipelineAsset.ShaderPrefilteringData spd)
             {
                 ShaderBuildPreprocessor.GetEveryShaderFeatureAndPrefilteringData(rendererFeaturesList, ref spd);
@@ -720,6 +725,168 @@ namespace ShaderStrippingAndPrefiltering
             m_TestHelper.GetEveryVolumeFeatures(ref volumeFeatures);
             m_TestHelper.AssertVolumeFeatures(VolumeFeatures.All, volumeFeatures);
         }
+
+        void AssertVolumeFeaturesFromProfile(Action<VolumeProfile> setupProfile, VolumeFeatures expectedFeatures)
+        {
+            var profile = ScriptableObject.CreateInstance<VolumeProfile>();
+            bool prevStrip = ShaderBuildPreprocessor.s_StripUnusedPostProcessingVariants;
+            ShaderBuildPreprocessor.s_StripUnusedPostProcessingVariants = true;
+
+            try
+            {
+                setupProfile(profile);
+
+                VolumeFeatures volumeFeatures = VolumeFeatures.None;
+                m_TestHelper.GetSupportedFeaturesFromVolumes(new List<VolumeProfile> { profile }, ref volumeFeatures);
+                m_TestHelper.AssertVolumeFeatures(VolumeFeatures.Calculated | expectedFeatures, volumeFeatures);
+            }
+            finally
+            {
+                ShaderBuildPreprocessor.s_StripUnusedPostProcessingVariants = prevStrip;
+                Object.DestroyImmediate(profile);
+            }
+        }
+
+        [Test]
+        public void TestStripUnusedPostProcessingVariants_FilmGrain()
+        {
+            AssertVolumeFeaturesFromProfile(profile =>
+            {
+                var filmGrain = profile.Add<FilmGrain>(overrides: true);
+                filmGrain.intensity.Override(1f);
+                filmGrain.type.Override(FilmGrainLookup.Thin1);
+            }, VolumeFeatures.FilmGrain);
+        }
+
+        [Test]
+        public void TestStripUnusedPostProcessingVariants_ChromaticAberration()
+        {
+            AssertVolumeFeaturesFromProfile(profile =>
+            {
+                var ca = profile.Add<ChromaticAberration>(overrides: true);
+                ca.intensity.Override(1f);
+            }, VolumeFeatures.ChromaticAberration);
+        }
+
+        [Test]
+        public void TestStripUnusedPostProcessingVariants_LensDistortion()
+        {
+            AssertVolumeFeaturesFromProfile(profile =>
+            {
+                var ld = profile.Add<LensDistortion>(overrides: true);
+                ld.intensity.Override(1f);
+                ld.xMultiplier.Override(1f);
+            }, VolumeFeatures.LensDistortion);
+        }
+
+        [Test]
+        public void TestStripUnusedPostProcessingVariants_ToneMapping()
+        {
+            AssertVolumeFeaturesFromProfile(profile =>
+            {
+                var tm = profile.Add<Tonemapping>(overrides: true);
+                tm.mode.Override(TonemappingMode.ACES);
+            }, VolumeFeatures.ToneMapping);
+        }
+
+        [Test]
+        public void TestStripUnusedPostProcessingVariants_DepthOfField()
+        {
+            AssertVolumeFeaturesFromProfile(profile =>
+            {
+                var dof = profile.Add<DepthOfField>(overrides: true);
+                dof.mode.Override(DepthOfFieldMode.Bokeh);
+            }, VolumeFeatures.DepthOfField);
+        }
+
+        [Test]
+        public void TestStripUnusedPostProcessingVariants_CameraMotionBlur()
+        {
+            AssertVolumeFeaturesFromProfile(profile =>
+            {
+                var mb = profile.Add<MotionBlur>(overrides: true);
+                mb.intensity.Override(1f);
+            }, VolumeFeatures.CameraMotionBlur);
+        }
+
+        [Test]
+        public void TestStripUnusedPostProcessingVariants_PaniniProjection()
+        {
+            AssertVolumeFeaturesFromProfile(profile =>
+            {
+                var pp = profile.Add<PaniniProjection>(overrides: true);
+                pp.distance.Override(1f);
+            }, VolumeFeatures.PaniniProjection);
+        }
+
+        [Test]
+        public void TestStripUnusedPostProcessingVariants_BloomLQ()
+        {
+            AssertVolumeFeaturesFromProfile(profile =>
+            {
+                var bloom = profile.Add<Bloom>(overrides: true);
+                bloom.intensity.Override(1f);
+                bloom.highQualityFiltering.Override(false);
+                bloom.dirtIntensity.Override(0f);
+            }, VolumeFeatures.BloomLQ);
+        }
+
+        [Test]
+        public void TestStripUnusedPostProcessingVariants_BloomLQDirt()
+        {
+            AssertVolumeFeaturesFromProfile(profile =>
+            {
+                var bloom = profile.Add<Bloom>(overrides: true);
+                bloom.intensity.Override(1f);
+                bloom.highQualityFiltering.Override(false);
+                bloom.dirtIntensity.Override(1f);
+                bloom.dirtTexture.Override(Texture2D.whiteTexture);
+            }, VolumeFeatures.BloomLQDirt);
+        }
+
+        [Test]
+        public void TestStripUnusedPostProcessingVariants_BloomHQ()
+        {
+            AssertVolumeFeaturesFromProfile(profile =>
+            {
+                var bloom = profile.Add<Bloom>(overrides: true);
+                bloom.intensity.Override(1f);
+                bloom.highQualityFiltering.Override(true);
+                bloom.dirtIntensity.Override(0f);
+            }, VolumeFeatures.BloomHQ);
+        }
+
+        [Test]
+        public void TestStripUnusedPostProcessingVariants_BloomHQDirt()
+        {
+            AssertVolumeFeaturesFromProfile(profile =>
+            {
+                var bloom = profile.Add<Bloom>(overrides: true);
+                bloom.intensity.Override(1f);
+                bloom.highQualityFiltering.Override(true);
+                bloom.dirtIntensity.Override(1f);
+                bloom.dirtTexture.Override(Texture2D.whiteTexture);
+            }, VolumeFeatures.BloomHQDirt);
+        }
+
+        [Test]
+        public void TestStripUnusedPostProcessingVariants_InactiveFeatures_AreNotReturned()
+        {
+            AssertVolumeFeaturesFromProfile(profile =>
+            {
+                // All volume components checked by GetSupportedFeaturesFromVolumes,
+                // added at their default values which should all be inactive.
+                profile.Add<LensDistortion>(overrides: true);
+                profile.Add<Bloom>(overrides: true);
+                profile.Add<Tonemapping>(overrides: true);
+                profile.Add<FilmGrain>(overrides: true);
+                profile.Add<DepthOfField>(overrides: true);
+                profile.Add<MotionBlur>(overrides: true);
+                profile.Add<PaniniProjection>(overrides: true);
+                profile.Add<ChromaticAberration>(overrides: true);
+            }, VolumeFeatures.None);
+        }
+
         [Test]
         public void TestStripUnusedVariants_ReturnsAll()
         {

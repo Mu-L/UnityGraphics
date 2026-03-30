@@ -36,7 +36,7 @@ namespace UnityEngine.Rendering.Universal.Internal
         /// <seealso cref="LayerMask"/>
         public DepthNormalOnlyPass(RenderPassEvent evt, RenderQueueRange renderQueueRange, LayerMask layerMask, ProfilingSampler sampler = null)
         {
-            profilingSampler = sampler ?? ProfilingSampler.Get(URPProfileId.DrawDepthNormalPrepass);
+            profilingSampler = sampler ?? URPProfilingSamplers.DrawDepthNormalPrepass;
             m_FilteringSettings = new FilteringSettings(renderQueueRange, layerMask);
             renderPassEvent = evt;
             shaderTagIds = k_DepthNormals;

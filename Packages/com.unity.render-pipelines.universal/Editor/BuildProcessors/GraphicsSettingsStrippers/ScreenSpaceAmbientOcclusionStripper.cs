@@ -13,19 +13,16 @@ namespace UnityEditor.Rendering
             if (GraphicsSettings.TryGetRenderPipelineSettings<URPShaderStrippingSetting>(out var urpShaderStrippingSettings) && !urpShaderStrippingSettings.stripUnusedVariants)
                 return false;
             
-            foreach (var urpAssetForBuild in URPBuildData.instance.renderPipelineAssets)
+            foreach (var rendererData in URPBuildData.instance.rendererDataList)
             {
-                foreach (var rendererData in urpAssetForBuild.m_RendererDataList)
+                if (rendererData is not UniversalRendererData)
+                    continue;
+
+                foreach (var rendererFeature in rendererData.rendererFeatures)
                 {
-                    if (rendererData is not UniversalRendererData) 
-                        continue;
-                    
-                    foreach (var rendererFeature in rendererData.rendererFeatures)
-                    {
-                        if (rendererFeature is ScreenSpaceAmbientOcclusion { isActive: true } occlusion
-                            && occlusion.settings.AOMethod == ScreenSpaceAmbientOcclusionSettings.AOMethodOptions.BlueNoise)
-                            return false;
-                    }
+                    if (rendererFeature is ScreenSpaceAmbientOcclusion { isActive: true } occlusion
+                        && occlusion.settings.AOMethod == ScreenSpaceAmbientOcclusionSettings.AOMethodOptions.BlueNoise)
+                        return false;
                 }
             }
 
@@ -42,18 +39,15 @@ namespace UnityEditor.Rendering
             if (GraphicsSettings.TryGetRenderPipelineSettings<URPShaderStrippingSetting>(out var urpShaderStrippingSettings) && !urpShaderStrippingSettings.stripUnusedVariants)
                 return false;
             
-            foreach (var urpAssetForBuild in URPBuildData.instance.renderPipelineAssets)
+            foreach (var rendererData in URPBuildData.instance.rendererDataList)
             {
-                foreach (var rendererData in urpAssetForBuild.m_RendererDataList)
+                if (rendererData is not UniversalRendererData)
+                    continue;
+
+                foreach (var rendererFeature in rendererData.rendererFeatures)
                 {
-                    if (rendererData is not UniversalRendererData)
-                        continue;
-                    
-                    foreach (var rendererFeature in rendererData.rendererFeatures)
-                    {
-                        if (rendererFeature is ScreenSpaceAmbientOcclusion { isActive: true })
-                            return false;
-                    }
+                    if (rendererFeature is ScreenSpaceAmbientOcclusion { isActive: true })
+                        return false;
                 }
             }
 

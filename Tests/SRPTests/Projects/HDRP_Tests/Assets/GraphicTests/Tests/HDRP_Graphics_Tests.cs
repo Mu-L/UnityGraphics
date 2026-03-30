@@ -1,6 +1,7 @@
 using System.Collections;
 using System.Runtime.InteropServices;
 using NUnit.Framework;
+using UnityEngine;
 using UnityEngine.SceneManagement;
 using UnityEngine.TestTools;
 using UnityEngine.TestTools.Graphics;
@@ -442,6 +443,58 @@ namespace UnityEngine.Rendering.HighDefinition.Tests
             "4075_PhysicalCamera-gateFit|4111_DRS-DLSS-With-CustomPass",
             "Disabled for Instability https://jira.unity3d.com/browse/UUM-134786",
             runtimePlatforms: new RuntimePlatform[]
+            {
+                RuntimePlatform.WindowsEditor
+            }
+        )]
+        [IgnoreGraphicsTest(
+            "4014_PrecomputedVelocityAlembic",
+            "https://jira.unity3d.com/browse/UUM-136889"
+        )]
+        [IgnoreGraphicsTest(
+            "9304_MotionVectorsPrecomputedAndCustomVelocity",
+            "Also fails because of Alembic removal https://jira.unity3d.com/browse/UUM-136889"
+        )]
+        [IgnoreGraphicsTest(
+            "9921_UnderWater",
+            "Also fails because of Alembic removal https://jira.unity3d.com/browse/UUM-136889"
+        )]
+        [IgnoreGraphicsTest(
+            "9921_UnderWater_Back",
+            "Also fails because of Alembic removal https://jira.unity3d.com/browse/UUM-136889"
+        )]
+        [IgnoreGraphicsTest(
+            "9950-LineRendering",
+            "Also fails because of Alembic removal https://jira.unity3d.com/browse/UUM-136889"
+        )]
+        [IgnoreGraphicsTest(
+            "4089_DRS-DLSS-Software",
+            "Disabled for Instability https://jira.unity3d.com/browse/UUM-135194",
+            runtimePlatforms: new[]
+            {
+                RuntimePlatform.WindowsEditor
+            }
+        )]
+        [IgnoreGraphicsTest(
+            "4088_DRS-DLSS-Hardware",
+            "Disabled for Instability https://jira.unity3d.com/browse/UUM-135194",
+            runtimePlatforms: new[]
+            {
+                RuntimePlatform.WindowsEditor
+            }
+        )]
+        [IgnoreGraphicsTest(
+            "9800_Compositor",
+            "Disabled for Instability https://jira.unity3d.com/browse/UUM-138001",
+            runtimePlatforms: new[]
+            {
+                RuntimePlatform.WindowsEditor
+            }
+        )]
+        [IgnoreGraphicsTest(
+            "9801_ShurikenLightModule",
+            "Disabled for Instability https://jira.unity3d.com/browse/UUM-138001",
+            runtimePlatforms: new[]
             {
                 RuntimePlatform.WindowsEditor
             }

@@ -76,7 +76,7 @@ namespace UnityEngine.Rendering.Universal
             public ushort lightBufferIndex;  // Index into light shader data buffer(s) (dst) (matches ForwardLights.SetupAdditionalLightConstants())
             public Light light; // Cached built-in light for the visibleLightIndex. Avoids multiple copies on all the gets from native array.
 
-            public static Func<LightCookieMapping, LightCookieMapping, int> s_CompareByCookieSize = (LightCookieMapping a, LightCookieMapping b) =>
+            static int CompareByCookieSize(LightCookieMapping a, LightCookieMapping b)
             {
                 var alc = a.light.cookie;
                 var blc = b.light.cookie;
@@ -91,12 +91,13 @@ namespace UnityEngine.Rendering.Universal
                     return (int)(ai - bi);
                 }
                 return d;
-            };
+            }
 
-            public static Func<LightCookieMapping, LightCookieMapping, int> s_CompareByBufferIndex = (LightCookieMapping a, LightCookieMapping b) =>
-            {
-                return a.lightBufferIndex - b.lightBufferIndex;
-            };
+            static int CompareByBufferIndex(LightCookieMapping a, LightCookieMapping b) =>
+                a.lightBufferIndex - b.lightBufferIndex;
+
+            public static readonly Func<LightCookieMapping, LightCookieMapping, int> s_CompareByCookieSize = CompareByCookieSize;
+            public static readonly Func<LightCookieMapping, LightCookieMapping, int> s_CompareByBufferIndex = CompareByBufferIndex;
         }
 
         private readonly struct WorkSlice<T>
@@ -326,7 +327,7 @@ namespace UnityEngine.Rendering.Universal
 
         public void Setup(CommandBuffer cmd, UniversalLightData lightData)
         {
-            using var profScope = new ProfilingScope(cmd, ProfilingSampler.Get(URPProfileId.LightCookies));
+            using var profScope = new ProfilingScope(cmd, URPProfilingSamplers.LightCookies);
 
             // Main light, 1 directional, bound directly
             bool isMainLightAvailable = lightData.mainLightIndex >= 0;

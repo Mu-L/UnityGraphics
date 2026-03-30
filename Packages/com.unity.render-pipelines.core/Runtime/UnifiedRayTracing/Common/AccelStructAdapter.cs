@@ -59,6 +59,7 @@ namespace UnityEngine.Rendering.UnifiedRayTracing
 
         public void AddInstance(UInt64 objectHandle, Component meshRendererOrTerrain, Span<uint> perSubMeshMask, Span<uint> perSubMeshMaterialIDs, Span<bool> perSubMeshIsOpaque, uint renderingLayerMask)
         {
+#if ENABLE_TERRAIN_MODULE
             if (meshRendererOrTerrain is Terrain terrain)
             {
                 Debug.Assert(terrain.enabled, "Terrains are expected to be enabled.");
@@ -73,6 +74,7 @@ namespace UnityEngine.Rendering.UnifiedRayTracing
                 AddInstance(objectHandle, terrainDesc);
             }
             else
+#endif
             {
                 var meshRenderer = (MeshRenderer)meshRendererOrTerrain;
                 Debug.Assert(meshRenderer.enabled, "Mesh renderers are expected to be enabled.");
@@ -104,6 +106,7 @@ namespace UnityEngine.Rendering.UnifiedRayTracing
             _objectHandleToInstances.Add(objectHandle, instances);
         }
 
+#if ENABLE_TERRAIN_MODULE
         private void AddInstance(UInt64 objectHandle, TerrainDesc terrainDesc)
         {
             List<IdsOfInstances> instanceHandles = new List<IdsOfInstances>();
@@ -166,6 +169,7 @@ namespace UnityEngine.Rendering.UnifiedRayTracing
                 }
             }
         }
+#endif
 
         IdsOfInstances AddInstance(MeshInstanceDesc instanceDesc, uint materialID, uint renderingLayerMask)
         {
@@ -272,6 +276,7 @@ namespace UnityEngine.Rendering.UnifiedRayTracing
 
     }
 
+#if ENABLE_TERRAIN_MODULE
     internal struct TerrainDesc
     {
         public Terrain terrain;
@@ -293,4 +298,5 @@ namespace UnityEngine.Rendering.UnifiedRayTracing
             frontTriangleCounterClockwise = false;
         }
     }
+#endif
 }
