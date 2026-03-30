@@ -30,8 +30,8 @@ public class BaseGraphicsTests
     //      The assembly rename has been reverted so these should now pass, but the ignores remain to avoid future issues
     //      until the underlying problem with test order is identified and fixed.
     [Ignore("These tests all fail if they are run after the tests in the MultipleSRP and Preview namespaces")]
-    [IgnoreGraphicsTest("0001_SwitchPipeline_UniversalRenderPipelineAsset", "Failed from the start when introducing DX12 coverage", runtimePlatforms: new[] { RuntimePlatform.WindowsEditor }, graphicsDeviceTypes: new GraphicsDeviceType[] { GraphicsDeviceType.Direct3D12 })]
-    [IgnoreGraphicsTest("0002_FallbackTest_UniversalRenderPipelineAsset", "Failed from the start when introducing DX12 coverage", runtimePlatforms: new[] { RuntimePlatform.WindowsEditor }, graphicsDeviceTypes: new GraphicsDeviceType[] { GraphicsDeviceType.Direct3D12 })]
+    [IgnoreGraphicsTest("0001_SwitchPipeline_UniversalRenderPipelineAsset", "Failed from the start when introducing DX12 coverage", RuntimePlatform.WindowsEditor, GraphicsDeviceType.Direct3D12)]
+    [IgnoreGraphicsTest("0002_FallbackTest_UniversalRenderPipelineAsset", "Failed from the start when introducing DX12 coverage", RuntimePlatform.WindowsEditor, GraphicsDeviceType.Direct3D12)]
     [UnityTest, Category("Base")]
     [MultipleSRPGraphicsTest("Assets/GraphicsTests")]
     [Timeout(300 * 1000)]

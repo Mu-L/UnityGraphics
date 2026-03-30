@@ -19,7 +19,7 @@ namespace Unity.Testing.VisualEffectGraph.Tests
         // and any calls to PerformanceTestUtils will throw a NullReferenceException error during test runs
         // By calling PerformanceTestSettings.GetSerializedSettings() as a prebuild setup step, we ensure 'Resources/PerformanceTestsSettings' exists,
         // or gets created if it doesn't exist
-        public override void Setup()
+        protected override void Setup()
         {
 #if UNITY_EDITOR
             PerformanceTestSettings.GetSerializedSettings();

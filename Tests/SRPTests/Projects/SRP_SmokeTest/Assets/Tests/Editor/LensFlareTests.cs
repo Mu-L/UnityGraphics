@@ -329,7 +329,7 @@ namespace UnityEngine.Rendering.Tests
         }
         
         [Test, GraphicsTest]
-        [IgnoreGraphicsTest("", "Occlusion render texture is not supported on GL or WebGPU", graphicsDeviceTypes: new[] { GraphicsDeviceType.OpenGLES3, GraphicsDeviceType.OpenGLCore, GraphicsDeviceType.WebGPU })]
+        [TestNotSupportedOn("", "Occlusion render texture is not supported on GL or WebGPU", GraphicsDeviceType.OpenGLES3, GraphicsDeviceType.OpenGLCore, GraphicsDeviceType.WebGPU)]
         public void FlareRendersToColorHDRP(
             GraphicsTestCase testCase,
             [Values(SRPLensFlareType.Circle, SRPLensFlareType.Polygon, SRPLensFlareType.Ring)] SRPLensFlareType flareType
@@ -341,7 +341,7 @@ namespace UnityEngine.Rendering.Tests
         }
 
         [Test, GraphicsTest]
-        [IgnoreGraphicsTest("", "Occlusion render texture is not supported on GL or WebGPU", graphicsDeviceTypes: new[] { GraphicsDeviceType.OpenGLES3, GraphicsDeviceType.OpenGLCore, GraphicsDeviceType.WebGPU })]
+        [TestNotSupportedOn("", "Occlusion render texture is not supported on GL or WebGPU", GraphicsDeviceType.OpenGLES3, GraphicsDeviceType.OpenGLCore, GraphicsDeviceType.WebGPU)]
         public void FlareRendersToOcclusionTexture(
             GraphicsTestCase testCase,
             [Values(SRP.URP, SRP.HDRP)] SRP srp
@@ -368,7 +368,7 @@ namespace UnityEngine.Rendering.Tests
         }
 
         [Test, GraphicsTest]
-        [IgnoreGraphicsTest("", "Inline occlusion is only used on GL or WebGPU", graphicsDeviceTypes: new[] { GraphicsDeviceType.OpenGLES3, GraphicsDeviceType.OpenGLCore, GraphicsDeviceType.WebGPU }, isInclusive: true)]
+        [TestOnlySupportedOn("", "Inline occlusion is only used on GL or WebGPU", GraphicsDeviceType.OpenGLES3, GraphicsDeviceType.OpenGLCore, GraphicsDeviceType.WebGPU)]
         public void FlareRendersToColorWithInlineOcclusion(
             GraphicsTestCase testCase
         )

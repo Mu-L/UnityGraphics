@@ -13,7 +13,7 @@ namespace Unity.Testing.VisualEffectGraph.Tests
     {
         public AssetBundleSetupAttribute() : base() { }
 
-        public override void Setup()
+        protected override void Setup()
         {
 #if UNITY_EDITOR
             var vfxAssetsGuid = AssetDatabase.FindAssets("t:VisualEffectAsset AssetBundle");
