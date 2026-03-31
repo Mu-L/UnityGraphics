@@ -19,6 +19,7 @@ using System.Runtime.CompilerServices;
 [assembly: InternalsVisibleTo("Unity.RenderPipelines.Universal.Editor")]
 [assembly: InternalsVisibleTo("Unity.RenderPipelines.Universal.Editor-testable")]
 [assembly: InternalsVisibleTo("DynamicProxyGenAssembly2")]
+[assembly: InternalsVisibleTo("Unity.AI.Assistant.Bridge.Editor")]
 
 namespace UnityEditor.VFX
 {
