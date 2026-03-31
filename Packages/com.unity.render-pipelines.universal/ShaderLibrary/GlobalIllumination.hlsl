@@ -426,7 +426,7 @@ half3 GlossyEnvironmentReflection(half3 reflectVector, float3 positionWS, half p
     #if defined(_SCREENSPACEREFLECTIONS_OFF)
     half4 ssrColor = 0;
     #else
-    half4 ssrColor = GetScreenSpaceReflection(normalizedScreenSpaceUV, perceptualRoughness);
+    half4 ssrColor = GetScreenSpaceReflection(normalizedScreenSpaceUV, positionWS, perceptualRoughness);
     #endif
 
     // We skip sampling reflection probes if they would be overwritten by SSR anyways.

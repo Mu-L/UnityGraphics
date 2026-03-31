@@ -52,12 +52,12 @@ namespace UnityEngine.Rendering.Universal
         internal static class ShaderConstants
         {
             internal static readonly int _ReflectionParam = Shader.PropertyToID("_ScreenSpaceReflectionParam");
+            internal static readonly int _ReflectionParam2 = Shader.PropertyToID("_ScreenSpaceReflectionParam2");
             internal static readonly int _MaxRayLength = Shader.PropertyToID("_MaxRayLength");
             internal static readonly int _MaxRaySteps = Shader.PropertyToID("_MaxRaySteps");
             internal static readonly int _Downsample = Shader.PropertyToID("_Downsample");
             internal static readonly int _ThicknessScaleAndBias = Shader.PropertyToID("_ThicknessScaleAndBias");
             internal static readonly int _ScreenSpaceReflectionFinalTexture = Shader.PropertyToID(k_ScreenSpaceReflectionTextureName);
-            internal static readonly int _ProjectionParams2 = Shader.PropertyToID("_ProjectionParams2");
             internal static readonly int _CameraProjections = Shader.PropertyToID("_CameraProjections");
             internal static readonly int _CameraInverseProjections = Shader.PropertyToID("_CameraInverseProjections");
             internal static readonly int _CameraInverseViewProjections = Shader.PropertyToID("_CameraInverseViewProjections");
@@ -207,9 +207,11 @@ namespace UnityEngine.Rendering.Universal
             internal int hitRefinementSteps;
             internal int maxRaySteps;
             internal int resolutionScale;
+            internal float roughnessScale;
             internal bool reflectSky;
             internal bool afterOpaque;
             internal bool linearMarching;
+            internal bool useGaussianBlur;
         }
 
         public override void RecordRenderGraph(RenderGraph renderGraph, ContextContainer frameData)
@@ -264,6 +266,7 @@ namespace UnityEngine.Rendering.Universal
                     passData.cameraData = cameraData;
                     passData.afterOpaque = m_AfterOpaque;
                     passData.linearMarching = settings.ShouldUseLinearMarching();
+                    passData.useGaussianBlur = settings.ShouldUseGaussianBlurRoughness();
                     passData.minimumSmoothness = settings.minimumSmoothness.value;
                     passData.smoothnessFadeStart = settings.smoothnessFadeStart.value;
                     passData.normalFade = settings.normalFade.value;
@@ -274,6 +277,7 @@ namespace UnityEngine.Rendering.Universal
                     passData.rayLengthFade = settings.rayLengthFade.value;
                     passData.maxRaySteps = settings.maxRaySteps.value;
                     passData.resolutionScale = (int)settings.resolution.value;
+                    passData.roughnessScale = settings.roughnessScale.value;
                     passData.material = m_Material;
                     passData.localKeywords = m_LocalKeywords;
                     passData.mipsInfo = m_PackedMipChainInfo;
@@ -373,8 +377,34 @@ namespace UnityEngine.Rendering.Universal
                         if (!ssrData.afterOpaque)
                         {
                             // We only want URP shaders to sample SSR if After Opaque is disabled...
-                            cmd.SetGlobalVector(ShaderConstants._ReflectionParam, new Vector4(1f, ssrData.minimumSmoothness, ssrData.smoothnessFadeStart, 0f));
+                            cmd.SetGlobalVector(ShaderConstants._ReflectionParam, new Vector4(1f, ssrData.minimumSmoothness, ssrData.smoothnessFadeStart, 0));
                         }
+
+                        // This handles asymetric projections as well as orthographic ones. We only take into account the first eye as both eyes have the same "width", even
+                        // if the projection is "flipped"
+                        Vector3 right = ssrData.cameraInverseProjections[0].MultiplyPoint(new Vector3(1, 0, 0));
+                        Vector3 left = ssrData.cameraInverseProjections[0].MultiplyPoint(new Vector3(-1, 0, 0));
+
+                        Vector4 ssrTextureSourceSize = PostProcessUtils.CalcShaderSourceSize(ssrData.ssrTexture);
+                        float ssrTextureLastMipIndex = Mathf.Log(ssrTextureSourceSize.x) / Mathf.Log(2);
+                        float ssrTextureLastValidMipIndex = ssrTextureLastMipIndex;
+                        // With gaussian blurring, we do not compute mips that are under k_MinimumResolutionGaussian pixels wide.
+                        // See MipGenerator.RenderColorGaussianPyramid
+                        if (ssrData.useGaussianBlur)
+                        {
+                            float mipOffset = Mathf.Log((float)MipGenerator.k_MinimumResolutionGaussian) / Mathf.Log(2);
+                            ssrTextureLastValidMipIndex = Mathf.Max(0, ssrTextureLastValidMipIndex - mipOffset);
+                        }
+
+                        const float k_SSRBlurReferenceLastMipIndex = 10.0f;
+                        float ssrTextureMipOffset = ssrTextureLastMipIndex - k_SSRBlurReferenceLastMipIndex;
+
+                        // Multiply by the ratio between a reference screen width and the actual width so we are independent of field of view.
+                        const float k_SSRBlurReferenceScreenHalfWidth = 1.0f;
+                        const float k_BlurrinessBase = 100f;
+                        float screenHalfWidthAtOne = 0.5f * Math.Abs(left.x / left.z - right.x / right.z);
+                        float blurriness = k_BlurrinessBase * Mathf.Pow(2f, ssrData.roughnessScale) * k_SSRBlurReferenceScreenHalfWidth / Math.Max(0.01f, screenHalfWidthAtOne);
+                        cmd.SetGlobalVector(ShaderConstants._ReflectionParam2, new Vector4(blurriness, ssrTextureMipOffset, ssrTextureLastValidMipIndex, 0));
                     });
                 }
 
@@ -468,7 +498,6 @@ namespace UnityEngine.Rendering.Universal
                 data.cameraInverseViewProjections[eyeIndex] = data.cameraViewProjections[eyeIndex].inverse;
             }
 
-            data.material.SetVector(ShaderConstants._ProjectionParams2, new Vector4(1.0f / cameraData.camera.nearClipPlane, 0.0f, 0.0f, 0.0f));
             data.material.SetMatrixArray(ShaderConstants._CameraProjections, data.cameraProjections);
             data.material.SetMatrixArray(ShaderConstants._CameraInverseProjections, data.cameraInverseProjections);
             data.material.SetMatrixArray(ShaderConstants._CameraViews, data.cameraViews);

@@ -2,7 +2,7 @@
 #define UNIVERSAL_SSR_INCLUDED
 
 // Includes
-#include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Core.hlsl"
+#include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/ScreenSpaceReflectionCommon.hlsl"
 #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/ShaderVariablesFunctions.hlsl"
 #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/DeclareDepthTexture.hlsl"
 #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/DeclareNormalsTexture.hlsl"
@@ -467,11 +467,16 @@ float4 CompositeSSRAfterOpaque(Varyings input) : SV_Target
 
     float2 uv = UnityStereoTransformScreenSpaceTex(input.texcoord);
 
+    // Reconstruct world position
+    float2 positionNDC = uv;
+    float deviceDepth = SampleSceneDepth(uv).r;
+    float3 positionWS = ComputeWorldSpacePosition(positionNDC, deviceDepth, _CameraInverseViewProjections[unity_eyeIndex]);
+
     float perceptualSmoothness = SAMPLE_TEXTURE2D_X(_SmoothnessTexture, sampler_SmoothnessTexture, uv).a;
+    float perceptualRoughness = PerceptualSmoothnessToPerceptualRoughness(perceptualSmoothness);
 
     // Map roughness to mip level to get blur.
-    float perceptualRoughness = PerceptualSmoothnessToPerceptualRoughness(perceptualSmoothness);
-    float mipLevel = PerceptualRoughnessToMipmapLevel(perceptualRoughness);
+    float mipLevel = GetSSRMipLevelFromPerceptualRoughness(positionWS, perceptualRoughness);
     float4 reflColor = SAMPLE_TEXTURE2D_X_LOD(_BlitTexture, sampler_TrilinearClamp, uv, mipLevel);
 
     // Fade out reflections with smoothness.

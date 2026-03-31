@@ -33,6 +33,7 @@ namespace UnityEditor.Rendering.Universal
         SerializedDataParameter m_Mode;
         SerializedDataParameter m_AfterOpaque;
         SerializedDataParameter m_RoughReflections;
+        SerializedDataParameter m_RoughnessScale;
         SerializedDataParameter m_MinimumSmoothness;
         SerializedDataParameter m_SmoothnessFadeStart;
         SerializedDataParameter m_NormalFade;
@@ -119,6 +120,7 @@ namespace UnityEditor.Rendering.Universal
             m_HitRefinementSteps = Unpack(o.Find(x => x.hitRefinementSteps));
             m_FinalThicknessMultiplier = Unpack(o.Find(x => x.finalThicknessMultiplier));
             m_RoughReflections = Unpack(o.Find(x => x.roughReflections));
+            m_RoughnessScale = Unpack(o.Find(x => x.roughnessScale));
             m_MinimumSmoothness = Unpack(o.Find(x => x.minimumSmoothness));
             m_SmoothnessFadeStart =  Unpack(o.Find(x => x.smoothnessFadeStart));
             m_NormalFade = Unpack(o.Find(x => x.normalFade));
@@ -194,6 +196,14 @@ namespace UnityEditor.Rendering.Universal
             DrawHeader("Visual Quality");
             PropertyField(m_Mode);
             PropertyField(m_RoughReflections);
+            if (m_RoughReflections.value.enumValueIndex != (int)ScreenSpaceReflectionVolumeSettings.RoughReflectionsQuality.Disabled)
+            {
+                using (new EditorGUI.DisabledScope(!m_RoughReflections.overrideState.boolValue))
+                {
+                    PropertyField(m_RoughnessScale);
+                }
+            }
+
             PropertyField(m_MinimumSmoothness);
             PropertyField(m_SmoothnessFadeStart);
             m_SmoothnessFadeStart.value.floatValue = Mathf.Max(m_MinimumSmoothness.value.floatValue, m_SmoothnessFadeStart.value.floatValue);

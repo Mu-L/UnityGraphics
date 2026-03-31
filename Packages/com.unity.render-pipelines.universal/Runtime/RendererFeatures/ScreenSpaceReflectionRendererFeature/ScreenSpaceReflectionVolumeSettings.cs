@@ -79,6 +79,10 @@ namespace UnityEngine.Rendering.Universal
         [Tooltip("Whether to enable rough reflections by blurring the reflected color. Disabling will improve performance, but all reflections will be mirror-like.")]
         public EnumParameter<RoughReflectionsQuality> roughReflections = new(RoughReflectionsQuality.GaussianBlur);
 
+        /// <summary>Controls how blurry rough reflections appear on a logarithmic scale. A value of 0 is neutral, negative values reduce blurriness, positive values increase it.</summary>
+        [Tooltip("Controls how blurry rough reflections appear on a logarithmic scale. A value of 0 is neutral, negative values reduce blurriness, positive values increase it.")]
+        public ClampedFloatParameter roughnessScale = new(0.0f, -2.0f, 2.0f);
+
         /// <summary>The minimum amount of surface smoothness at which Screen Space Reflections are used.</summary>
         [Tooltip("The minimum amount of surface smoothness at which Screen Space Reflections are used. Higher values will result in less objects receiving Screen Space Reflections.")]
         public ClampedFloatParameter minimumSmoothness = new(0.05f, 0.0f, 1.0f);
