@@ -1,6 +1,9 @@
 #ifndef _PATHTRACING_LIGHTSAMPLING_HLSL_
 #define _PATHTRACING_LIGHTSAMPLING_HLSL_
 
+// Silence FXC's annoying "potentially uninitialized variable" warnings
+#pragma warning (disable : 4000)
+
 #include "PathTracingCommon.hlsl"
 #include "PathTracingMaterials.hlsl"
 #include "PathTracingLightGrid.hlsl"

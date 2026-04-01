@@ -1,6 +1,9 @@
 #ifndef _PATHTRACING_STOCHASTICLIGHTMAPSAMPLING_HLSL_
 #define _PATHTRACING_STOCHASTICLIGHTMAPSAMPLING_HLSL_
 
+// Silence FXC's annoying "potentially uninitialized variable" warnings
+#pragma warning (disable : 4000)
+
 #include "PathTracingCommon.hlsl"
 
 UnifiedRT::Ray MakeUVRay(float2 origin)
