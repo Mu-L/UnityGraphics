@@ -165,6 +165,7 @@ namespace UnityEngine.Rendering.Tests
         }
 
         [UnityTest]
+        [Ignore("Unstable: https://jira.unity3d.com/browse/UUM-138435")]
         public IEnumerator EnableRecording_InlineCpuElapsedTime_IsGreaterThanZero()
         {
             m_Sampler.enableRecording = true;
@@ -181,6 +182,7 @@ namespace UnityEngine.Rendering.Tests
         }
 
         [UnityTest]
+        [Ignore("Unstable: https://jira.unity3d.com/browse/UUM-138435")]
         public IEnumerator ProfilingScope_InlineCpuElapsedTime_IsGreaterThanZero()
         {
             m_Sampler.enableRecording = true;
