@@ -96,7 +96,7 @@ namespace UnityEditor.VFX
             return newExpression;
         }
 
-        protected override int[] additionnalOperands { get { return new int[] { (int)type, (int)condition }; } }
+        internal override int[] additionalOperands { get { return new int[] { (int)type, (int)condition }; } }
         private VFXValueType type;
         private VFXCondition condition;
     }
@@ -140,6 +140,6 @@ namespace UnityEditor.VFX
             return base.Reduce(reducedParents);
         }
 
-        protected override int[] additionnalOperands { get { return new int[] { (int)parents[1].valueType }; } }
+        internal override int[] additionalOperands { get { return new int[] { (int)parents[1].valueType }; } }
     }
 }

@@ -81,56 +81,6 @@ namespace UnityEditor.VFX
             { typeof(GraphicsBuffer), UnityEngine.VFX.VFXValueType.Buffer },
         };
 
-        delegate uint OnAddExpression(VfxGraphLegacyOutputPass pass, IExpression expression, VFXExpressionOperation op, List<uint> parentExpressionIndices);
-
-        struct ExpressionHandler
-        {
-            VFXExpressionOperation operation;
-            OnAddExpression onAddExpression;
-            public ExpressionHandler(VFXExpressionOperation operation, OnAddExpression onAddExpression)
-            {
-                this.operation = operation;
-                this.onAddExpression = onAddExpression;
-            }
-
-            public uint AddExpression(VfxGraphLegacyOutputPass pass, IExpression expression, List<uint> parentExpressionIndices)
-            {
-                return onAddExpression(pass, expression, operation, parentExpressionIndices);
-            }
-        }
-        static uint AddOperationExpression(VfxGraphLegacyOutputPass pass, IExpression expression, VFXExpressionOperation op, List<uint> parentExpressionIndices)
-        {
-            Type resultType = expression.ResultType;
-            var valueType = GetVFXValueTypeFromType(resultType);
-            int[] data = { -1, -1, -1 };
-            for(int i = 0; i < parentExpressionIndices.Count; i++)
-                data[i] = (int)parentExpressionIndices[ i];
-            return pass.AddExpression(op, data[0], data[1], data[2], (int)valueType);
-        }
-
-        static uint AddBuiltinExpression(VfxGraphLegacyOutputPass pass, IExpression expression, VFXExpressionOperation op, List<uint> parentExpressionIndices)
-        {
-            int[] data = { -1, -1, -1, -1 };
-            for(int i = 0; i < parentExpressionIndices.Count; i++)
-                data[i] = (int)parentExpressionIndices[ i];
-            return  pass.AddExpression(op, data[0], data[1], data[2], data[3]);
-        }
-
-        static uint AddValueExpression(VfxGraphLegacyOutputPass pass, IExpression expression, VFXExpressionOperation op, List<uint> parentExpressionIndices)
-        {
-            return pass.AddValueExpression((IValueExpression)expression);
-        }
-
-        ExpressionHandler _valueExpressionHandler = new(VFXExpressionOperation.Value, AddValueExpression);
-
-        static readonly Dictionary<Type, ExpressionHandler> s_PredefinedExpressions = new()
-        {
-            { typeof(DeltaTimeExpression), new ExpressionHandler(VFXExpressionOperation.DeltaTime, AddBuiltinExpression)},
-            { typeof(TotalTimeExpression), new ExpressionHandler(VFXExpressionOperation.TotalTime, AddBuiltinExpression)},
-            { typeof(CosineExpression<float>), new ExpressionHandler(VFXExpressionOperation.Cos, AddOperationExpression)},
-            { typeof(AddExpression<float>), new ExpressionHandler(VFXExpressionOperation.Add, AddOperationExpression)},
-        };
-
         readonly Dictionary<IDataDescription, uint> m_GpuBufferDescIndices = new();
         readonly Dictionary<IDataDescription, uint> m_CpuBufferDescIndices = new();
         readonly Dictionary<DataNodeId, uint> m_ValuesExpressionIndices = new();
@@ -140,7 +90,7 @@ namespace UnityEditor.VFX
         public VfxGraphLegacyCompilationOutput Execute(ref CompilationContext context)
         {
             VfxGraphLegacyCompilationOutput output = new();
-
+            Cleanup();
             m_currentOutput = output;
             m_currentOutput.Version = 7;
 
@@ -163,39 +113,29 @@ namespace UnityEditor.VFX
             return output;
         }
 
-        IValueExpression EvaluateExpressionRecursively(IExpression expression)
-        {
-            List<IValueExpression> parentExpressionValues = new();
-            foreach (var parentExpression in expression.Parents)
-            {
-                var parentExpressionValue = EvaluateExpressionRecursively(parentExpression);
-                parentExpressionValues.Add(parentExpressionValue);
-            }
-            return expression.Evaluate(parentExpressionValues);
-        }
-
-        uint AddExpressionRecursively(IExpression expression)
+        uint AddExpressionRecursively(VFXExpression expression)
         {
             List<uint> parentExpressionIndices = new();
-            foreach (var parentExpression in expression.Parents)
+            foreach (var parentExpression in expression.parents)
             {
                 var parentExpressionValue = AddExpressionRecursively(parentExpression);
                 parentExpressionIndices.Add(parentExpressionValue);
             }
 
-            uint vfxExpressionIndex;
-            if (s_PredefinedExpressions.TryGetValue(expression.GetType(), out var expressionAdder))
+            // See VFXExpressionAbstract GetOperands for reference
+            var data = new VFXExpression.Operands(-1);
+            for(int i = 0; i < parentExpressionIndices.Count; i++)
+                data[i] = (int)parentExpressionIndices[i];
+            for (int i = 0; i < expression.additionalOperands.Length; i++)
+                data[VFXExpression.Operands.OperandCount - expression.additionalOperands.Length + i] = expression.additionalOperands[i];
+
+            uint vfxExpressionIndex = AddExpression(expression.operation, data[0], data[1], data[2], data[3]);
+
+            if (expression.Is(VFXExpression.Flags.Value))
             {
-                vfxExpressionIndex = expressionAdder.AddExpression(this, expression, parentExpressionIndices);
+                m_currentOutput.SheetValues.Add(CreateValueContainerDesc(expression, vfxExpressionIndex));
             }
-            else if (expression is IValueExpression valueExpression)
-            {
-                vfxExpressionIndex = _valueExpressionHandler.AddExpression(this, valueExpression, parentExpressionIndices);
-            }
-            else
-            {
-                throw new NotImplementedException($"Expression of type {expression.GetType()} is not supported");
-            }
+
             return vfxExpressionIndex;
         }
 
@@ -216,11 +156,11 @@ namespace UnityEditor.VFX
         {
             foreach (var dataNode in context.graph.DataNodes)
             {
-                if (dataNode.TaskNode.Task is ExpressionTask expressionTask)
+                if (dataNode.TaskNode.Task is LegacyExpressionTask expressionTask)
                 {
                     foreach (var childDataNode in dataNode.Children)
                     {
-                        if (childDataNode.TaskNode.Task is GpuKernelTask or PlaceholderSystemTask or RenderingTask)
+                        if (childDataNode.TaskNode.Task is GpuKernelTask or PlaceholderSystemTask or RenderingTask or SpawnerTask)
                         {
                             uint vfxExpressionIndex = AddExpressionRecursively(expressionTask.Expression);
                             m_ValuesExpressionIndices.Add(childDataNode.Id, vfxExpressionIndex);
@@ -316,7 +256,7 @@ namespace UnityEditor.VFX
                             target = GraphicsBuffer.Target.Structured,
                             size = particleData.Capacity + 2,
                             stride = 4u,
-                            mode = ComputeBufferMode.Dynamic,
+                            mode = ComputeBufferMode.Immutable,
                         });
 
                         m_GpuBufferDescIndices[deadListData] = bufferIndex;
@@ -345,13 +285,7 @@ namespace UnityEditor.VFX
 
         void GenerateSystemDescs(ref CompilationContext context)
         {
-            foreach (var taskNode in context.graph.TaskNodes)
-            {
-                if (taskNode.Task is SpawnerTask spawnerTask && GenerateSpawnerSystemDesc(ref context, taskNode, spawnerTask, out var systemDesc))
-                {
-                    m_currentOutput.SystemDescs.Add(systemDesc);
-                }
-            }
+            GenerateSpawnerSystemDescs(ref context);
 
             var particleSystemContainer = context.data.Get<VfxGraphLegacyParticleSystemContainer>();
             foreach (var particleSystem in particleSystemContainer)
@@ -363,21 +297,50 @@ namespace UnityEditor.VFX
             }
         }
 
-        bool GenerateSpawnerSystemDesc(ref CompilationContext context, TaskNode taskNode, SpawnerTask task, out UnityEditor.VFX.VFXEditorSystemDesc systemDesc)
+        void GenerateSpawnerSystemDescs(ref CompilationContext context)
         {
-            systemDesc = new();
+            Dictionary<SpawnData, VFXEditorSystemDesc> spawnDataMap = new();
 
-            SpawnData spawnData = null;
-            foreach (var dataNode in taskNode.DataNodes)
+            // Collect systems from spawn data first
+            foreach (var dataView in context.graph.DataViews)
             {
-                foreach (var dataView in dataNode.UsedDataViews)
+                if (dataView.Root.DataDescription is SpawnData spawnData)
                 {
-                    if (dataView.DataDescription is SpawnData spawnDataDescription)
+                    if (!spawnDataMap.ContainsKey(spawnData))
                     {
-                        spawnData = spawnDataDescription;
+                        GenerateSpawnerSystemDesc(ref context, spawnData, out var systemDesc);
+                        spawnDataMap[spawnData] = systemDesc;
                     }
                 }
             }
+            // Then fill tasks for each spawner system
+            foreach (var taskNode in context.graph.TaskNodes)
+            {
+                if (taskNode.Task is SpawnerTask spawnerTask)
+                {
+                    foreach (var dataNode in taskNode.DataNodes)
+                    {
+                        if(dataNode.UsedDataViewsRoot.DataDescription is SpawnData spawnDataDescription)
+                        {
+                            var systemDesc = spawnDataMap[spawnDataDescription];
+                            List<VFXEditorTaskDesc> taskDescs = new List<VFXEditorTaskDesc>(systemDesc.tasks);
+                            GenerateSpawnerTask(ref context, spawnerTask, taskNode, out var task);
+                            taskDescs.Add(task);
+                            systemDesc.tasks = taskDescs.ToArray();
+                            spawnDataMap[spawnDataDescription] = systemDesc;
+                        }
+                    }
+                }
+            }
+            foreach (var spawnerSystemDesc in spawnDataMap.Values)
+            {
+                m_currentOutput.SystemDescs.Add(spawnerSystemDesc);
+            }
+        }
+
+        bool GenerateSpawnerSystemDesc(ref CompilationContext context, SpawnData spawnData, out UnityEditor.VFX.VFXEditorSystemDesc systemDesc)
+        {
+            systemDesc = new();
 
             var cpuData = new UnityEditor.VFX.VFXCPUBufferData();
             cpuData.PushFloat(1.0f);
@@ -398,51 +361,33 @@ namespace UnityEditor.VFX
             });
             m_CpuBufferDescIndices[spawnData] = spawnerOutputIndex;
 
-            systemDesc.name = task.TemplateName;
-            systemDesc.type = UnityEngine.VFX.VFXSystemType.Spawner;
-
-            List<UnityEditor.VFX.VFXEditorTaskDesc> tasks = new();
-            foreach (var block in task.Blocks)
-            {
-                if (GenerateSpawnerTask(ref context, block, out var taskDesc))
-                {
-                    tasks.Add(taskDesc);
-                }
-            }
-
-            systemDesc.tasks = tasks.ToArray();
+            systemDesc.name = "Spawn System";
             systemDesc.type = UnityEngine.VFX.VFXSystemType.Spawner;
             systemDesc.buffers = new[] { new UnityEditor.VFX.VFXMapping("spawner_output", (int)spawnerOutputIndex) };
+            systemDesc.tasks = Array.Empty<VFXEditorTaskDesc>();
             return true;
         }
 
-        bool GenerateSpawnerTask(ref CompilationContext context, SubtaskDescription block, out UnityEditor.VFX.VFXEditorTaskDesc taskDesc)
+        bool GenerateSpawnerTask(ref CompilationContext context, SpawnerTask spawnerTask, TaskNode spawnerTaskNode, out UnityEditor.VFX.VFXEditorTaskDesc taskDesc)
         {
             taskDesc = new();
 
-            if (block.Name == "ConstantRate") // TODO: remove this hack
+            taskDesc.shaderSourceIndex = -1;
+            taskDesc.type = (UnityEngine.VFX.VFXTaskType)spawnerTask.SpawnerType;
+
+            List<VFXMapping> valueMappings = new();
+            var taskNode = spawnerTaskNode;
+            foreach (var dataBinding in taskNode.DataBindings)
             {
-                var rateExpression = block.Expressions[0].Item2.Evaluate(new ReadOnlyList<IValueExpression>());
-                var enabledExpression = block.Expressions[1].Item2.Evaluate(new ReadOnlyList<IValueExpression>());
-                if (rateExpression != null && enabledExpression != null)
+                if (m_ValuesExpressionIndices.TryGetValue(dataBinding.DataNode.Id, out var expressionIndex))
                 {
-                    var vfxEnableIndex = AddValueExpression(enabledExpression);
-                    var rateExpressionIndex = AddValueExpression(rateExpression);
-                    taskDesc = new()
-                    {
-                        type = UnityEngine.VFX.VFXTaskType.ConstantRateSpawner,
-                        values = new UnityEditor.VFX.VFXMapping[]
-                        {
-                            new() { name = "_vfx_enabled", index = (int)vfxEnableIndex },
-                            new() { name = "Rate", index = (int)rateExpressionIndex }
-                        },
-                        shaderSourceIndex = -1,
-                    };
-                    return true;
+                    string name = dataBinding.BindingDataKey.ToString();
+                    valueMappings.Add(new VFXMapping(name, (int)expressionIndex));
                 }
             }
 
-            return false;
+            taskDesc.values = valueMappings.ToArray();
+            return true;
         }
 
         bool GenerateParticleSystemDesc(ref CompilationContext context, VfxGraphLegacyParticleSystemContainer.ParticleSystem particleSystem, out UnityEditor.VFX.VFXEditorSystemDesc systemDesc)
@@ -498,23 +443,13 @@ namespace UnityEditor.VFX
                 if (m_ValuesExpressionIndices.TryGetValue(dataBinding.DataNode.Id, out var index))
                 {
                     var name = dataBinding.BindingDataKey.ToString();
-                    // Dirty approach for renaming some specific values to match the expected names in the VFX system
-                    switch (name)
+                    // "System values"
+                    if(name is "bounds_center" or "bounds_size" or "boundsPadding")
                     {
-                        case "BoundsCenter":
-                            name = "bounds_center";
-                            valueMappings.Add(new VFXMapping(name, (int)index));
-                            continue;
-                        case "BoundsSize":
-                            name = "bounds_size";
-                            valueMappings.Add(new VFXMapping(name, (int)index));
-                            continue;
-                        case "BoundsPadding":
-                            name = "boundsPadding";
-                            valueMappings.Add(new VFXMapping(name, (int)index));
-                            continue;
+                        valueMappings.Add(new VFXMapping(name, (int)index));
+                        continue;
                     }
-
+                    // Graph values
                     graphValueMappings.Add(dataBinding.DataView.DataDescription as ValueData, new VFXMapping(name, (int)index));
                     graphValueBufferLayout.AddValueData(dataBinding.DataView.DataDescription as ValueData);
                 }
@@ -601,36 +536,36 @@ namespace UnityEditor.VFX
                     {
                         if(dataView.DataDescription is AttributeData)
                         {
-                            bufferMappings.Add(new VFXMapping($"_{dataView.DataContainer.Name}_attributeBuffer", (int)gpuIndex));
+                            bufferMappings.Add(new VFXMapping($"_{dataView.DataContainer.IdentifierName}_attributeBuffer", (int)gpuIndex));
                         }
                         else if (dataView.DataDescription is DeadListData)
                         {
-                            bufferMappings.Add(new VFXMapping($"_{dataView.DataContainer.Name}_deadListBuffer", (int)gpuIndex));
+                            bufferMappings.Add(new VFXMapping($"_{dataView.DataContainer.IdentifierName}_deadListBuffer", (int)gpuIndex));
                         }
                         else if(dataView.Root.DataDescription is StructuredData)
                         {
-                            bufferMappings.Add(new VFXMapping($"_{dataView.DataContainer.Name}_buffer", (int)gpuIndex));
+                            bufferMappings.Add(new VFXMapping($"_{dataView.DataContainer.IdentifierName}_buffer", (int)gpuIndex));
                         }
                         else if (dataView.DataDescription is SpawnData)
                         {
-                            bufferMappings.Add(new VFXMapping($"_{dataView.DataContainer.Name}_instancingPrefixSum", (int)gpuIndex));
+                            bufferMappings.Add(new VFXMapping($"_{dataView.DataContainer.IdentifierName}_instancingPrefixSum", (int)gpuIndex));
                         }
                     }
-
-                    if (m_ValuesExpressionIndices.TryGetValue(dataBinding.DataNode.Id, out var expressionIndex))
-                    {
-                        string name = dataBinding.BindingDataKey.ToString();
-                        valueMappings.Add(new VFXMapping( name, (int)expressionIndex));
-                    }
+                }
+                if (m_ValuesExpressionIndices.TryGetValue(dataBinding.DataNode.Id, out var expressionIndex))
+                {
+                    // For textures/buffers for now we need to use the name of the data container to match with what is generated in the description writer, we should find a better way to link them together
+                    string name = dataBinding.DataNode.DataContainer.Name;
+                    valueMappings.Add(new VFXMapping(name, (int)expressionIndex));
                 }
             }
             if (taskNode.Task is GpuKernelTask gpuKernelTask)
             {
-                taskDesc.processor = gpuKernelTask.Shader;
+                //taskDesc.processor = gpuKernelTask.Shader;
             }
             else if (taskNode.Task is RenderingTask renderingTask)
             {
-                taskDesc.processor = renderingTask.Material;
+                //taskDesc.processor = renderingTask.Material;
             }
 
             taskDesc.values = valueMappings.ToArray();
@@ -639,33 +574,51 @@ namespace UnityEditor.VFX
             return true;
         }
 
-        VFXExpressionValueContainerDesc CreateValueContainerDesc(IValueExpression exp, uint expressionIndex)
+        VFXExpressionValueContainerDesc CreateValueContainerDesc(VFXExpression exp, uint expressionIndex)
         {
-            Type resultType = exp.ResultType;
+            VFXExpressionValueContainerDesc value;
+            switch (exp.valueType)
+            {
+                case VFXValueType.Float: value = CreateValueDesc<float>(exp, (int)expressionIndex); break;
+                case VFXValueType.Float2: value = CreateValueDesc<Vector2>(exp, (int)expressionIndex); break;
+                case VFXValueType.Float3: value = CreateValueDesc<Vector3>(exp, (int)expressionIndex); break;
+                case VFXValueType.Float4: value = CreateValueDesc<Vector4>(exp, (int)expressionIndex); break;
+                case VFXValueType.Int32: value = CreateValueDesc<int>(exp, (int)expressionIndex); break;
+                case VFXValueType.Uint32: value = CreateValueDesc<uint>(exp, (int)expressionIndex); break;
+                case VFXValueType.Texture2D:
+                case VFXValueType.Texture2DArray:
+                case VFXValueType.Texture3D:
+                case VFXValueType.TextureCube:
+                case VFXValueType.TextureCubeArray:
+                    value = CreateObjectValueDesc<Texture>(exp, (int)expressionIndex);
+                    break;
+                case VFXValueType.CameraBuffer: value = CreateObjectValueDesc<Texture>(exp, (int)expressionIndex); break;
+                case VFXValueType.Matrix4x4: value = CreateValueDesc<Matrix4x4>(exp, (int)expressionIndex); break;
+                case VFXValueType.Curve: value = CreateValueDesc<AnimationCurve>(exp, (int)expressionIndex); break;
+                case VFXValueType.ColorGradient: value = CreateValueDesc<Gradient>(exp, (int)expressionIndex); break;
+                case VFXValueType.Mesh: value = CreateObjectValueDesc<Mesh>(exp, (int)expressionIndex); break;
+                case VFXValueType.SkinnedMeshRenderer: value = CreateObjectValueDesc<SkinnedMeshRenderer>(exp, (int)expressionIndex); break;
+                case VFXValueType.Boolean: value = CreateValueDesc<bool>(exp, (int)expressionIndex); break;
+                case VFXValueType.Buffer: value = CreateValueDesc<GraphicsBuffer>(exp, (int)expressionIndex); break;
+                default: throw new InvalidOperationException("Invalid type : " + exp.valueType);
+            }
 
-            if(resultType == typeof(bool) && exp.TryGetValue<bool>(out var boolVal))
-                return new VFXExpressionValueContainerDesc<bool>() { expressionIndex = expressionIndex, value = boolVal };
-            if (resultType == typeof(float) && exp.TryGetValue<float>(out var floatVal))
-                return new VFXExpressionValueContainerDesc<float>() { expressionIndex = expressionIndex, value = floatVal };
-            if (resultType == typeof(Vector2) && exp.TryGetValue<Vector2>(out var vector2Val))
-                return new VFXExpressionValueContainerDesc<Vector2>() { expressionIndex = expressionIndex, value = vector2Val };
-            if (resultType == typeof(Vector3) && exp.TryGetValue<Vector3>(out var vector3Val))
-                return new VFXExpressionValueContainerDesc<Vector3>() { expressionIndex = expressionIndex, value = vector3Val };
-            if (resultType == typeof(Vector4) && exp.TryGetValue<Vector4>(out var vector4Val))
-                return new VFXExpressionValueContainerDesc<Vector4>() { expressionIndex = expressionIndex, value = vector4Val };
-            if (resultType == typeof(int) && exp.TryGetValue<int>(out var intVal))
-                return new VFXExpressionValueContainerDesc<int>() { expressionIndex = expressionIndex, value = intVal };
-            if (resultType == typeof(uint) && exp.TryGetValue<uint>(out var uintVal))
-                return new VFXExpressionValueContainerDesc<uint>() { expressionIndex = expressionIndex, value = uintVal };
-            if (resultType == typeof(Color) && exp.TryGetValue<Color>(out var colorVal))
-                return new VFXExpressionValueContainerDesc<Vector4>() { expressionIndex = expressionIndex, value = (Vector4)colorVal };
-            if (resultType == typeof(Texture) && exp.TryGetValue<Texture>(out var textureVal))
-                return new VFXExpressionObjectValueContainerDesc<Texture>() { expressionIndex = expressionIndex, entityId = textureVal ? textureVal.GetEntityId() : EntityId.None};
-            if (resultType == typeof(Texture2D) && (exp.TryGetValue<Texture>(out var texture2DVal) || true))
-                return new VFXExpressionObjectValueContainerDesc<Texture>() { expressionIndex = expressionIndex, entityId = texture2DVal ? texture2DVal.GetEntityId() : EntityId.None };
+            return value;
+        }
 
-
-            throw new NotSupportedException($"Unsupported result type {resultType}");
+        private static VFXExpressionValueContainerDesc<T> CreateValueDesc<T>(VFXExpression exp, int expressionIndex)
+        {
+            var desc = new VFXExpressionValueContainerDesc<T>();
+            desc.value = exp.Get<T>();
+            desc.expressionIndex = (uint)expressionIndex;
+            return desc;
+        }
+        private static VFXExpressionObjectValueContainerDesc<T> CreateObjectValueDesc<T>(VFXExpression exp, int expressionIndex)
+        {
+            var desc = new VFXExpressionObjectValueContainerDesc<T>();
+            desc.entityId = exp.Get<EntityId>();
+            desc.expressionIndex = (uint)expressionIndex;
+            return desc;
         }
 
         uint AddExpression(VFXExpressionOperation op, int data0, int data1, int data2, int data3)
@@ -674,22 +627,6 @@ namespace UnityEditor.VFX
             vfxExpression.data = new[] { data0, data1, data2, data3 };
             var vfxExpressionIndex = (uint)m_currentOutput.SheetExpressions.Count;
             m_currentOutput.SheetExpressions.Add(vfxExpression);
-
-            return vfxExpressionIndex;
-        }
-
-        uint AddValueExpression(IValueExpression exp)
-        {
-            Debug.Assert(exp != null);
-            Type resultType = exp.ResultType;
-            if (!s_ValueTypeConversion.ContainsKey(resultType))
-                throw new NotSupportedException($"Unsupported result type {resultType}");
-
-            var valueType = GetVFXValueTypeFromType(resultType);
-
-            uint vfxExpressionIndex = AddExpression(VFXExpressionOperation.Value, -1, -1, -1, (int)valueType);
-
-            m_currentOutput.SheetValues.Add(CreateValueContainerDesc(exp, vfxExpressionIndex));
             return vfxExpressionIndex;
         }
 

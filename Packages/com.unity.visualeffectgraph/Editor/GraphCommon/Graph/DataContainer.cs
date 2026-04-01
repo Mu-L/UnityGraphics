@@ -83,6 +83,11 @@ namespace Unity.GraphCommon.LowLevel.Editor
         public string Name => m_Graph.Valid ? m_Info.Name : null;
 
         /// <summary>
+        /// Gets the name of this container. Returns null if the graph is not valid.
+        /// </summary>
+        public string IdentifierName => Name.Replace(' ', '_');
+
+        /// <summary>
         /// Gets the root DataView of this container.
         /// </summary>
         public DataView RootDataView => m_Graph.Ref.DataViews[m_Info.RootDataViewId];

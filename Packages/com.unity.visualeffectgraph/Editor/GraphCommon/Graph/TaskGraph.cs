@@ -258,8 +258,9 @@ namespace Unity.GraphCommon.LowLevel.Editor
             }
             else if (usageFromTask != BindingUsage.Unknown && usage != usageFromTask)
             {
-                Debug.LogWarning($"Provided binding usage {usage} doesn't match binding usage {usageFromTask} from task node");
-                return;
+                //TODO: Let's skip usage validation for now
+                //Debug.LogWarning($"Provided binding usage {usage} doesn't match binding usage {usageFromTask} from task node");
+                //return;
             }
             if (usage == BindingUsage.Unknown)
             {
@@ -424,6 +425,15 @@ namespace Unity.GraphCommon.LowLevel.Editor
             SubEnumerable<DataBindingId> subEnumerable = new(container, taskNodeId.Index, container[taskNodeId.Index].Count);
             return new(DataBindings, subEnumerable);
         }
+
+        /// <inheritdoc cref="IReadOnlyGraph"/>
+        public DataBindingEnumerable<SubEnumerable<DataBindingId>> GetDataBindings(DataNodeId dataNodeId)
+        {
+            var container = DataNodeToDataBindings.Data;
+            SubEnumerable<DataBindingId> subEnumerable = new(container, dataNodeId.Index, container[dataNodeId.Index].Count);
+            return new(DataBindings, subEnumerable);
+        }
+
 
         /// <inheritdoc cref="IReadOnlyGraph.GetUsedDataViews"/>
         public DataView GetUsedDataViews(DataNodeId dataNodeId)

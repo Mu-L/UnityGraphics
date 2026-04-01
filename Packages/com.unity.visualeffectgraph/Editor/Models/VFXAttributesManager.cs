@@ -257,9 +257,15 @@ namespace UnityEditor.VFX
             }
         }
 
+        static Dictionary<VFXAttribute, Unity.GraphCommon.LowLevel.Editor.Attribute> s_NewCompilerAttributes = new();
         public static Unity.GraphCommon.LowLevel.Editor.Attribute ConvertToNewCompiler(VFXAttribute vfxAttribute)
         {
-            return new Unity.GraphCommon.LowLevel.Editor.Attribute(vfxAttribute.name, vfxAttribute.value.GetContent());
+            if (!s_NewCompilerAttributes.TryGetValue(vfxAttribute, out var attribute))
+            {
+                attribute = new Unity.GraphCommon.LowLevel.Editor.Attribute(vfxAttribute.name, vfxAttribute.value.GetContent());
+                s_NewCompilerAttributes.Add(vfxAttribute, attribute);
+            }
+            return attribute;
         }
 
         /****************************************************************/

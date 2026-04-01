@@ -11,7 +11,7 @@ namespace UnityEditor.VFX
         protected VFXExpressionNumericOperation(VFXExpression[] parents)
             : base(Flags.None, parents)
         {
-            m_additionnalOperands = new int[] { };
+            m_additionalOperands = new int[] { };
         }
 
         static private object[] ToObjectArray(float input) { return new object[] { input }; }
@@ -75,17 +75,17 @@ namespace UnityEditor.VFX
         }
 
         sealed public override VFXExpressionOperation operation { get { return m_Operation; } }
-        sealed protected override int[] additionnalOperands { get { return m_additionnalOperands; } }
+        sealed internal override int[] additionalOperands { get { return m_additionalOperands; } }
 
         protected override VFXExpression Reduce(VFXExpression[] reducedParents)
         {
             var newExpression = (VFXExpressionNumericOperation)base.Reduce(reducedParents);
-            newExpression.m_additionnalOperands = m_additionnalOperands.Select(o => o).ToArray();
+            newExpression.m_additionalOperands = m_additionalOperands.Select(o => o).ToArray();
             newExpression.m_Operation = m_Operation;
             return newExpression;
         }
 
-        protected int[] m_additionnalOperands;
+        protected int[] m_additionalOperands;
         protected VFXExpressionOperation m_Operation;
     }
 
@@ -97,7 +97,7 @@ namespace UnityEditor.VFX
             {
                 throw new ArgumentException("Incorrect VFXExpressionUnaryMathOperation");
             }
-            m_additionnalOperands = new int[] { (int)parent.valueType };
+            m_additionalOperands = new int[] { (int)parent.valueType };
             m_Operation = operation;
         }
 
@@ -160,7 +160,7 @@ namespace UnityEditor.VFX
                 throw new ArgumentException("Incorrect VFXExpressionBinaryFloatOperation (incompatible numeric type)");
             }
 
-            m_additionnalOperands = new int[] { (int)parentLeft.valueType };
+            m_additionalOperands = new int[] { (int)parentLeft.valueType };
             m_Operation = operation;
         }
 

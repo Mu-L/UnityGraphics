@@ -236,7 +236,7 @@ namespace UnityEditor.VFX
         }
 
         static private readonly VFXValueType s_ValueType = ToValueType();
-        protected override int[] additionnalOperands
+        internal override int[] additionalOperands
         {
             get
             {
@@ -252,7 +252,7 @@ namespace UnityEditor.VFX
             m_ContentType = contentType;
         }
 
-        sealed protected override int[] additionnalOperands
+        sealed internal override int[] additionalOperands
         {
             get
             {

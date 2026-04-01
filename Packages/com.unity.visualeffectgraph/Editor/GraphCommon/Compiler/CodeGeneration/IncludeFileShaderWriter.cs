@@ -6,7 +6,6 @@ namespace Unity.GraphCommon.LowLevel.Editor
     class IncludeFileShaderWriter : ShaderWriter
     {
         private string m_GuardName;
-        private StringBuilder m_Builder = new();
 
         public override void Begin(string name)
         {
@@ -31,30 +30,43 @@ namespace Unity.GraphCommon.LowLevel.Editor
 
         string BuildGuardName(string name)
         {
-            int index = 0;
-            bool wasLowercase = false;
-
             Debug.Assert(ShaderBuilder.Length == 0);
-            m_Builder.Append("VFX");
-            for (int i = 0; i <= name.Length; ++i)
+
+            StringBuilder builder = new();
+            void AddWord(ref int from, int to)
             {
-                bool split = i == name.Length;
-                if (!split)
+                int length = to - from;
+                if (length > 0)
                 {
-                    bool isLowercase = char.IsLower(name[i]);
-                    split = wasLowercase && !isLowercase;
-                    wasLowercase = isLowercase;
-                }
-                if (split)
-                {
-                    m_Builder.Append('_');
-                    m_Builder.Append(name.Substring(index, i - index).ToUpperInvariant());
-                    index = i;
+                    builder.Append('_');
+                    builder.Append(name.Substring(from, to - from).ToUpperInvariant());
+                    from = to;
                 }
             }
-            string guardName = m_Builder.ToString();
-            m_Builder.Clear();
-            return guardName;
+
+            builder.Append("VFX");
+
+            int index = 0;
+            bool wasLowercase = false;
+            for (int i = 0; i < name.Length; ++i)
+            {
+                if (char.IsWhiteSpace(name[i]))
+                {
+                    AddWord(ref index, i);
+                    index++;
+                }
+
+                bool isLowercase = char.IsLower(name[i]);
+                if (wasLowercase && !isLowercase)
+                {
+                    AddWord(ref index, i);
+                }
+                wasLowercase = isLowercase;
+
+            }
+            AddWord(ref index, name.Length);
+
+            return builder.ToString();
         }
     }
 }

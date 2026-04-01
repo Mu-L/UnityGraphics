@@ -1,0 +1,32 @@
+
+//VFX_DECLARE_BINDING(ParticleData, ParticleDataBinding);
+
+//VFX_MAP_ATTRIBUTES(Attributes, ParticleDataBinding.particleAttributeBuffer);
+
+void main(ThreadData threadData)
+{
+    uint particleIndex = threadData.index;
+    uint maxParticleCount = asuint(ContextData.x);
+
+    if(particleIndex >= maxParticleCount)
+    {
+        return;
+    }
+
+    Attributes particleAttributes;
+    ParticleDataBinding.particleAttributeBuffer.LoadData(particleAttributes, particleIndex);
+
+    if (particleAttributes.alive)
+    {
+        VFXProcessBlocks(particleAttributes);
+
+        if (particleAttributes.alive)
+        {
+            ParticleDataBinding.particleAttributeBuffer.StoreData(particleAttributes, particleIndex);
+        }
+        else
+        {
+            ParticleDataBinding.DeleteParticle(particleIndex);
+        }
+    }
+}

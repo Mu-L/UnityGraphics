@@ -104,6 +104,8 @@ namespace Unity.GraphCommon.LowLevel.Editor
         /// </summary>
         public DataView UsedDataViewsRoot => m_Graph.Ref.GetUsedDataViews(Id);
 
+        public DataBindingEnumerable<SubEnumerable<DataBindingId>> DataBindings => m_Graph.Ref.GetDataBindings(Id);
+
         /// <summary>
         /// Gets the data views used by this data node, as an enumerable.
         /// </summary>
@@ -128,7 +130,7 @@ namespace Unity.GraphCommon.LowLevel.Editor
         /// Gets the data views written by this data node, as an enumerable.
         /// </summary>
         public DataViewFlatTreeEnumerable WrittenDataViews => WrittenDataViewsRoot.Flat;
-        
+
         internal DataNode(IIndexable<GraphNode<DataNodeId>, DataNode> nodeConverter, GraphNode<DataNodeId> node, IReadOnlyGraph graph, DataNodeInfo info)
         {
             m_NodeConverter = nodeConverter;

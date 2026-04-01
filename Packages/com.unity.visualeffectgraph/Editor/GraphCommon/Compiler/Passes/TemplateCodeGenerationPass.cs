@@ -35,7 +35,7 @@ namespace Unity.GraphCommon.LowLevel.Editor
 
             foreach (var dataContainer in context.graph.DataContainers)
             {
-                if (!IsResource(dataContainer.RootDataView.DataDescription))
+                if (IsCompositeData(dataContainer.RootDataView.DataDescription))
                 {
                     string sourceCode = GenerateContainerSourceCode(dataContainer, context);
                     generatedCodeContainer.Add(dataContainer.Id, sourceCode);
@@ -74,22 +74,28 @@ namespace Unity.GraphCommon.LowLevel.Editor
 
         string GenerateContainerSourceCode(DataContainer dataContainer, CompilationContext context)
         {
-            var containerName = dataContainer.Name;
+            var containerName = dataContainer.IdentifierName;
+            var rootDataView = dataContainer.RootDataView;
             m_IncludeFileShaderWriter.Begin(containerName);
-            if (m_DataWriter.TryGetDataDescriptionWriter(dataContainer.RootDataView.DataDescription, out var dataDescriptionWriter))
+            if (m_DataWriter.TryGetDataDescriptionWriter(rootDataView.DataDescription, out var dataDescriptionWriter))
             {
-                foreach (var resource in dataDescriptionWriter.GetUsedResources(dataContainer.Name, dataContainer.RootDataView))
+                foreach (var resource in dataDescriptionWriter.GetUsedResources(containerName, rootDataView))
                 {
                     if (resource.Item2 != null)
                     {
-                        m_IncludeFileShaderWriter.WriteLine($"{resource.Item1} {resource.Item2};");
+                        WriteVariableDeclaration(m_IncludeFileShaderWriter, resource.Item1, resource.Item2);
                         m_IncludeFileShaderWriter.NewLine();
                     }
                 }
 
-                dataDescriptionWriter.WriteDescription(m_IncludeFileShaderWriter, dataContainer.RootDataView, containerName, context);
+                dataDescriptionWriter.WriteDescription(m_IncludeFileShaderWriter, rootDataView, containerName, context);
             }
             return m_IncludeFileShaderWriter.End();
+        }
+
+        void WriteVariableDeclaration(ShaderWriter shaderWriter, string type, string name, bool isStatic = false) // TODO: maybe add an enum of modifiers and move to shader writer
+        {
+            shaderWriter.WriteLine($"{(isStatic ? "static " : "")}{type} {name};");
         }
 
         string GenerateTemplatedTaskSourceCode_Compute(TaskNode taskNode, CompilationContext context)
@@ -100,7 +106,7 @@ namespace Unity.GraphCommon.LowLevel.Editor
 
             m_ComputeShaderWriter.Begin(shaderName);
 
-            m_ComputeShaderWriter.WriteLine("#include \"Shaders/Data/ThreadData.hlsl\"");
+            m_ComputeShaderWriter.WriteLine("#include \"Packages/com.unity.visualeffectgraph/Shaders/Temp/Data/ThreadData.hlsl\"");
 
             IncludeData(m_ComputeShaderWriter, taskNode, context);
 
@@ -158,11 +164,16 @@ namespace Unity.GraphCommon.LowLevel.Editor
 
             foreach (var dataNode in taskNode.DataNodes)
             {
-                var dataDescription = dataNode.DataContainer.RootDataView.DataDescription;
-                if (!IsResource(dataDescription))
+                var rootDataView = dataNode.DataContainer.RootDataView;
+                var dataDescription = rootDataView.DataDescription;
+                if (!IsCompositeData(dataDescription))
                 {
-                    m_DataWriter.TryGetDataDescriptionWriter(dataDescription, out var dataDescriptionWriter);
-
+                    shaderWriter.NewLine();
+                    var dataTypename = m_DataWriter.FindDataTypeName(rootDataView);
+                    WriteVariableDeclaration(shaderWriter, dataTypename, dataNode.DataContainer.Name);
+                }
+                else if (m_DataWriter.TryGetDataDescriptionWriter(dataDescription, out var dataDescriptionWriter))
+                {
                     shaderWriter.NewLine();
                     //shaderWriter.IncludeFile($"{dataNode.DataContainer.Name}.hlsl");
                     shaderWriter.WriteLine($"// Begin {dataNode.DataContainer.Name}");
@@ -170,6 +181,10 @@ namespace Unity.GraphCommon.LowLevel.Editor
                     shaderWriter.WriteLine(generatedCodeContainer.Find(dataNode.DataContainer.Id), ShaderWriter.WriteLineOptions.Multiline);
                     dataDescriptionWriter.UndefineResourceUsage(shaderWriter, dataNode.UsedDataViewsRoot, dataNode.ReadDataViewsRoot, dataNode.WrittenDataViewsRoot);
                     shaderWriter.WriteLine($"// End   {dataNode.DataContainer.Name}");
+                }
+                else
+                {
+                    Debug.Assert(false, "Data node not handled");
                 }
             }
         }
@@ -254,23 +269,37 @@ namespace Unity.GraphCommon.LowLevel.Editor
                 shaderWriter.NewLine();
 
                 bool hasView = false;
-                string sourceName = m_DataWriter.FindDataTypeName(dataView);
+                string typeName = m_DataWriter.FindDataTypeName(dataView);
                 string bindingName = dataBinding.BindingDataKey.ToString();
-                if (m_DataWriter.TryGetDataDescriptionWriter(dataDescription, out var dataDescriptionWriter))
+                if (IsCompositeData(dataDescription))
                 {
-                    hasView = dataDescriptionWriter.WriteView(shaderWriter, usedDataView, readDataView, writtenDataView, bindingName, sourceName, context);
+                    if (m_DataWriter.TryGetDataDescriptionWriter(dataDescription, out var dataDescriptionWriter))
+                    {
+                        hasView = dataDescriptionWriter.WriteView(shaderWriter, usedDataView, readDataView, writtenDataView, bindingName, typeName, context);
+                    }
                 }
+
                 if (hasView)
                 {
                     m_DataBindingsWithView.Add(dataBinding.Id);
                 }
-                else
+                else if (BindingNeedsRemapping(dataBinding))
                 {
-                    shaderWriter.WriteLine($"{sourceName} {bindingName};");
+                    bool isStatic = !IsCompositeData(dataDescription);
+                    WriteVariableDeclaration(shaderWriter, typeName, bindingName, isStatic);
                 }
+
             }
             var attributeSourceManager = context.data.GetOrCreate<AttributeSourceManager>();
             attributeSourceManager.Clear();
+        }
+
+        bool BindingNeedsRemapping(DataBinding dataBinding)
+        {
+            var dataView = dataBinding.DataView;
+            var containerName = dataView.DataContainer.Name;
+            var bindingName = dataBinding.BindingDataKey.ToString();
+            return !dataView.IsRoot || containerName != bindingName;
         }
 
         void WriteProcessBlocksDeclaration(ShaderWriter shaderWriter, TemplatedTask templatedTask)
@@ -293,6 +322,9 @@ namespace Unity.GraphCommon.LowLevel.Editor
         void ForwardDeclarations(ShaderWriter shaderWriter, TemplatedTask templatedTask)
         {
             shaderWriter.NewLine();
+            shaderWriter.Define("VFX_LOCAL_SPACE", "1");
+            shaderWriter.IncludeFile("Packages/com.unity.render-pipelines.universal/Runtime/VFXGraph/Shaders/VFXCommon.hlsl");
+            shaderWriter.IncludeFile("Packages/com.unity.visualeffectgraph/Shaders/VFXCommon.hlsl");
             WriteProcessBlocksDeclaration(shaderWriter, templatedTask);
             shaderWriter.Write(";");
             shaderWriter.NewLine();
@@ -301,7 +333,7 @@ namespace Unity.GraphCommon.LowLevel.Editor
         void IncludeTemplateFile(ShaderWriter shaderWriter, string templateName)
         {
             shaderWriter.NewLine();
-            shaderWriter.IncludeFile($"Shaders/Templates/{templateName}.hlsl"); // TODO: Template should have full path
+            shaderWriter.IncludeFile($"Packages/com.unity.visualeffectgraph/Shaders/Temp/Templates/{templateName}.hlsl"); // TODO: Template should have full path
         }
 
         void GenerateEntryPoint_Compute(ComputeShaderWriter computeShaderWriter, TaskNode taskNode,
@@ -311,7 +343,7 @@ namespace Unity.GraphCommon.LowLevel.Editor
             uint threadCount = 64u;
             computeShaderWriter.WriteMainFunction(threadCount, 1, 1);
             computeShaderWriter.OpenBlock();
-            InitMainData(computeShaderWriter, taskNode, context);
+            InitMainData(computeShaderWriter, taskNode);
             computeShaderWriter.NewLine();
             computeShaderWriter.WriteLine("// Template entry point");
             computeShaderWriter.WriteLine("ThreadData threadData;");
@@ -325,7 +357,7 @@ namespace Unity.GraphCommon.LowLevel.Editor
             renderingShaderWriter.NewLine();
             renderingShaderWriter.WriteVertexFunction();
             renderingShaderWriter.OpenBlock();
-            InitMainData(renderingShaderWriter, taskNode, context);
+            InitMainData(renderingShaderWriter, taskNode);
             renderingShaderWriter.NewLine();
             renderingShaderWriter.WriteLine("return vert(id, input);");
             renderingShaderWriter.CloseBlock();
@@ -333,19 +365,25 @@ namespace Unity.GraphCommon.LowLevel.Editor
             renderingShaderWriter.NewLine();
             renderingShaderWriter.WriteFragmentFunction();
             renderingShaderWriter.OpenBlock();
-            InitMainData(renderingShaderWriter, taskNode, context);
+            InitMainData(renderingShaderWriter, taskNode);
             renderingShaderWriter.NewLine();
             renderingShaderWriter.WriteLine("return frag(input);");
             renderingShaderWriter.CloseBlock();
         }
 
-        void InitMainData(ShaderWriter shaderWriter, TaskNode taskNode, CompilationContext context)
+        void InitMainData(ShaderWriter shaderWriter, TaskNode taskNode)
+        {
+            InitContainers(shaderWriter, taskNode);
+            InitBindings(shaderWriter, taskNode);
+        }
+
+        void InitContainers(ShaderWriter shaderWriter, TaskNode taskNode)
         {
             bool initContainers = false;
             foreach (var dataNode in taskNode.DataNodes)
             {
                 var dataContainer = dataNode.DataContainer;
-                if (!IsResource(dataContainer.RootDataView.DataDescription))
+                if (IsCompositeData(dataContainer.RootDataView.DataDescription))
                 {
                     shaderWriter.NewLine();
                     if (!initContainers)
@@ -354,46 +392,75 @@ namespace Unity.GraphCommon.LowLevel.Editor
                         initContainers = true;
                     }
 
-                    var typeName = dataContainer.Name;
+                    var typeName = dataContainer.IdentifierName;
                     var variableName = char.ToLowerInvariant(typeName[0]) + typeName.Substring(1);
                     shaderWriter.WriteLine($"{typeName} {variableName};");
                     shaderWriter.WriteLine($"{variableName}.Init();");
                 }
             }
+        }
 
+        void InitBindings(ShaderWriter shaderWriter, TaskNode taskNode)
+        {
             bool initBindings = false;
             foreach (var dataBinding in taskNode.DataBindings)
             {
-                if (dataBinding.DataView.DataDescription is ConstantValueData valueData)
-                {
-                    if (typeof(Texture).IsAssignableFrom(valueData.Type))
-                        continue;
-                }
-
-                shaderWriter.NewLine();
                 if (!initBindings)
                 {
                     shaderWriter.WriteLine("// Init bindings");
                     initBindings = true;
                 }
 
+                var dataDescription = dataBinding.DataView.DataDescription;
                 bool hasView = m_DataBindingsWithView.Contains(dataBinding.Id);
-                shaderWriter.Indent();
-                shaderWriter.Write(dataBinding.BindingDataKey.ToString());
-                shaderWriter.Write(hasView ? ".Init(" : " = ");
-                if (dataBinding.DataView.DataDescription is ConstantValueData constantValueData)
+                if (hasView)
                 {
-                    shaderWriter.Write(HlslCodeHelper.GetValueString(constantValueData.ObjectValue));
+                    WriteBindingInit(shaderWriter, dataBinding);
+                    shaderWriter.NewLine();
                 }
-                else
+                else if (BindingNeedsRemapping(dataBinding))
                 {
-                    var container = dataBinding.DataNode.DataContainer;
-                    var containerName = container.Name;
-                    var variableName = char.ToLowerInvariant(containerName[0]) + containerName.Substring(1);
-                    shaderWriter.Write(variableName);
-                    WriteSubdataPath(shaderWriter, container.RootDataView, dataBinding.DataView);
+                    WriteBindingRemap(shaderWriter, dataBinding);
+                    shaderWriter.NewLine();
                 }
-                shaderWriter.WriteLine(hasView ? ");" : ";", ShaderWriter.WriteLineOptions.NoIndent);
+            }
+        }
+
+        void WriteBindingInit(ShaderWriter shaderWriter, DataBinding dataBinding)
+        {
+            shaderWriter.Indent();
+            shaderWriter.Write(dataBinding.BindingDataKey.ToString());
+            shaderWriter.Write(".Init(");
+            WriteSubdataPath(shaderWriter, dataBinding.DataNode.DataContainer, dataBinding.DataView);
+            shaderWriter.WriteLine(");", ShaderWriter.WriteLineOptions.NoIndent);
+        }
+
+        void WriteBindingRemap(ShaderWriter shaderWriter, DataBinding dataBinding)
+        {
+            shaderWriter.Indent();
+            shaderWriter.Write(dataBinding.BindingDataKey.ToString());
+            shaderWriter.Write(" = ");
+            WriteSubdataPath(shaderWriter, dataBinding.DataNode.DataContainer, dataBinding.DataView);
+            shaderWriter.WriteLine(";", ShaderWriter.WriteLineOptions.NoIndent);
+        }
+
+        void WriteSubdataPath(ShaderWriter shaderWriter, DataContainer container, DataView toDataView)
+        {
+            if (toDataView.DataDescription is ConstantValueData constantValueData)
+            {
+                shaderWriter.Write(HlslCodeHelper.GetValueString(constantValueData.ObjectValue));
+            }
+            else
+            {
+                var rootDataView = container.RootDataView;
+                var containerName = container.IdentifierName;
+                var variableName = containerName;
+                if (IsCompositeData(rootDataView.DataDescription))
+                {
+                    variableName = char.ToLowerInvariant(variableName[0]) + variableName.Substring(1);
+                }
+                shaderWriter.Write(variableName);
+                WriteSubdataPath(shaderWriter, rootDataView, toDataView);
             }
         }
 
@@ -427,7 +494,7 @@ namespace Unity.GraphCommon.LowLevel.Editor
             shaderWriter.CloseBlock();
         }
 
-        bool IsResource(IDataDescription dataDescription) => dataDescription is ValueData; // TODO: Temp
+        bool IsCompositeData(IDataDescription dataDescription) => dataDescription is not ValueData; // TODO: Temp
     }
 
     class GeneratedCodeContainer

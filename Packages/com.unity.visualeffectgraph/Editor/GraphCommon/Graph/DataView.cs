@@ -109,6 +109,8 @@ namespace Unity.GraphCommon.LowLevel.Editor
         /// </summary>
         public DataView Root => m_Source[m_Node.Root];
 
+        public bool IsRoot => Id.IsValid && !Parent.HasValue;
+
         /// <summary>
         /// Gets the IDataDescription associated with this data view.
         /// Returns null if the graph is not valid.

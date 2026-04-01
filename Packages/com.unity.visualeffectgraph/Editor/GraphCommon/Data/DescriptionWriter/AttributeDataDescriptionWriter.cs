@@ -5,7 +5,7 @@ namespace Unity.GraphCommon.LowLevel.Editor
     {
         public void WriteDescription(ShaderWriter shaderWriter, DataView dataView, AttributeData attributeData, string name, CompilationContext context)
         {
-            shaderWriter.IncludeFile("Packages/com.unity.vfxgraph/Shaders/Data/AttributeBuffer.hlsl");
+            shaderWriter.IncludeFile("Packages/com.unity.visualeffectgraph/Shaders/Temp/Data/AttributeBuffer.hlsl");
 
             shaderWriter.NewLine();
             shaderWriter.WriteLine($"struct {name}");
@@ -72,7 +72,7 @@ namespace Unity.GraphCommon.LowLevel.Editor
                 // That would allow multiple attribute sources for each attribute buffer, overloading the methods
                 // If detached, the attribute set to be used would be included on each attributeSource (.AttributeSet)
                 var attributeSourceTypename = attributeSource.ToString();
-                if (readDataView.Children.Count > 0)
+                //if (readDataView.Children.Count > 0)
                 {
                     shaderWriter.NewLine();
                     shaderWriter.WriteLine($"void LoadData(out {attributeSourceTypename} {variableName}, uint index)");
@@ -85,7 +85,7 @@ namespace Unity.GraphCommon.LowLevel.Editor
                     }
                     shaderWriter.CloseBlock();
                 }
-                if (writtenDataView.Children.Count > 0)
+                //if (writtenDataView.Children.Count > 0)
                 {
                     shaderWriter.NewLine();
                     shaderWriter.WriteLine($"void StoreData({attributeSourceTypename} {variableName}, uint index)");
