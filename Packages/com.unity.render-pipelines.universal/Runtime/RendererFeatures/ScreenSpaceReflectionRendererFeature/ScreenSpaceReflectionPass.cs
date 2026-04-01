@@ -68,6 +68,7 @@ namespace UnityEngine.Rendering.Universal
             internal static readonly int _CameraNormalsTexture = Shader.PropertyToID("_CameraNormalsTexture");
             internal static readonly int _SmoothnessTexture = Shader.PropertyToID("_SmoothnessTexture");
             internal static readonly int _MotionVectorColorTexture = Shader.PropertyToID("_MotionVectorColorTexture");
+            internal static readonly int _LastFrameCameraDepthTexture = Shader.PropertyToID("_LastFrameCameraDepthTexture");
             internal static readonly int _SsrDepthPyramidMaxMip = Shader.PropertyToID("_SsrDepthPyramidMaxMip");
             internal static readonly int _SsrDepthPyramid = Shader.PropertyToID("_DepthPyramid");
             internal static readonly int _MinimumSmoothnessAndFadeStart = Shader.PropertyToID("_MinimumSmoothnessAndFadeStart");
@@ -189,6 +190,7 @@ namespace UnityEngine.Rendering.Universal
             internal TextureHandle blackTexture;         // A black fallback texture.
 
             // Optional textures.
+            internal TextureHandle lastFrameCameraDepth; // Camera depth texture from last frame (only needed if AfterOpaque=false). May contain transparents if transparency support is on.
             internal TextureHandle lastFrameCameraColor; // Camera target texture from last frame (only needed if AfterOpaque=false).
             internal TextureHandle motionVectorColor;    // Motion vectors (only needed if AfterOpaque=false).
             internal TextureHandle depthPyramidTexture;  // Depth pyramid texture for HiZ marching (only needed if LinearMarching=false).
@@ -294,6 +296,7 @@ namespace UnityEngine.Rendering.Universal
 
                     // Set optional input textures to black by default.
                     passData.lastFrameCameraColor = passData.blackTexture;
+                    passData.lastFrameCameraDepth = passData.blackTexture;
                     passData.motionVectorColor = passData.blackTexture;
                     passData.depthPyramidTexture = passData.blackTexture;
 
@@ -349,6 +352,18 @@ namespace UnityEngine.Rendering.Universal
                             passData.motionVectorColor = motionVectorColorTexture;
                             builder.UseTexture(passData.motionVectorColor);
                         }
+
+                        // We also need depth from last frame to reject our reprojected positions.
+                        {
+                            cameraData.historyManager.RequestAccess<ScreenSpaceReflectionDepthHistory>();
+                            ScreenSpaceReflectionDepthHistory history = cameraData.historyManager.GetHistoryForRead<ScreenSpaceReflectionDepthHistory>();
+                            var depthHistoryTexture = history?.GetPreviousTexture(multipassId);
+                            if (depthHistoryTexture != null)
+                            {
+                                passData.lastFrameCameraDepth = renderGraph.ImportTexture(depthHistoryTexture);
+                                builder.UseTexture(passData.lastFrameCameraDepth);
+                            }
+                        }
                     }
 
                     builder.SetRenderFunc<ScreenSpaceReflectionPassData>(static (ssrData, rgContext) =>
@@ -359,6 +374,7 @@ namespace UnityEngine.Rendering.Universal
                         ssrData.material.SetVector(ShaderConstants._SourceSize, PostProcessUtils.CalcShaderSourceSize(ssrData.cameraColor));
 
                         ssrData.material.SetTexture(ShaderConstants._CameraDepthTexture, ssrData.cameraDepth);
+
                         if (ssrData.afterOpaque)
                             ssrData.material.SetTexture(ShaderConstants._CameraColorTexture, ssrData.cameraColor);
                         // Somehow this texture can be null even when TextureHandle.IsValid() is true, guard against that.
@@ -366,6 +382,13 @@ namespace UnityEngine.Rendering.Universal
                             ssrData.material.SetTexture(ShaderConstants._CameraColorTexture, ssrData.blackTexture);
                         else
                             ssrData.material.SetTexture(ShaderConstants._CameraColorTexture, ssrData.lastFrameCameraColor);
+
+                        if (ssrData.afterOpaque)
+                            ssrData.material.SetTexture(ShaderConstants._LastFrameCameraDepthTexture, ssrData.blackTexture);
+                        else if (((RTHandle)ssrData.lastFrameCameraDepth)?.rt == null)
+                            ssrData.material.SetTexture(ShaderConstants._LastFrameCameraDepthTexture, ssrData.blackTexture);
+                        else
+                            ssrData.material.SetTexture(ShaderConstants._LastFrameCameraDepthTexture, ssrData.lastFrameCameraDepth);
 
                         ssrData.material.SetTexture(ShaderConstants._CameraNormalsTexture, ssrData.cameraNormalsTexture);
                         ssrData.material.SetTexture(ShaderConstants._SmoothnessTexture, ssrData.smoothnessTexture);
@@ -471,6 +494,8 @@ namespace UnityEngine.Rendering.Universal
                     }
                 }
             }
+
+            RenderDepthHistory(renderGraph, cameraData, cameraDepthTexture);
 
             // Set global texture so subsequent passes can read it.
             if (m_AfterOpaque)
@@ -647,6 +672,39 @@ namespace UnityEngine.Rendering.Universal
             }
             else
                 depthPyramidTexture = TextureHandle.nullHandle;
+        }
+
+        private static void RenderDepthHistory(RenderGraph renderGraph, UniversalCameraData cameraData, TextureHandle cameraDepthTexture)
+        {
+            if (cameraData.historyManager != null)
+            {
+                UniversalCameraHistory history = cameraData.historyManager;
+
+                bool xrMultipassEnabled = false;
+                int multipassId = 0;
+#if ENABLE_VR && ENABLE_XR_MODULE
+                xrMultipassEnabled = cameraData.xr.enabled && !cameraData.xr.singlePassEnabled;
+                multipassId = cameraData.xr.multipassId;
+#endif
+                if (history.IsAccessRequested<ScreenSpaceReflectionDepthHistory>() && cameraDepthTexture.IsValid())
+                {
+                    var depthHistory = history.GetHistoryForWrite<ScreenSpaceReflectionDepthHistory>();
+                    if (depthHistory != null)
+                    {
+                        var tempColorDepthDesc = cameraData.cameraTargetDescriptor;
+                        tempColorDepthDesc.graphicsFormat = GraphicsFormat.R32_SFloat;
+                        tempColorDepthDesc.depthStencilFormat = GraphicsFormat.None;
+
+                        depthHistory.Update(ref tempColorDepthDesc, xrMultipassEnabled);
+
+                        if (depthHistory.GetCurrentTexture(multipassId) != null)
+                        {
+                            var depthHistoryTarget = renderGraph.ImportTexture(depthHistory.GetCurrentTexture(multipassId));
+                            renderGraph.AddBlitPass(cameraDepthTexture, depthHistoryTarget, Vector2.one, Vector2.zero, filterMode: BlitFilterMode.ClampNearest);
+                        }
+                    }
+                }
+            }
         }
     }
 }

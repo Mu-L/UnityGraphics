@@ -20,6 +20,8 @@ SAMPLER(sampler_SmoothnessTexture);
 TEXTURE2D_X(_MotionVectorColorTexture);
 SAMPLER(sampler_MotionVectorColorTexture);
 
+TEXTURE2D_X(_LastFrameCameraDepthTexture);
+
 SAMPLER(sampler_BlitTexture);
 
 // Params
@@ -354,17 +356,13 @@ float4 ComputeSSR(Varyings input) : SV_Target
     float perceptualSmoothness = SampleSmoothness(positionNDC);
     UNITY_BRANCH if (perceptualSmoothness <= GetMinimumSmoothness())
     {
-        #if UNITY_REVERSED_Z
-        float alpha = deviceDepth != 0;
-        #else
-        float alpha = deviceDepth != 1;
-        #endif
         // Output the framebuffer color ->
         //   avoids bleeding black/uninitialized texels into reflections when blurring.
         // If the pixel is showing skybox, output 0 alpha ->
         //   avoids bleeding the skybox color into reflections when blurring, which would cause haloing.
         // If the pixel is showing an object, output 1 alpha ->
         //   avoids bleeding 0 alpha into reflections when blurring, which would cause peter-panning.
+        float alpha = deviceDepth != UNITY_RAW_FAR_CLIP_VALUE;
         return float4(SAMPLE_TEXTURE2D_X_LOD(_CameraColorTexture, sampler_CameraColorTexture, positionNDC, 0).rgb, alpha);
     }
 
@@ -423,10 +421,48 @@ float4 ComputeSSR(Varyings input) : SV_Target
     UNITY_BRANCH if (hit)
     {
         #ifdef _USE_MOTION_VECTORS
+        // Reproject position
+        const float2 downsampledScreenSize = screenSizeWithInverse.zw * _Downsample;
         rayHitPosNDC.xy -= SampleMotionVector(rayHitPosNDC.xy);
-        #endif
+        const int2 topLeftReprojectedPixelPos = int2(rayHitPosNDC.xy * downsampledScreenSize - 0.5);
 
+        // Manually apply bilinear filter at the reprojected position
+        float3 hitColor = 0;
+        float weightSum = 0;
+        for (int dx = 0; dx < 2; dx++)
+        {
+            for (int dy = 0; dy < 2; dy++)
+            {
+                const int2 samplePixelPos = topLeftReprojectedPixelPos + int2(dx, dy);
+                const float2 samplePixelCenter = float2(samplePixelPos) + 0.5;
+
+                // Reject samples that are off-screen
+                const bool isInView = all(0 <= samplePixelPos && samplePixelPos < downsampledScreenSize);
+                if (!isInView)
+                    continue;
+
+                // Reject samples that land on the skybox (unless we are intentionally reflecting skybox)
+                const float sampleDeviceDepth = LOAD_TEXTURE2D_X_LOD(_LastFrameCameraDepthTexture, samplePixelPos, 0).x;
+                if (sampleDeviceDepth == UNITY_RAW_FAR_CLIP_VALUE && rayHitPosNDC.z != UNITY_RAW_FAR_CLIP_VALUE)
+                    continue;
+
+                // Calculate bilinear weight and accumulate
+                const float weight =
+                    (1.0f - abs(rayHitPosNDC.x * downsampledScreenSize.x - samplePixelCenter.x)) *
+                    (1.0f - abs(rayHitPosNDC.y * downsampledScreenSize.y - samplePixelCenter.y));
+                const float3 sampleColor = LOAD_TEXTURE2D_X_LOD(_CameraColorTexture, samplePixelPos, 0).rgb;
+                hitColor += weight * sampleColor;
+                weightSum += weight;
+            }
+        }
+        // If we got no valid samples, just return the existing framebuffer color.
+        if (weightSum == 0)
+            return float4(SAMPLE_TEXTURE2D_X_LOD(_CameraColorTexture, sampler_CameraColorTexture, positionNDC, 0).rgb, 0);
+        else
+            hitColor /= weightSum;
+        #else
         float3 hitColor = SAMPLE_TEXTURE2D_X_LOD(_CameraColorTexture, sampler_CameraColorTexture, rayHitPosNDC.xy, 0).rgb;
+        #endif
 
         // Fade rays pointing toward camera.
         float viewDotRay = dot(SafeNormalize(positionVS), rayDirVS);
