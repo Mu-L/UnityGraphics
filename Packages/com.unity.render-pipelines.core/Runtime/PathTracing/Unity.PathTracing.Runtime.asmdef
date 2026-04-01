@@ -35,6 +35,11 @@
             "name": "com.unity.modules.imageconversion",
             "expression": "1.0.0",
             "define": "ENABLE_IMAGECONVERSION_MODULE"
+        },
+        {
+            "name": "com.unity.modules.terrain",
+            "expression": "1.0.0",
+            "define": "ENABLE_TERRAIN_MODULE"
         }
     ],
     "noEngineReferences": false
