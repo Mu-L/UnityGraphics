@@ -3,6 +3,8 @@ using System.Collections.Generic;
 using System.IO;
 using System.Reflection;
 using Unity.Mathematics;
+using Unity.Profiling;
+using Unity.Profiling.LowLevel;
 using UnityEngine.Assertions;
 using UnityEngine.Rendering;
 using UnityEngine.Rendering.UnifiedRayTracing;
@@ -11,6 +13,14 @@ namespace UnityEngine.PathTracing.Lightmapping
 {
     internal static class LightmapIntegrationHelpers
     {
+        /// <summary>
+        /// Profiles the box filtering pass applied to the blue channel of the lightmap output,
+        /// used to smooth validity values through an indirect compute dispatch.
+        /// </summary>
+        static readonly ProfilerMarker k_BoxFiltering =
+            new ProfilerMarker(ProfilerCategory.Render, "BoxFiltering",
+                MarkerFlags.Default | MarkerFlags.SampleGPU);
+
         internal class ComputeHelpers
         {
             internal ComputeShader ComputeHelperShader = null;
@@ -509,7 +519,7 @@ namespace UnityEngine.PathTracing.Lightmapping
 
         public static void ReferenceBoxFilterBlueChannelRenderTexture(CommandBuffer cmd, ComputeShader referenceBoxFilterBlueChannelShader, int referenceBoxFilterBlueChannelKernel, RenderTargetIdentifier inOut, int width, int height, int radius, GraphicsBuffer indirectDispatchBuffer)
         {
-            cmd.BeginSample("BoxFiltering");
+            cmd.BeginSample(k_BoxFiltering);
             cmd.GetTemporaryRT(ComputeHelpers.ShaderIDs.TextureOut, width, height, 0, FilterMode.Point, RenderTextureFormat.ARGBFloat, RenderTextureReadWrite.Linear, 1, true);
             cmd.SetComputeTextureParam(referenceBoxFilterBlueChannelShader, referenceBoxFilterBlueChannelKernel, ComputeHelpers.ShaderIDs.SourceTexture, inOut);
             cmd.SetComputeTextureParam(referenceBoxFilterBlueChannelShader, referenceBoxFilterBlueChannelKernel, ComputeHelpers.ShaderIDs.TextureOut, ComputeHelpers.ShaderIDs.TextureOut);
@@ -519,7 +529,7 @@ namespace UnityEngine.PathTracing.Lightmapping
             cmd.DispatchCompute(referenceBoxFilterBlueChannelShader, referenceBoxFilterBlueChannelKernel, indirectDispatchBuffer, 0);
             cmd.CopyTexture(ComputeHelpers.ShaderIDs.TextureOut, inOut); // TODO(jesper): dont do copy
             cmd.ReleaseTemporaryRT(ComputeHelpers.ShaderIDs.TextureOut);
-            cmd.EndSample("BoxFiltering");
+            cmd.EndSample(k_BoxFiltering);
         }
 
         // Computes the region of a lightmap that is occupied by the pixels of a specific instance,

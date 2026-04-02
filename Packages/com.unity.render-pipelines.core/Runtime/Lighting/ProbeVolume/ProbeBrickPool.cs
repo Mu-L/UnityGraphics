@@ -1,6 +1,7 @@
 using System.Diagnostics;
 using System.Collections.Generic;
-using UnityEngine.Profiling;
+using Unity.Profiling;
+using Unity.Profiling.LowLevel;
 using UnityEngine.Experimental.Rendering;
 using Cell = UnityEngine.Rendering.ProbeReferenceVolume.Cell;
 using CellStreamingScratchBuffer = UnityEngine.Rendering.ProbeReferenceVolume.CellStreamingScratchBuffer;
@@ -10,6 +11,15 @@ namespace UnityEngine.Rendering
 {
     internal class ProbeBrickPool
     {
+        /// <summary>
+        /// Allocates all SH data texture arrays (L0/L1, optional L2), validity, sky occlusion,
+        /// sky shading direction, probe occlusion, and rendering layer textures based on the
+        /// memory budget and enabled feature set.
+        /// </summary>
+        static readonly ProfilerMarker k_CreateProbeBrickPool =
+            new ProfilerMarker(ProfilerCategory.Render, "Create ProbeBrickPool",
+                MarkerFlags.VerbosityAdvanced);
+
         internal static readonly int _Out_L0_L1Rx = Shader.PropertyToID("_Out_L0_L1Rx");
         internal static readonly int _Out_L1G_L1Ry = Shader.PropertyToID("_Out_L1G_L1Ry");
         internal static readonly int _Out_L1B_L1Rz = Shader.PropertyToID("_Out_L1B_L1Rz");
@@ -182,7 +192,8 @@ namespace UnityEngine.Rendering
 
         internal ProbeBrickPool(ProbeVolumeTextureMemoryBudget memoryBudget, ProbeVolumeSHBands shBands, bool allocateValidityData = false, bool allocateRenderingLayerData = false, bool allocateSkyOcclusion = false, bool allocateSkyShadingData = false, bool allocateProbeOcclusionData = false)
         {
-            Profiler.BeginSample("Create ProbeBrickPool");
+            using var _ = k_CreateProbeBrickPool.Auto();
+
             m_NextFreeChunk.x = m_NextFreeChunk.y = m_NextFreeChunk.z = 0;
 
             m_SHBands = shBands;
@@ -198,8 +209,6 @@ namespace UnityEngine.Rendering
             AllocatePool(width, height, depth);
 
             m_AvailableChunkCount = (m_Pool.width / (kChunkSizeInBricks * kBrickProbeCountPerDim)) * (m_Pool.height / kBrickProbeCountPerDim) * (m_Pool.depth / kBrickProbeCountPerDim);
-
-            Profiler.EndSample();
         }
 
         internal void AllocatePool(int width, int height, int depth)

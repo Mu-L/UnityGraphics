@@ -4,12 +4,42 @@ using UnityEngine.Assertions;
 using Unity.Collections;
 using Unity.Jobs;
 using Unity.Collections.LowLevel.Unsafe;
-using UnityEngine.Profiling;
+using Unity.Profiling;
+using Unity.Profiling.LowLevel;
 
 namespace UnityEngine.Rendering
 {
     internal class CPUDrawInstanceData
     {
+        /// <summary>
+        /// Sorts and removes the destroyed draw instance indices from the CPU draw instance, batch, and
+        /// range data structures using binary search. Cost scales with total live draw instance count, not just the number removed.
+        /// </summary>
+        static readonly ProfilerMarker k_DestroyDrawInstanceIndices =
+            new ProfilerMarker(ProfilerCategory.Render, "DestroyDrawInstanceIndices.RemoveDrawInstanceIndices", MarkerFlags.VerbosityAdvanced);
+
+        /// <summary>
+        /// Removes a batch of GPU instances from all CPU draw data structures. Sorts instance
+        /// handles, maps them to draw instance indices via a parallel job, then removes those
+        /// indices. Cost scales with total live draw instance count, not just the number removed.
+        /// </summary>
+        static readonly ProfilerMarker k_DestroyDrawInstances =
+            new ProfilerMarker(ProfilerCategory.Render, "DestroyDrawInstances", MarkerFlags.VerbosityAdvanced);
+
+        /// <summary>
+        /// Sorts the destroyed instance handle array in parallel. A prerequisite for the
+        /// binary-search index-lookup job in DestroyDrawInstances.
+        /// </summary>
+        static readonly ProfilerMarker k_DestroyDrawInstancesParallelSort =
+            new ProfilerMarker(ProfilerCategory.Render, "DestroyDrawInstances.ParallelSort", MarkerFlags.VerbosityAdvanced);
+
+        /// <summary>
+        /// Sorts the destroyed batch material ID array in parallel. A prerequisite for the
+        /// binary-search index-lookup job in DestroyMaterialDrawInstances.
+        /// </summary>
+        static readonly ProfilerMarker k_DestroyedBatchMaterialsParallelSort =
+            new ProfilerMarker(ProfilerCategory.Render, "DestroyedBatchMaterials.ParallelSort", MarkerFlags.VerbosityAdvanced);
+
         public NativeList<DrawInstance> drawInstances => m_DrawInstances;
         public NativeParallelHashMap<DrawKey, int> batchHash => m_BatchHash;
         public NativeList<DrawBatch> drawBatches => m_DrawBatches;
@@ -106,18 +136,16 @@ namespace UnityEngine.Rendering
 
         public unsafe void DestroyDrawInstanceIndices(NativeArray<int> drawInstanceIndicesToDestroy)
         {
-            Profiler.BeginSample("DestroyDrawInstanceIndices.ParallelSort");
-            drawInstanceIndicesToDestroy.ParallelSort().Complete();
-            Profiler.EndSample();
+            using var _ = k_DestroyDrawInstanceIndices.Auto();
 
-            Profiler.BeginSample("DestroyDrawInstanceIndices.RemoveDrawInstanceIndices");
+            drawInstanceIndicesToDestroy.ParallelSort().Complete();
+
             CPUDrawInstanceDataBurst.RemoveDrawInstanceIndices(drawInstanceIndicesToDestroy,
                 ref m_DrawInstances,
                 ref m_RangeHash,
                 ref m_BatchHash,
                 ref m_DrawRanges,
                 ref m_DrawBatches);
-            Profiler.EndSample();
         }
 
         public unsafe void DestroyDrawInstances(NativeArray<InstanceHandle> destroyedInstances)
@@ -125,16 +153,17 @@ namespace UnityEngine.Rendering
             if (m_DrawInstances.IsEmpty || destroyedInstances.Length == 0)
                 return;
 
-            Profiler.BeginSample("DestroyDrawInstances");
+            using var _ = k_DestroyDrawInstances.Auto();
 
             NeedsRebuild();
 
             var destroyedInstancesSorted = new NativeArray<InstanceHandle>(destroyedInstances, Allocator.TempJob);
             Assert.AreEqual(UnsafeUtility.SizeOf<InstanceHandle>(), UnsafeUtility.SizeOf<int>());
 
-            Profiler.BeginSample("DestroyDrawInstances.ParallelSort");
-            destroyedInstancesSorted.Reinterpret<int>().ParallelSort().Complete();
-            Profiler.EndSample();
+            using (k_DestroyDrawInstancesParallelSort.Auto())
+            {
+                destroyedInstancesSorted.Reinterpret<int>().ParallelSort().Complete();
+            }
 
             var drawInstanceIndicesToDestroy = new NativeList<int>(m_DrawInstances.Length, Allocator.TempJob);
 
@@ -150,8 +179,6 @@ namespace UnityEngine.Rendering
 
             destroyedInstancesSorted.Dispose();
             drawInstanceIndicesToDestroy.Dispose();
-
-            Profiler.EndSample();
         }
 
         public unsafe void DestroyMaterialDrawInstances(NativeArray<uint> destroyedBatchMaterials)
@@ -163,9 +190,10 @@ namespace UnityEngine.Rendering
 
             var destroyedBatchMaterialsSorted = new NativeArray<uint>(destroyedBatchMaterials, Allocator.TempJob);
 
-            Profiler.BeginSample("DestroyedBatchMaterials.ParallelSort");
-            destroyedBatchMaterialsSorted.Reinterpret<int>().ParallelSort().Complete();
-            Profiler.EndSample();
+            using (k_DestroyedBatchMaterialsParallelSort.Auto())
+            {
+                destroyedBatchMaterialsSorted.Reinterpret<int>().ParallelSort().Complete();
+            }
 
             var drawInstanceIndicesToDestroy = new NativeList<int>(m_DrawInstances.Length, Allocator.TempJob);
 

@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using Unity.Collections;
 using Unity.Collections.LowLevel.Unsafe;
+using Unity.Profiling;
 
 namespace UnityEngine.Rendering.RenderGraphModule.NativeRenderPassCompiler
 {
@@ -184,6 +185,7 @@ namespace UnityEngine.Rendering.RenderGraphModule.NativeRenderPassCompiler
             NativePassData.SetPassStatesForNativePass(contextData, nativePassId);
         }
 
+        [Obsolete("This enum is deprecated and will be removed in a future release. Please use ProfilerMarkers NRPRGComp_* instead.")]
         internal enum NativeCompilerProfileId
         {
             NRPRGComp_PrepareNativePass,
@@ -221,7 +223,7 @@ namespace UnityEngine.Rendering.RenderGraphModule.NativeRenderPassCompiler
 
         void SetupContextData(RenderGraphResourceRegistry resources)
         {
-            using (new ProfilingScope(ProfilingSampler.Get(NativeCompilerProfileId.NRPRGComp_SetupContextData)))
+            using (k_SetupContextData.Auto())
             {
                 contextData.Initialize(resources, k_EstimatedPassCount);
             }
@@ -351,7 +353,7 @@ namespace UnityEngine.Rendering.RenderGraphModule.NativeRenderPassCompiler
             ctx.passData.ResizeUninitialized(passes.Count);
 
             // Build up the context graph and keep track of nodes we encounter that can't be culled
-            using (new ProfilingScope(ProfilingSampler.Get(NativeCompilerProfileId.NRPRGComp_BuildGraph)))
+            using (k_BuildGraph.Auto())
             {
                 for (int passId = 0; passId < passes.Count; passId++)
                 {
@@ -468,11 +470,11 @@ namespace UnityEngine.Rendering.RenderGraphModule.NativeRenderPassCompiler
 
         void CullUnusedRenderGraphPasses()
         {
-            using (new ProfilingScope(ProfilingSampler.Get(NativeCompilerProfileId.NRPRGComp_CullNodes)))
-            {
-                if (graph.disablePassCulling)
-                    return;
+            if (graph.disablePassCulling)
+                return;
 
+            using (k_CullNodes.Auto())
+            {
                 // Must come first
                 CullRenderGraphPassesWithNoSideEffect();
 
@@ -613,7 +615,7 @@ namespace UnityEngine.Rendering.RenderGraphModule.NativeRenderPassCompiler
         {
             var ctx = contextData;
 
-            using (new ProfilingScope(ProfilingSampler.Get(NativeCompilerProfileId.NRPRGComp_TryMergeNativePasses)))
+            using (k_TryMergeNativePasses.Auto())
             {
                 // Try to merge raster passes into the currently active native pass. This will not do pass reordering yet
                 // so it is simply greedy trying to add the next pass to a currently active one.
@@ -853,7 +855,7 @@ namespace UnityEngine.Rendering.RenderGraphModule.NativeRenderPassCompiler
         {
             var ctx = contextData;
 
-            using (new ProfilingScope(ProfilingSampler.Get(NativeCompilerProfileId.NRPRGComp_FindResourceUsageRanges)))
+            using (k_FindResourceUsageRanges.Auto())
             {
                 // Algorithm is in two steps, traversing the list of passes twice
 
@@ -1087,7 +1089,7 @@ namespace UnityEngine.Rendering.RenderGraphModule.NativeRenderPassCompiler
 
         void PropagateTextureUVOrigin()
         {
-            using (new ProfilingScope(ProfilingSampler.Get(NativeCompilerProfileId.NRPRGComp_PropagateTextureUVOrigin)))
+            using (k_PropagateTextureUVOrigin.Auto())
             {
                 // Work backwards through the native pass list and propagate the texture uv origin we store with to
                 // any texture attachments that are not explicitly known (usually intermediate memoryless attachments).
@@ -1156,7 +1158,7 @@ namespace UnityEngine.Rendering.RenderGraphModule.NativeRenderPassCompiler
 
         void DetectMemoryLessResources()
         {
-            using (new ProfilingScope(ProfilingSampler.Get(NativeCompilerProfileId.NRPRGComp_DetectMemorylessResources)))
+            using (k_DetectMemorylessResources.Auto())
             {
                 // No need to go further if we don't support memoryless textures
                 if (!SystemInfo.supportsMemorylessTextures)
@@ -1256,7 +1258,7 @@ namespace UnityEngine.Rendering.RenderGraphModule.NativeRenderPassCompiler
         {
             bool haveGfxCommandsBeenAddedToCmd = false;
 
-            using (new ProfilingScope(ProfilingSampler.Get(NativeCompilerProfileId.NRPRGComp_ExecuteInitializeResources)))
+            using (k_ExecuteInitializeResources.Auto())
             {
                 resources.forceManualClearOfResource = true;
 
@@ -1337,7 +1339,7 @@ namespace UnityEngine.Rendering.RenderGraphModule.NativeRenderPassCompiler
 
         void DetermineLoadStoreActions(ref NativePassData nativePass)
         {
-            using (new ProfilingScope(ProfilingSampler.Get(NativeCompilerProfileId.NRPRGComp_PrepareNativePass)))
+            using (k_PrepareNativePass.Auto())
             {
                 ref readonly var firstGraphPass = ref contextData.passData.ElementAt(nativePass.firstGraphPass);
                 ref readonly var lastGraphPass = ref contextData.passData.ElementAt(nativePass.lastGraphPass);
@@ -1736,7 +1738,7 @@ namespace UnityEngine.Rendering.RenderGraphModule.NativeRenderPassCompiler
 
         internal unsafe void ExecuteBeginRenderPass(InternalRenderGraphContext rgContext, RenderGraphResourceRegistry resources, ref NativePassData nativePass)
         {
-            using (new ProfilingScope(ProfilingSampler.Get(NativeCompilerProfileId.NRPRGComp_ExecuteBeginRenderpassCommand)))
+            using (k_ExecuteBeginRenderPassCommand.Auto())
             {
                 ref var attachments = ref nativePass.attachments;
                 var attachmentCount = attachments.size;
@@ -1911,7 +1913,7 @@ namespace UnityEngine.Rendering.RenderGraphModule.NativeRenderPassCompiler
 
         private void ExecuteDestroyResource(InternalRenderGraphContext rgContext, RenderGraphResourceRegistry resources, ref PassData pass)
         {
-            using (new ProfilingScope(ProfilingSampler.Get(NativeCompilerProfileId.NRPRGComp_ExecuteDestroyResources)))
+            using (k_ExecuteDestroyResources.Auto())
             {
                 // Unsafe pass might soon use temporary render targets,
                 // users can also use temporary data in their render graph execute nodes using public RenderGraphObjectPool API

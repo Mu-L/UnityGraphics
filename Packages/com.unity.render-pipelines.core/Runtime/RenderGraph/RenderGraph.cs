@@ -1443,7 +1443,7 @@ namespace UnityEngine.Rendering.RenderGraphModule
         // Internal for testing purpose only.
         internal int ComputeGraphHash()
         {
-            using (new ProfilingScope(RenderGraphProfilerMarkers.ComputeHashRenderGraph))
+            using (RenderGraphProfilerMarkers.ComputeHashRenderGraph.Auto())
             {
                 var hash128 = HashFNV1A32.Create();
                 for (int i = 0; i < m_RenderPasses.Count; ++i)

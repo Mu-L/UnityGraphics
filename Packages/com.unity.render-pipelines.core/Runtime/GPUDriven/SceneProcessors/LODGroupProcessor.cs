@@ -1,13 +1,29 @@
 #if !UNITY_WEBGL_RENDERER_ONLY
 using Unity.Collections;
 using Unity.Mathematics;
+using Unity.Profiling;
+using Unity.Profiling.LowLevel;
 using UnityEngine.Assertions;
-using UnityEngine.Profiling;
 
 namespace UnityEngine.Rendering
 {
     internal class LODGroupProcessor
     {
+        /// <summary>
+        /// Frees GPU and CPU state for a set of destroyed LOD group instances by delegating to
+        /// <c>LODGroupDataSystem.FreeLODGroups</c>.
+        /// </summary>
+        static readonly ProfilerMarker k_DestroyLODGroupInstances =
+            new ProfilerMarker(ProfilerCategory.Render, "DestroyLODGroupInstances", MarkerFlags.VerbosityAdvanced);
+
+        /// <summary>
+        /// Processes a LOD group update batch that allocates GPU instances for new groups and writes
+        /// group settings, reference point, world-space size, and LOD buffer data. Transform-only
+        /// batches skip allocation and update position and size only.
+        /// </summary>
+        static readonly ProfilerMarker k_ProcessLODGroupUpdateBatch =
+            new ProfilerMarker(ProfilerCategory.Render, "ProcessLODGroupUpdateBatch", MarkerFlags.VerbosityAdvanced);
+
         private GPUDrivenProcessor m_GPUDrivenProcessor;
         private LODGroupDataSystem m_LODGroupDataSystem;
 
@@ -19,9 +35,10 @@ namespace UnityEngine.Rendering
 
         public void DestroyInstances(NativeArray<EntityId> destroyedIDs)
         {
-            Profiler.BeginSample("DestroyLODGroupInstances");
-            m_LODGroupDataSystem.FreeLODGroups(destroyedIDs);
-            Profiler.EndSample();
+            using (k_DestroyLODGroupInstances.Auto())
+            {
+                m_LODGroupDataSystem.FreeLODGroups(destroyedIDs);
+            }
         }
 
         public void ProcessGameObjectChanges(NativeArray<EntityId> changedLODGroups, bool transformOnly)
@@ -34,7 +51,7 @@ namespace UnityEngine.Rendering
             if (updateBatch.TotalLength == 0)
                 return;
 
-            Profiler.BeginSample("ProcessLODGroupUpdateBatch");
+            using var _ = k_ProcessLODGroupUpdateBatch.Auto();
 
             if (updateBatch.updateMode == LODGroupUpdateBatchMode.MightIncludeNewInstances)
             {
@@ -55,8 +72,6 @@ namespace UnityEngine.Rendering
 
                 m_LODGroupDataSystem.UpdateLODGroupTransforms(updateBatch);
             }
-
-            Profiler.EndSample();
         }
 
         void ProcessGameObjectUpdateBatch(in GPUDrivenLODGroupData inputData)

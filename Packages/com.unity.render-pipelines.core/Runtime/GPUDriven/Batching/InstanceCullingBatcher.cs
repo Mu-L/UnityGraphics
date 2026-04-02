@@ -2,8 +2,9 @@
 using System;
 using Unity.Collections;
 using Unity.Jobs;
+using Unity.Profiling;
+using Unity.Profiling.LowLevel;
 using UnityEngine.Assertions;
-using UnityEngine.Profiling;
 
 namespace UnityEngine.Rendering
 {
@@ -47,6 +48,51 @@ namespace UnityEngine.Rendering
 
     internal class InstanceCullingBatcher : IDisposable
     {
+        /// <summary>
+        /// Filters the incoming mesh IDs to find previously unseen ones, registers them with the
+        /// BatchRendererGroup, then fetches and stores their sub-mesh data. Cost scales with the
+        /// number of unique new meshes and their sub-mesh counts.
+        /// </summary>
+        static readonly ProfilerMarker k_RegisterMeshes =
+            new ProfilerMarker(ProfilerCategory.Render, "RegisterMeshes", MarkerFlags.VerbosityAdvanced);
+
+        /// <summary>
+        /// Filters the incoming material IDs to find previously unseen ones, then registers them
+        /// with the BatchRendererGroup. Cost scales with the number of unique new materials.
+        /// </summary>
+        static readonly ProfilerMarker k_RegisterMaterials =
+            new ProfilerMarker(ProfilerCategory.Render, "RegisterMaterials", MarkerFlags.VerbosityAdvanced);
+
+        /// <summary>
+        /// Unregisters each destroyed material from the BatchRendererGroup, removes it from the
+        /// material map, and removes all associated draw instances from CPU draw data structures.
+        /// </summary>
+        static readonly ProfilerMarker k_DestroyMaterials =
+            new ProfilerMarker(ProfilerCategory.Render, "DestroyMaterials", MarkerFlags.VerbosityAdvanced);
+
+        /// <summary>
+        /// Unregisters each destroyed mesh from the BatchRendererGroup, disposes its sub-mesh
+        /// data, and removes it from the mesh map.
+        /// </summary>
+        static readonly ProfilerMarker k_DestroyMeshes =
+            new ProfilerMarker(ProfilerCategory.Render, "DestroyMeshes", MarkerFlags.VerbosityAdvanced);
+
+        /// <summary>
+        /// Removes stale draw instances for the given instances, then creates new draw batches
+        /// by grouping instances by mesh, material, and render state. Marks the draw lists dirty
+        /// for rebuild on next cull.
+        /// </summary>
+        static readonly ProfilerMarker k_BuildBatches =
+            new ProfilerMarker(ProfilerCategory.Render, "BuildBatches", MarkerFlags.VerbosityAdvanced);
+
+        /// <summary>
+        /// Registers any new meshes and materials in the update batch, then rebuilds draw batches
+        /// for the affected instances. Combines RegisterMeshes, RegisterMaterials,
+        /// and BuildBatches in a single scope.
+        /// </summary>
+        static readonly ProfilerMarker k_RegisterAndBuildBatches =
+            new ProfilerMarker(ProfilerCategory.Render, "RegisterAndBuildBatches");
+
         private GPUResidentContext m_GRDContext;
         private InstanceDataSystem m_InstanceDataSystem;
         private LODGroupDataSystem m_LODGroupDataSystem;
@@ -212,7 +258,8 @@ namespace UnityEngine.Rendering
 
         private void RegisterMeshes(JaggedSpan<EntityId> meshIDs)
         {
-            Profiler.BeginSample("RegisterMeshes");
+            using var _ = k_RegisterMeshes.Auto();
+
             var jobRanges = JaggedJobRange.FromSpanWithMaxBatchSize(meshIDs, FindNonRegisteredInstanceIDsJob<MeshInfo>.MaxBatchSize, Allocator.TempJob);
             var newMeshSet = new NativeParallelHashSet<EntityId>(meshIDs.totalLength, Allocator.TempJob);
 
@@ -245,12 +292,12 @@ namespace UnityEngine.Rendering
 
             jobRanges.Dispose();
             newMeshSet.Dispose();
-            Profiler.EndSample();
         }
 
         private void RegisterMaterials(JaggedSpan<EntityId> materials)
         {
-            Profiler.BeginSample("RegisterMaterials");
+            using var _ = k_RegisterMaterials.Auto();
+
             var jobRanges = JaggedJobRange.FromSpanWithMaxBatchSize(materials, FindNonRegisteredInstanceIDsJob<GPUDrivenMaterial>.MaxBatchSize, Allocator.TempJob);
             var newMaterialIDSet = new NativeParallelHashSet<EntityId>(materials.totalLength, Allocator.TempJob);
 
@@ -287,7 +334,6 @@ namespace UnityEngine.Rendering
 
             jobRanges.Dispose();
             newMaterialIDSet.Dispose();
-            Profiler.EndSample();
         }
 
         private void OnFetchMeshesDataForUpdate(NativeArray<EntityId> meshIDs,
@@ -388,8 +434,7 @@ namespace UnityEngine.Rendering
             if (destroyedInstanceIDs.Length == 0)
                 return;
 
-            Profiler.BeginSample("DestroyMaterials");
-
+            using var _ = k_DestroyMaterials.Auto();
             var destroyedBatchMaterials = new NativeList<uint>(destroyedInstanceIDs.Length, Allocator.TempJob);
 
             foreach (EntityId instanceID in destroyedInstanceIDs)
@@ -406,8 +451,6 @@ namespace UnityEngine.Rendering
             m_DrawInstanceData.DestroyMaterialDrawInstances(destroyedBatchMaterials.AsArray());
 
             destroyedBatchMaterials.Dispose();
-
-            Profiler.EndSample();
         }
 
         public void DestroyMeshes(NativeArray<EntityId> destroyedInstanceIDs)
@@ -415,7 +458,7 @@ namespace UnityEngine.Rendering
             if (destroyedInstanceIDs.Length == 0)
                 return;
 
-            Profiler.BeginSample("DestroyMeshes");
+            using var _ = k_DestroyMeshes.Auto();
 
             foreach (EntityId instanceID in destroyedInstanceIDs)
             {
@@ -426,13 +469,11 @@ namespace UnityEngine.Rendering
                     m_BRG.UnregisterMesh(meshData.meshID);
                 }
             }
-
-            Profiler.EndSample();
         }
 
         public void BuildBatches(NativeArray<InstanceHandle> instances)
         {
-            Profiler.BeginSample("BuildBatches");
+            using var _ = k_BuildBatches.Auto();
 
             DestroyDrawInstances(instances);
 
@@ -453,13 +494,11 @@ namespace UnityEngine.Rendering
                 ref drawInstances);
 
             m_DrawInstanceData.NeedsRebuild();
-
-            Profiler.EndSample();
         }
 
         public void RegisterAndBuildBatches(NativeArray<InstanceHandle> instances, in MeshRendererUpdateBatch updateBatch)
         {
-            Profiler.BeginSample("RegisterAndBuildBatches");
+            using var _ = k_RegisterAndBuildBatches.Auto();
 
             if (updateBatch.HasAnyComponent(MeshRendererComponentMask.Material))
                 RegisterMaterials(updateBatch.materialIDs);
@@ -468,8 +507,6 @@ namespace UnityEngine.Rendering
                 RegisterMeshes(updateBatch.meshIDs);
 
             BuildBatches(instances);
-
-            Profiler.EndSample();
         }
     }
 }

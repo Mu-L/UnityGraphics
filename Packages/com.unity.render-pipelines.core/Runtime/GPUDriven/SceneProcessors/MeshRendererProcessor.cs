@@ -6,8 +6,8 @@ using Unity.Collections.LowLevel.Unsafe;
 using Unity.Jobs;
 using Unity.Mathematics;
 using Unity.Profiling;
+using Unity.Profiling.LowLevel;
 using UnityEngine.Assertions;
-using UnityEngine.Profiling;
 
 namespace UnityEngine.Rendering
 {
@@ -19,6 +19,101 @@ namespace UnityEngine.Rendering
             public GPUComponentHandle component;
             public int componentSize;
         }
+
+        /// <summary>
+        /// Resolves renderer entity IDs to instance handles, removes their draw instances from
+        /// the culling batcher, then frees the instance handles from the instance data system.
+        /// </summary>
+        static readonly ProfilerMarker k_DestroyMeshRendererInstances =
+            new ProfilerMarker(ProfilerCategory.Render, "DestroyMeshRendererInstances", MarkerFlags.VerbosityAdvanced);
+
+        /// <summary>
+        /// Compares incoming material and mesh data against the cached maps and returns the
+        /// subsets whose GPU-relevant data actually changed. Early-outs if nothing changed,
+        /// avoiding unnecessary renderer queries downstream.
+        /// </summary>
+        static readonly ProfilerMarker k_GetMaterialsAndMeshesWithChangedData =
+            new ProfilerMarker(ProfilerCategory.Render, "GetMaterialsAndMeshesWithChangedData", MarkerFlags.VerbosityAdvanced);
+
+        /// <summary>
+        /// Sorts the excluded renderer ID array in parallel. A prerequisite for the binary-search
+        /// exclusion check in <c>FindRenderersFromMaterialsOrMeshes</c>.
+        /// </summary>
+        static readonly ProfilerMarker k_ProcessRendererMaterialAndMeshChangesSort =
+            new ProfilerMarker(ProfilerCategory.Render, "ProcessRendererMaterialAndMeshChanges.Sort", MarkerFlags.VerbosityAdvanced);
+
+        /// <summary>
+        /// Scans all registered renderers to find those referencing any changed material or mesh,
+        /// excluding renderers in the sorted exclusion list. Cost scales with total registered
+        /// renderer count, not just the number of changed materials or meshes.
+        /// </summary>
+        static readonly ProfilerMarker k_FindRenderersFromMaterialsOrMeshes =
+            new ProfilerMarker(ProfilerCategory.Render, "FindRenderersFromMaterialsOrMeshes", MarkerFlags.VerbosityAdvanced);
+
+        /// <summary>
+        /// Queries instance handles for all affected renderers, then calls
+        /// <c>BuildBatches</c> to rebuild their draw batches with the new material or mesh data.
+        /// </summary>
+        static readonly ProfilerMarker k_UpdateRenderers =
+            new ProfilerMarker(ProfilerCategory.Render, "UpdateRenderers");
+
+        /// <summary>
+        /// Processes a mesh renderer update batch end-to-end: allocates or reallocates GPU
+        /// instances, updates instance data, uploads component overrides, initializes or updates
+        /// transforms, and rebuilds draw batches. Skips stages not required by the batch's
+        /// component mask and update type.
+        /// </summary>
+        static readonly ProfilerMarker k_ProcessMeshRendererUpdateBatch =
+            new ProfilerMarker(ProfilerCategory.Render, "ProcessMeshRendererUpdateBatch");
+
+        /// <summary>
+        /// Writes per-instance GPU component override values into a CPU staging buffer via
+        /// parallel jobs, uploads the buffer to the GPU, then scatter-writes each component
+        /// into the instance data buffer.
+        /// </summary>
+        static readonly ProfilerMarker k_UploadGPUComponentOverrides =
+            new ProfilerMarker(ProfilerCategory.Render, "UploadGPUComponentOverrides", MarkerFlags.VerbosityAdvanced);
+
+        /// <summary>
+        /// Verifies that no GPU archetype changes occurred for the updated instances by
+        /// re-evaluating renderer settings, lightmap, and GPU component masks. Only runs
+        /// when <see cref="GPUResidentDrawer.EnableDeepValidation"/> is enabled; skips
+        /// early if no archetype-affecting components are present in the batch.
+        /// </summary>
+        static readonly ProfilerMarker k_DeepValidationGPUArchetypesDidNotChange =
+            new ProfilerMarker(ProfilerCategory.Render, "DeepValidation.GPUArchetypesDidNotChange", MarkerFlags.VerbosityAdvanced);
+
+        /// <summary>
+        /// Computes a GPU archetype handle for each instance in the update batch. When
+        /// blend probe usage, lightmap usage, and tree exclusion are all fully known,
+        /// resolves to a single shared archetype handle instead of one per instance.
+        /// </summary>
+        static readonly ProfilerMarker k_ComputeInstanceGPUArchetypes =
+            new ProfilerMarker(ProfilerCategory.Render, "ComputeInstanceGPUArchetypes", MarkerFlags.VerbosityAdvanced);
+
+        /// <summary>
+        /// Builds the GPU component override upload source array from the jagged per-component
+        /// update list in the update batch. Skipped entirely when no GPU component overrides
+        /// are present.
+        /// </summary>
+        static readonly ProfilerMarker k_BuildGPUComponentOverrideUploadSources =
+            new ProfilerMarker(ProfilerCategory.Render, "BuildGPUComponentOverrideUploadSources", MarkerFlags.VerbosityAdvanced);
+
+        /// <summary>
+        /// Completes all parallel component write jobs before uploading the buffer to the GPU.
+        /// This is a synchronous CPU stall; cost scales with the number of GPU component
+        /// override entries scheduled in the batch.
+        /// </summary>
+        static readonly ProfilerMarker k_SyncWriteGPUComponentJobs =
+            new ProfilerMarker(ProfilerCategory.Render, "SyncWriteGPUComponentJobs", MarkerFlags.VerbosityAdvanced);
+
+        /// <summary>
+        /// Verifies that no instance in the batch uses blend probe lighting. Only runs when
+        /// <see cref="GPUResidentDrawer.EnableDeepValidation"/> is enabled; iterates all
+        /// instances in the batch to check their light probe usage.
+        /// </summary>
+        static readonly ProfilerMarker k_DeepValidationNoInstanceUsesBlendProbes =
+            new ProfilerMarker(ProfilerCategory.Render, "DeepValidation.NoInstanceUsesBlendProbes", MarkerFlags.VerbosityAdvanced);
 
         private GPUDrivenProcessor m_GPUDrivenProcessor;
         private InstanceCullingBatcher m_CullingBatcher;
@@ -52,13 +147,14 @@ namespace UnityEngine.Rendering
             if (destroyedRenderers.Length == 0)
                 return;
 
-            Profiler.BeginSample("DestroyMeshRendererInstances");
-            var destroyedInstances = new NativeArray<InstanceHandle>(destroyedRenderers.Length, Allocator.TempJob);
-            m_InstanceDataSystem.QueryRendererInstances(destroyedRenderers, destroyedInstances);
-            m_CullingBatcher.DestroyDrawInstances(destroyedInstances);
-            m_InstanceDataSystem.FreeInstances(destroyedInstances);
-            destroyedInstances.Dispose();
-            Profiler.EndSample();
+            using (k_DestroyMeshRendererInstances.Auto())
+            {
+                var destroyedInstances = new NativeArray<InstanceHandle>(destroyedRenderers.Length, Allocator.TempJob);
+                m_InstanceDataSystem.QueryRendererInstances(destroyedRenderers, destroyedInstances);
+                m_CullingBatcher.DestroyDrawInstances(destroyedInstances);
+                m_InstanceDataSystem.FreeInstances(destroyedInstances);
+                destroyedInstances.Dispose();
+            }
         }
 
         public void ProcessGameObjectChanges(NativeArray<EntityId> changedRenderers)
@@ -97,10 +193,13 @@ namespace UnityEngine.Rendering
                 return;
 
             // Update the material/mesh maps and retrieve the IDs of the materials/meshes for which the data actually changed.
-            Profiler.BeginSample("GetMaterialsAndMeshesWithChangedData");
-            NativeHashSet<EntityId> materialsWithChangedData = m_CullingBatcher.UpdateMaterialData(changedMaterials, changedMaterialDatas, Allocator.TempJob);
-            NativeHashSet<EntityId> meshesWithChangedData = m_CullingBatcher.UpdateMeshData(changedMeshes, Allocator.TempJob);
-            Profiler.EndSample();
+            NativeHashSet<EntityId> materialsWithChangedData;
+            NativeHashSet<EntityId> meshesWithChangedData;
+            using (k_GetMaterialsAndMeshesWithChangedData.Auto())
+            {
+                materialsWithChangedData = m_CullingBatcher.UpdateMaterialData(changedMaterials, changedMaterialDatas, Allocator.TempJob);
+                meshesWithChangedData = m_CullingBatcher.UpdateMeshData(changedMeshes, Allocator.TempJob);
+            }
 
             if (materialsWithChangedData.Count == 0 && meshesWithChangedData.Count == 0)
             {
@@ -112,17 +211,21 @@ namespace UnityEngine.Rendering
             var sortedExcludedRenderers = new NativeArray<EntityId>(excludedRenderers, Allocator.TempJob);
             if (sortedExcludedRenderers.Length > 0)
             {
-                Profiler.BeginSample("ProcessRendererMaterialAndMeshChanges.Sort");
-                sortedExcludedRenderers.Reinterpret<int>().ParallelSort().Complete();
-                Profiler.EndSample();
+                using (k_ProcessRendererMaterialAndMeshChangesSort.Auto())
+                {
+                    sortedExcludedRenderers.Reinterpret<int>().ParallelSort().Complete();
+                }
             }
 
-            Profiler.BeginSample("FindRenderersFromMaterialsOrMeshes");
-            var (renderersWithChangedMaterials, renderersWithChangeMeshes) = FindRenderersFromMaterialsOrMeshes(sortedExcludedRenderers,
-                materialsWithChangedData,
-                meshesWithChangedData,
-                Allocator.TempJob);
-            Profiler.EndSample();
+            (NativeList<EntityId> renderersWithChangedMaterials, NativeList<EntityId> renderersWithChangeMeshes) rendererPair;
+            using (k_FindRenderersFromMaterialsOrMeshes.Auto())
+            {
+                rendererPair = FindRenderersFromMaterialsOrMeshes(sortedExcludedRenderers,
+                    materialsWithChangedData,
+                    meshesWithChangedData,
+                    Allocator.TempJob);
+            }
+            var (renderersWithChangedMaterials, renderersWithChangeMeshes) = rendererPair;
 
             materialsWithChangedData.Dispose();
             meshesWithChangedData.Dispose();
@@ -135,25 +238,26 @@ namespace UnityEngine.Rendering
                 return;
             }
 
-            Profiler.BeginSample("UpdateRenderers");
-            var changedMaterialsCount = renderersWithChangedMaterials.Length;
-            var changedMeshesCount = renderersWithChangeMeshes.Length;
-            var totalCount = changedMaterialsCount + changedMeshesCount;
+            using (k_UpdateRenderers.Auto())
+            {
+                var changedMaterialsCount = renderersWithChangedMaterials.Length;
+                var changedMeshesCount = renderersWithChangeMeshes.Length;
+                var totalCount = changedMaterialsCount + changedMeshesCount;
 
-            var changedRenderers = new NativeArray<EntityId>(totalCount, Allocator.TempJob, NativeArrayOptions.UninitializedMemory);
-            NativeArray<EntityId>.Copy(renderersWithChangedMaterials.AsArray(), changedRenderers, changedMaterialsCount);
-            NativeArray<EntityId>.Copy(renderersWithChangeMeshes.AsArray(), changedRenderers.GetSubArray(changedMaterialsCount, changedMeshesCount), changedMeshesCount);
+                var changedRenderers = new NativeArray<EntityId>(totalCount, Allocator.TempJob, NativeArrayOptions.UninitializedMemory);
+                NativeArray<EntityId>.Copy(renderersWithChangedMaterials.AsArray(), changedRenderers, changedMaterialsCount);
+                NativeArray<EntityId>.Copy(renderersWithChangeMeshes.AsArray(), changedRenderers.GetSubArray(changedMaterialsCount, changedMeshesCount), changedMeshesCount);
 
-            var changedInstances = new NativeArray<InstanceHandle>(totalCount, Allocator.TempJob, NativeArrayOptions.UninitializedMemory);
-            m_InstanceDataSystem.QueryRendererInstances(changedRenderers, changedInstances);
-            
-            m_CullingBatcher.BuildBatches(changedInstances);
+                var changedInstances = new NativeArray<InstanceHandle>(totalCount, Allocator.TempJob, NativeArrayOptions.UninitializedMemory);
+                m_InstanceDataSystem.QueryRendererInstances(changedRenderers, changedInstances);
 
-            changedRenderers.Dispose();
-            changedInstances.Dispose();
-            renderersWithChangedMaterials.Dispose();
-            renderersWithChangeMeshes.Dispose();
-            Profiler.EndSample();
+                m_CullingBatcher.BuildBatches(changedInstances);
+
+                changedRenderers.Dispose();
+                changedInstances.Dispose();
+                renderersWithChangedMaterials.Dispose();
+                renderersWithChangeMeshes.Dispose();
+            }
         }
 
         private (NativeList<EntityId> renderersWithMaterials, NativeList<EntityId> renderersWithMeshes)
@@ -186,7 +290,7 @@ namespace UnityEngine.Rendering
             if (updateBatch.TotalLength == 0)
                 return;
 
-            Profiler.BeginSample("ProcessMeshRendererUpdateBatch");
+            using var _ = k_ProcessMeshRendererUpdateBatch.Auto();
 
             MeshRendererUpdateType updateType = updateBatch.updateType;
             bool anyInstanceUseBlendProbes = updateBatch.blendProbesUsage != MeshRendererUpdateBatch.BlendProbesUsage.AllDisabled;
@@ -278,12 +382,11 @@ namespace UnityEngine.Rendering
             instances.Dispose();
             archetypes.Dispose();
             componentUploadSources.Dispose();
-            Profiler.EndSample();
         }
 
         unsafe NativeArray<GPUArchetypeHandle> ComputeInstanceGPUArchetypes(ref MeshRendererUpdateBatch updateBatch, GPUComponentSet overrideComponentSet, Allocator allocator)
         {
-            using (new ProfilerMarker("ComputeInstanceGPUArchetypes").Auto())
+            using (k_ComputeInstanceGPUArchetypes.Auto())
             {
                 bool useSharedGPUArchetype = updateBatch.blendProbesUsage != MeshRendererUpdateBatch.BlendProbesUsage.Unknown
                     && updateBatch.lightmapUsage != MeshRendererUpdateBatch.LightmapUsage.Unknown
@@ -317,7 +420,7 @@ namespace UnityEngine.Rendering
                 return default;
             }
 
-            using (new ProfilerMarker("BuildGPUComponentOverrideUploadSources").Auto())
+            using (k_BuildGPUComponentOverrideUploadSources.Auto())
             {
                 NativeArray<GPUComponentUploadSource> uploadSources = new NativeArray<GPUComponentUploadSource>(componentUpdates.Length, allocator);
                 GPUComponentSet componentSet = default;
@@ -334,7 +437,7 @@ namespace UnityEngine.Rendering
             Assert.IsTrue(!componentSet.isEmpty);
             Assert.IsTrue(uploadSources.Length > 0);
 
-            Profiler.BeginSample("UploadGPUComponentOverrides");
+            using var _ = k_UploadGPUComponentOverrides.Auto();
 
             GPUInstanceUploadData uploadData = m_InstanceDataSystem.CreateInstanceUploadData(componentSet, instances.Length, Allocator.TempJob);
 
@@ -351,7 +454,7 @@ namespace UnityEngine.Rendering
                 allWritesJobHandle = JobHandle.CombineDependencies(jobHandle, allWritesJobHandle);
             }
 
-            using (new ProfilerMarker("SyncWriteGPUComponentJobs").Auto())
+            using (k_SyncWriteGPUComponentJobs.Auto())
             {
                 allWritesJobHandle.Complete();
             }
@@ -361,7 +464,6 @@ namespace UnityEngine.Rendering
             m_InstanceDataSystem.UploadDataToGPU(instances, m_GPUUploadBuffer, uploadData);
 
             uploadData.Dispose();
-            Profiler.EndSample();
         }
 
         void EnsureUploadBufferUintCount(int uintCount)
@@ -517,7 +619,7 @@ namespace UnityEngine.Rendering
             if (!GPUResidentDrawer.EnableDeepValidation)
                 return;
 
-            using (new ProfilerMarker("DeepValidation.NoInstanceUsesBlendProbes").Auto())
+            using (k_DeepValidationNoInstanceUsesBlendProbes.Auto())
             {
                 if (AnyInstanceUseBlendProbes(instances))
                     Debug.LogError("One instance has LightProbeUsage == LightProbeUsage.BlendProbes whereas it wasn't expected.");
@@ -595,7 +697,7 @@ namespace UnityEngine.Rendering
             if (!GPUResidentDrawer.EnableDeepValidation)
                 return;
 
-            using (new ProfilerMarker("DeepValidation.GPUArchetypesDidNotChange").Auto())
+            using (k_DeepValidationGPUArchetypesDidNotChange.Auto())
             {
                 bool archetypeMightHaveChanged = updateBatch.HasAnyComponent(MeshRendererComponentMask.RendererSettings
                     | MeshRendererComponentMask.Lightmap

@@ -5,8 +5,8 @@ using Unity.Collections.LowLevel.Unsafe;
 using Unity.Jobs;
 using Unity.Mathematics;
 using Unity.Profiling;
+using Unity.Profiling.LowLevel;
 using UnityEngine.Assertions;
-using UnityEngine.Profiling;
 
 namespace UnityEngine.Rendering
 {
@@ -43,6 +43,91 @@ namespace UnityEngine.Rendering
         private bool m_EnableBoundingSpheres;
 
         private readonly int[] m_ScratchWindParamAddressArray = new int[k_STMaxWindParamsCount * 4];
+
+        /// <summary>
+        /// Runs light probe interpolation and tetrahedron cache update jobs for all instances in
+        /// the probe update queue. Computes SH coefficients and occlusion values per instance.
+        /// Cost scales with the number of instances that use blended light probes.
+        /// </summary>
+        static readonly ProfilerMarker k_InterpolateProbesAndUpdateTetrahedronCache =
+            new ProfilerMarker(ProfilerCategory.Render, "InterpolateProbesAndUpdateTetrahedronCache", MarkerFlags.VerbosityAdvanced);
+
+        /// <summary>
+        /// Uploads SH and occlusion probe data to the GPU instance buffer via a compute shader
+        /// scatter-write. Includes a <c>ComputeBuffer.SetData</c> call and an immediate dispatch.
+        /// </summary>
+        static readonly ProfilerMarker k_DispatchProbeUpdateCommand =
+            new ProfilerMarker(ProfilerCategory.Render, "DispatchProbeUpdateCommand", MarkerFlags.VerbosityAdvanced);
+
+        /// <summary>
+        /// Uploads previous-frame transform matrices to the GPU instance buffer via a compute
+        /// shader scatter-write to enable per-object motion vectors. Includes a
+        /// <c>ComputeBuffer.SetData</c> call and an immediate dispatch.
+        /// </summary>
+        static readonly ProfilerMarker k_DispatchMotionUpdateCommand =
+            new ProfilerMarker(ProfilerCategory.Render, "DispatchMotionUpdateCommand", MarkerFlags.VerbosityAdvanced);
+
+        /// <summary>
+        /// Uploads object-to-world and world-to-object matrices to the GPU instance buffer via
+        /// a compute shader scatter-write. Optionally uploads bounding spheres when enabled.
+        /// Includes <c>ComputeBuffer.SetData</c> calls and an immediate dispatch.
+        /// </summary>
+        static readonly ProfilerMarker k_DispatchTransformUpdateCommand =
+            new ProfilerMarker(ProfilerCategory.Render, "DispatchTransformUpdateCommand", MarkerFlags.VerbosityAdvanced);
+
+        /// <summary>
+        /// Copies current-frame SpeedTree wind parameters into the history slots in the GPU
+        /// instance buffer via a compute shader scatter-write, enabling wind continuity across
+        /// frames.
+        /// </summary>
+        static readonly ProfilerMarker k_DispatchWindDataCopyHistory =
+            new ProfilerMarker(ProfilerCategory.Render, "DispatchWindDataCopyHistory", MarkerFlags.VerbosityAdvanced);
+
+        /// <summary>
+        /// Transfers CPU staging buffers to <c>ComputeBuffer</c> slots on the GPU synchronously.
+        /// Appears inside each dispatch marker; cost scales with the size of the data being
+        /// uploaded and stalls the CPU until the transfer completes.
+        /// </summary>
+        static readonly ProfilerMarker k_ComputeBufferSetData =
+            new ProfilerMarker(ProfilerCategory.Render, "ComputeBuffer.SetData", MarkerFlags.VerbosityAdvanced);
+
+        /// <summary>
+        /// Allocates temporary <c>NativeArray</c> staging buffers for the transform and probe
+        /// update queues. Allocates additional probe arrays only when any instance uses blended
+        /// light probes.
+        /// </summary>
+        static readonly ProfilerMarker k_AllocateBuffers =
+            new ProfilerMarker(ProfilerCategory.Render, "AllocateBuffers", MarkerFlags.VerbosityAdvanced);
+
+        /// <summary>
+        /// Runs the <c>TransformUpdateJob</c> and optionally the <c>ProbesUpdateJob</c> in
+        /// parallel, writing transform packets and SH data into the staging queues consumed by
+        /// the subsequent GPU dispatch commands.
+        /// </summary>
+        static readonly ProfilerMarker k_UpdateTransformsAndProbes =
+            new ProfilerMarker(ProfilerCategory.Render, "UpdateTransformsAndProbes", MarkerFlags.VerbosityAdvanced);
+
+        /// <summary>
+        /// Runs <c>UpdateRendererInstancesJob</c> in parallel to write bounds, LOD group,
+        /// render settings, and other per-instance renderer data into the render world for the
+        /// given update batch.
+        /// </summary>
+        static readonly ProfilerMarker k_UpdateInstanceData =
+            new ProfilerMarker(ProfilerCategory.Render, "UpdateInstanceData", MarkerFlags.VerbosityAdvanced);
+
+        /// <summary>
+        /// Looks up the <c>InstanceHandle</c> for each renderer entity ID in parallel using the
+        /// renderer-to-instance map, writing results into the caller-provided instances array.
+        /// </summary>
+        static readonly ProfilerMarker k_QueryRendererInstances =
+            new ProfilerMarker(ProfilerCategory.Render, "QueryRendererInstances", MarkerFlags.VerbosityAdvanced);
+
+        /// <summary>
+        /// Recomputes the ground-truth total tree count from renderer settings and asserts it
+        /// matches the cached value. Only runs when deep validation is enabled.
+        /// </summary>
+        static readonly ProfilerMarker k_DeepValidateTotalTreeCount =
+            new ProfilerMarker(ProfilerCategory.Render, "DeepValidate.TotalTreeCount", MarkerFlags.VerbosityAdvanced);
 
         public NativeReference<GPUArchetypeManager> archetypeManager => m_ArchetypeManager;
         public ref DefaultGPUComponents defaultGPUComponents => ref m_DefaultGPUComponents;
@@ -202,7 +287,7 @@ namespace UnityEngine.Rendering
             NativeArray<SphericalHarmonicsL2> probeUpdateDataQueue,
             NativeArray<Vector4> probeOcclusionUpdateDataQueue)
         {
-            Profiler.BeginSample("InterpolateProbesAndUpdateTetrahedronCache");
+            using var _ = k_InterpolateProbesAndUpdateTetrahedronCache.Auto();
 
             ScheduleInterpolateProbesAndUpdateTetrahedronCache(queueCount,
                 probeUpdateInstanceQueue,
@@ -211,8 +296,6 @@ namespace UnityEngine.Rendering
                 probeUpdateDataQueue,
                 probeOcclusionUpdateDataQueue)
                 .Complete();
-
-            Profiler.EndSample();
         }
 
         private void DispatchProbeUpdateCommand(int queueCount,
@@ -220,17 +303,19 @@ namespace UnityEngine.Rendering
             NativeArray<SphericalHarmonicsL2> probeUpdateDataQueue,
             NativeArray<Vector4> probeOcclusionUpdateDataQueue)
         {
-            Profiler.BeginSample("DispatchProbeUpdateCommand");
+            using var _ = k_DispatchProbeUpdateCommand.Auto();
+
             EnsureProbeBuffersCapacity(queueCount);
 
             var gpuIndices = new NativeArray<GPUInstanceIndex>(queueCount, Allocator.TempJob, NativeArrayOptions.UninitializedMemory);
             m_InstanceDataBuffer.QueryInstanceGPUIndices(m_RenderWorld, probeInstanceQueue.GetSubArray(0, queueCount), gpuIndices);
 
-            Profiler.BeginSample("ComputeBuffer.SetData");
-            m_UpdateIndexQueueBuffer.SetData(gpuIndices, 0, 0, queueCount);
-            m_ProbeUpdateDataQueueBuffer.SetData(probeUpdateDataQueue, 0, 0, queueCount);
-            m_ProbeOcclusionUpdateDataQueueBuffer.SetData(probeOcclusionUpdateDataQueue, 0, 0, queueCount);
-            Profiler.EndSample();
+            using (k_ComputeBufferSetData.Auto())
+            {
+                m_UpdateIndexQueueBuffer.SetData(gpuIndices, 0, 0, queueCount);
+                m_ProbeUpdateDataQueueBuffer.SetData(probeUpdateDataQueue, 0, 0, queueCount);
+                m_ProbeOcclusionUpdateDataQueueBuffer.SetData(probeOcclusionUpdateDataQueue, 0, 0, queueCount);
+            }
 
             m_TransformUpdateCS.SetInt(InstanceTransformUpdateIDs._ProbeUpdateQueueCount, queueCount);
             m_TransformUpdateCS.SetInt(InstanceTransformUpdateIDs._SHUpdateVec4Offset, m_InstanceDataBuffer.GetComponentGPUUIntOffset(m_DefaultGPUComponents.shCoefficients));
@@ -241,20 +326,21 @@ namespace UnityEngine.Rendering
             m_TransformUpdateCS.Dispatch(m_ProbeUpdateKernel, (queueCount + 63) / 64, 1, 1);
 
             gpuIndices.Dispose();
-            Profiler.EndSample();
         }
 
         private void DispatchMotionUpdateCommand(int motionQueueCount, NativeArray<InstanceHandle> transformInstanceQueue)
         {
-            Profiler.BeginSample("DispatchMotionUpdateCommand");
+            using var _ = k_DispatchMotionUpdateCommand.Auto();
+
             EnsureTransformBuffersCapacity(motionQueueCount);
 
             var gpuIndices = new NativeArray<GPUInstanceIndex>(motionQueueCount, Allocator.TempJob, NativeArrayOptions.UninitializedMemory);
             m_InstanceDataBuffer.QueryInstanceGPUIndices(m_RenderWorld, transformInstanceQueue.GetSubArray(0, motionQueueCount), gpuIndices);
 
-            Profiler.BeginSample("ComputeBuffer.SetData");
-            m_UpdateIndexQueueBuffer.SetData(gpuIndices, 0, 0, motionQueueCount);
-            Profiler.EndSample();
+            using (k_ComputeBufferSetData.Auto())
+            {
+                m_UpdateIndexQueueBuffer.SetData(gpuIndices, 0, 0, motionQueueCount);
+            }
 
             m_TransformUpdateCS.SetInt(InstanceTransformUpdateIDs._TransformUpdateQueueCount, motionQueueCount);
             m_TransformUpdateCS.SetInt(InstanceTransformUpdateIDs._TransformUpdateOutputL2WVec4Offset, m_InstanceDataBuffer.GetComponentGPUUIntOffset(m_DefaultGPUComponents.objectToWorld));
@@ -266,7 +352,6 @@ namespace UnityEngine.Rendering
             m_TransformUpdateCS.Dispatch(m_MotionUpdateKernel, (motionQueueCount + 63) / 64, 1, 1);
 
             gpuIndices.Dispose();
-            Profiler.EndSample();
         }
 
         private void DispatchTransformUpdateCommand(bool initialize,
@@ -275,7 +360,8 @@ namespace UnityEngine.Rendering
             NativeArray<TransformUpdatePacket> updateDataQueue,
             NativeArray<float4> boundingSphereUpdateDataQueue)
         {
-            Profiler.BeginSample("DispatchTransformUpdateCommand");
+            using var _ = k_DispatchTransformUpdateCommand.Auto();
+
             EnsureTransformBuffersCapacity(transformQueueCount);
 
             int transformQueueDataSize;
@@ -296,12 +382,13 @@ namespace UnityEngine.Rendering
             var gpuIndices = new NativeArray<GPUInstanceIndex>(transformQueueCount, Allocator.TempJob, NativeArrayOptions.UninitializedMemory);
             m_InstanceDataBuffer.QueryInstanceGPUIndices(m_RenderWorld, transformInstanceQueue.GetSubArray(0, transformQueueCount), gpuIndices);
 
-            Profiler.BeginSample("ComputeBuffer.SetData");
-            m_UpdateIndexQueueBuffer.SetData(gpuIndices, 0, 0, transformQueueCount);
-            m_TransformUpdateDataQueueBuffer.SetData(updateDataQueue, 0, 0, transformQueueDataSize);
-            if (m_EnableBoundingSpheres)
-                m_BoundingSpheresUpdateDataQueueBuffer.SetData(boundingSphereUpdateDataQueue, 0, 0, transformQueueCount);
-            Profiler.EndSample();
+            using (k_ComputeBufferSetData.Auto())
+            {
+                m_UpdateIndexQueueBuffer.SetData(gpuIndices, 0, 0, transformQueueCount);
+                m_TransformUpdateDataQueueBuffer.SetData(updateDataQueue, 0, 0, transformQueueDataSize);
+                if (m_EnableBoundingSpheres)
+                    m_BoundingSpheresUpdateDataQueueBuffer.SetData(boundingSphereUpdateDataQueue, 0, 0, transformQueueCount);
+            }
 
             m_TransformUpdateCS.SetInt(InstanceTransformUpdateIDs._TransformUpdateQueueCount, transformQueueCount);
             m_TransformUpdateCS.SetInt(InstanceTransformUpdateIDs._TransformUpdateOutputL2WVec4Offset, m_InstanceDataBuffer.GetComponentGPUUIntOffset(m_DefaultGPUComponents.objectToWorld));
@@ -320,21 +407,21 @@ namespace UnityEngine.Rendering
             m_TransformUpdateCS.Dispatch(kernel, (transformQueueCount + 63) / 64, 1, 1);
 
             gpuIndices.Dispose();
-            Profiler.EndSample();
         }
 
         private void DispatchWindDataCopyHistoryCommand(NativeArray<GPUInstanceIndex> gpuIndices)
         {
-            Profiler.BeginSample("DispatchWindDataCopyHistory");
+            using var _ = k_DispatchWindDataCopyHistory.Auto();
 
             int kernel = m_WindDataCopyHistoryKernel;
             int instancesCount = gpuIndices.Length;
 
             EnsureIndexQueueBufferCapacity(instancesCount);
 
-            Profiler.BeginSample("ComputeBuffer.SetData");
-            m_UpdateIndexQueueBuffer.SetData(gpuIndices, 0, 0, instancesCount);
-            Profiler.EndSample();
+            using (k_ComputeBufferSetData.Auto())
+            {
+                m_UpdateIndexQueueBuffer.SetData(gpuIndices, 0, 0, instancesCount);
+            }
 
             m_WindDataUpdateCS.SetInt(InstanceWindDataUpdateIDs._WindDataQueueCount, instancesCount);
             for (int i = 0; i < k_STMaxWindParamsCount; ++i)
@@ -347,8 +434,6 @@ namespace UnityEngine.Rendering
             m_WindDataUpdateCS.SetBuffer(kernel, InstanceWindDataUpdateIDs._WindDataUpdateIndexQueue, m_UpdateIndexQueueBuffer);
             m_WindDataUpdateCS.SetBuffer(kernel, InstanceWindDataUpdateIDs._WindDataBuffer, m_InstanceDataBuffer.nativeBuffer);
             m_WindDataUpdateCS.Dispatch(kernel, (instancesCount + 63) / 64, 1, 1);
-
-            Profiler.EndSample();
         }
 
         private unsafe void UpdateInstanceMotionsDataInternal()
@@ -384,7 +469,7 @@ namespace UnityEngine.Rendering
             if (instances.Length == 0)
                 return;
 
-            Profiler.BeginSample("AllocateBuffers");
+            k_AllocateBuffers.Begin();
             var transformUpdateInstanceQueue = new NativeArray<InstanceHandle>(instances.Length, Allocator.TempJob, NativeArrayOptions.UninitializedMemory);
             // When we reinitialize we have the current and the previous matrices per transform.
             var transformUpdateDataQueue = new NativeArray<TransformUpdatePacket>(initialize ? instances.Length * 2 : instances.Length, Allocator.TempJob, NativeArrayOptions.UninitializedMemory);
@@ -406,11 +491,11 @@ namespace UnityEngine.Rendering
                 probeOcclusionUpdateDataQueue = new NativeArray<Vector4>(instances.Length, Allocator.TempJob, NativeArrayOptions.UninitializedMemory);
             }
 
-            Profiler.EndSample();
+            k_AllocateBuffers.End();
 
             var transformJobRanges = JaggedJobRange.FromSpanWithMaxBatchSize(jaggedLocalToWorldMatrices, TransformUpdateJob.MaxBatchSize, Allocator.TempJob);
 
-            Profiler.BeginSample("UpdateTransformsAndProbes");
+            k_UpdateTransformsAndProbes.Begin();
 
             var transformQueueCount = 0;
             int probesQueueCount = 0;
@@ -448,7 +533,7 @@ namespace UnityEngine.Rendering
 
             JobHandle.CombineDependencies(transformJobHandle, probesJobHandle).Complete();
 
-            Profiler.EndSample();
+            k_UpdateTransformsAndProbes.End();
 
             if (probesQueueCount > 0)
             {
@@ -681,7 +766,8 @@ namespace UnityEngine.Rendering
 
         public void UpdateInstanceData(NativeArray<InstanceHandle> instances, in MeshRendererUpdateBatch updateBatch, NativeParallelHashMap<EntityId, GPUInstanceIndex> lodGroupDataMap)
         {
-            Profiler.BeginSample("UpdateInstanceData");
+            using var _ = k_UpdateInstanceData.Auto();
+
             Assert.IsTrue(instances.Length == updateBatch.TotalLength);
 
             var jobRanges = JaggedJobRange.FromSpanWithRelaxedBatchSize(updateBatch.instanceIDs, 128, Allocator.TempJob);
@@ -697,7 +783,6 @@ namespace UnityEngine.Rendering
             .RunParallel(jobRanges);
 
             jobRanges.Dispose();
-            Profiler.EndSample();
         }
 
         public GPUInstanceUploadData CreateInstanceUploadData(GPUComponentHandle component, int capacity, Allocator allocator)
@@ -817,9 +902,10 @@ namespace UnityEngine.Rendering
             NativeArray<InstanceHandle> instances,
             UnsafeAtomicCounter32 notFoundInstancesCount = default)
         {
-            Profiler.BeginSample("QueryRendererInstances");
-            ScheduleQueryRendererInstancesJob(jaggedRenderers, instances, notFoundInstancesCount).Complete();
-            Profiler.EndSample();
+            using (k_QueryRendererInstances.Auto())
+            {
+                ScheduleQueryRendererInstancesJob(jaggedRenderers, instances, notFoundInstancesCount).Complete();
+            }
         }
 
         public JobHandle ScheduleQueryRendererInstancesJob(NativeArray<EntityId> renderers, NativeArray<InstanceHandle> instances)
@@ -928,14 +1014,13 @@ namespace UnityEngine.Rendering
             if (!GPUResidentDrawer.EnableDeepValidation)
                 return;
 
-            Profiler.BeginSample("DeepValidate.TotalTreeCount");
+            using (k_DeepValidateTotalTreeCount.Auto())
+            {
+                int totalTreeCountTruth = InstanceDataSystemBurst.ComputeTotalTreeCount(m_RenderWorld.rendererSettings);
 
-            int totalTreeCountTruth = InstanceDataSystemBurst.ComputeTotalTreeCount(m_RenderWorld.rendererSettings);
-
-            if (totalTreeCount != totalTreeCountTruth)
-                Debug.LogError($"Cached total tree count ({totalTreeCount}) does not match total tree count truth ({totalTreeCountTruth}).");
-
-            Profiler.EndSample();
+                if (totalTreeCount != totalTreeCountTruth)
+                    Debug.LogError($"Cached total tree count ({totalTreeCount}) does not match total tree count truth ({totalTreeCountTruth}).");
+            }
 
 #pragma warning restore CS0162
         }

@@ -6,8 +6,9 @@ using Unity.Collections;
 using Unity.Collections.LowLevel.Unsafe;
 using Unity.Jobs;
 using Unity.Mathematics;
+using Unity.Profiling;
+using Unity.Profiling.LowLevel;
 using UnityEngine.Assertions;
-using UnityEngine.Profiling;
 
 namespace UnityEngine.Rendering
 {
@@ -27,6 +28,22 @@ namespace UnityEngine.Rendering
     // See GPU Archetype PR for details https://github.cds.internal.unity3d.com/unity/unity/pull/50000
     internal class GPUInstanceDataBuffer : IDisposable
     {
+        /// <summary>
+        /// Maps CPU instance handles to their packed GPU indices in parallel using the archetype
+        /// prefix-sum table. Results are written into the caller-provided gpuIndices array
+        /// for use by the upload scatter pass.
+        /// </summary>
+        static readonly ProfilerMarker k_QueryInstanceGPUIndices =
+            new ProfilerMarker(ProfilerCategory.Render, "QueryInstanceGPUIndices", MarkerFlags.VerbosityAdvanced);
+
+        /// <summary>
+        /// Uploads dirty per-instance component data to the GPU buffer through a scatter-write compute
+        /// shader. Includes CPU-side buffer setup and an immediate command buffer flush. Cost scales
+        /// with the number of instances and written component types.
+        /// </summary>
+        static readonly ProfilerMarker k_UploadGPUInstanceData =
+            new ProfilerMarker(ProfilerCategory.Render, "UploadGPUInstanceData", MarkerFlags.VerbosityAdvanced);
+
         //@ For now 1Gb but this is should be smaller for OpenGL ES 3.1
         public const int MaxGPUInstancDataBufferSize = 1024 * 1024 * 1024;
 
@@ -148,7 +165,7 @@ namespace UnityEngine.Rendering
         {
             Assert.AreEqual(instances.Length, gpuIndices.Length);
 
-            Profiler.BeginSample("QueryInstanceGPUIndices");
+            using var _ = k_QueryInstanceGPUIndices.Auto();
 
             new InstancesToGPUIndicesJob
             {
@@ -159,8 +176,6 @@ namespace UnityEngine.Rendering
                 gpuIndices = gpuIndices
             }
             .RunParallel(instances.Length, 512);
-
-            Profiler.EndSample();
         }
 
         public void UploadDataToGPU(CommandBuffer cmd, GraphicsBuffer uploadBuffer, in GPUInstanceUploadData uploadData, NativeArray<GPUInstanceIndex> scatterGPUIndices)
@@ -170,7 +185,7 @@ namespace UnityEngine.Rendering
             if (uploadData.length == 0)
                 return;
 
-            Profiler.BeginSample("UploadGPUInstanceData");
+            using var _ = k_UploadGPUInstanceData.Auto();
 
             Assert.IsTrue(scatterGPUIndices.Length <= uploadData.length);
 
@@ -214,8 +229,6 @@ namespace UnityEngine.Rendering
 
             Graphics.ExecuteCommandBuffer(cmd);
             cmd.Clear();
-
-            Profiler.EndSample();
         }
 
         public void SetGPULayout(CommandBuffer cmd, ref GPUArchetypeManager archetypeManager, in GPUInstanceDataBufferLayout newLayout, bool submitCmdBuffer)
