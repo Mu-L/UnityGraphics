@@ -271,6 +271,10 @@ namespace UnityEditor.ShaderGraph
                     if (childrenSet.Add(subGraphGuid))
                         subGraphNode.CollectShaderKeywords(keywordCollector, GenerationMode.ForReals);
                 }
+                else
+                {
+                    node.CollectShaderKeywords(keywordCollector, GenerationMode.ForReals);
+                }
 
                 if (node.hasError)
                 {

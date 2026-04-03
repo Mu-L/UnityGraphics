@@ -69,6 +69,7 @@ namespace UnityEditor.ShaderGraph
                 StructFields.VertexDescriptionInputs.ScreenPosition,
                 StructFields.VertexDescriptionInputs.NDCPosition,
                 StructFields.VertexDescriptionInputs.PixelPosition,
+                StructFields.VertexDescriptionInputs.ClipPosition,
 
                 StructFields.VertexDescriptionInputs.uv0,
                 StructFields.VertexDescriptionInputs.uv1,
@@ -129,6 +130,7 @@ namespace UnityEditor.ShaderGraph
                 StructFields.SurfaceDescriptionInputs.ScreenPosition,
                 StructFields.SurfaceDescriptionInputs.NDCPosition,
                 StructFields.SurfaceDescriptionInputs.PixelPosition,
+                StructFields.SurfaceDescriptionInputs.ClipPosition,
 
                 StructFields.SurfaceDescriptionInputs.uv0,
                 StructFields.SurfaceDescriptionInputs.uv1,

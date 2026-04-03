@@ -58,6 +58,7 @@ namespace UnityEditor.ShaderGraph
             new FieldDependency(StructFields.VertexDescriptionInputs.ScreenPosition,                                StructFields.VertexDescriptionInputs.WorldSpacePosition),
             new FieldDependency(StructFields.VertexDescriptionInputs.NDCPosition,                                   StructFields.VertexDescriptionInputs.ScreenPosition),
             new FieldDependency(StructFields.VertexDescriptionInputs.PixelPosition,                                 StructFields.VertexDescriptionInputs.NDCPosition),
+            new FieldDependency(StructFields.VertexDescriptionInputs.ClipPosition,                                  StructFields.VertexDescriptionInputs.WorldSpacePosition),
 
             new FieldDependency(StructFields.VertexDescriptionInputs.uv0,                                           StructFields.Attributes.uv0),
             new FieldDependency(StructFields.VertexDescriptionInputs.uv1,                                           StructFields.Attributes.uv1),

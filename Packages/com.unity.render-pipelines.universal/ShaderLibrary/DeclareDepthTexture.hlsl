@@ -9,6 +9,25 @@ float4 _CameraDepthTexture_TexelSize;
 // 2023.3 Deprecated. This is for backwards compatibility. Remove in the future.
 #define sampler_CameraDepthTexture sampler_PointClamp
 
+// Framebuffer fetch API for depth input attachment
+#if defined(DEPTH_AS_INPUT_ATTACHMENT)
+    FRAMEBUFFER_INPUT_X_FLOAT(0);
+
+    float FetchSceneDepth(float2 fragCoord)
+    {
+        float depth = LOAD_FRAMEBUFFER_INPUT_X(0, fragCoord).r;
+        return depth; 
+    }
+#elif defined(DEPTH_AS_INPUT_ATTACHMENT_MSAA)
+    FRAMEBUFFER_INPUT_X_FLOAT_MS(0);
+    
+    float FetchSceneDepth(float2 fragCoord, int sampleIndx) 
+    {
+        float depth = LOAD_FRAMEBUFFER_INPUT_X_MS(0, sampleIndx, fragCoord).r;
+        return depth;
+    }
+#endif
+
 float SampleSceneDepth(float2 uv)
 {
     uv = ClampAndScaleUVForBilinear(UnityStereoTransformScreenSpaceTex(uv), _CameraDepthTexture_TexelSize.xy);

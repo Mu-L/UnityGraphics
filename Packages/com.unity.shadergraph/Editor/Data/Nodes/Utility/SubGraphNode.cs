@@ -723,8 +723,10 @@ namespace UnityEditor.ShaderGraph
             return null;
         }
 
-        public void CollectShaderKeywords(KeywordCollector keywords, GenerationMode generationMode)
+        public override void CollectShaderKeywords(KeywordCollector keywords, GenerationMode generationMode)
         {
+            base.CollectShaderKeywords(keywords, generationMode);
+
             if (asset == null)
                 return;
 
@@ -829,6 +831,14 @@ namespace UnityEditor.ShaderGraph
                 return false;
 
             return asset.requirements.requiresPixelPosition;
+        }
+
+        public bool RequiresClipPosition(ShaderStageCapability stageCapability)
+        {
+            if (asset == null)
+                return false;
+
+            return asset.requirements.requiresClipPosition;
         }
 
         public NeededCoordinateSpace RequiresViewDirection(ShaderStageCapability stageCapability)

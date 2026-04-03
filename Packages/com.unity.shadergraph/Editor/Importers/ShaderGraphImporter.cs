@@ -847,6 +847,7 @@ Shader ""Hidden/GraphErrorShader2""
             AddRequirementsSnippet(r => r.requiresScreenPosition, $"float4 {ShaderGeneratorNames.ScreenPosition}");
             AddRequirementsSnippet(r => r.requiresNDCPosition, $"float2 {ShaderGeneratorNames.NDCPosition}");
             AddRequirementsSnippet(r => r.requiresPixelPosition, $"float2 {ShaderGeneratorNames.PixelPosition}");
+            AddRequirementsSnippet(r => r.requiresClipPosition, $"float2 {ShaderGeneratorNames.ClipPosition}");
             AddRequirementsSnippet(r => r.requiresFaceSign, $"float4 {ShaderGeneratorNames.FaceSign}");
 
             foreach (var uvChannel in EnumInfo<UVChannel>.values)

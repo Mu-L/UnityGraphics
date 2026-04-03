@@ -406,6 +406,11 @@ namespace UnityEditor.ShaderGraph
             }
         }
 
+        public virtual void CollectShaderKeywords(KeywordCollector keywords, GenerationMode generationMode)
+        {
+
+        }
+
         public virtual void CollectShaderProperties(PropertyCollector properties, GenerationMode generationMode)
         {
             foreach (var inputSlot in this.GetInputSlots<MaterialSlot>())

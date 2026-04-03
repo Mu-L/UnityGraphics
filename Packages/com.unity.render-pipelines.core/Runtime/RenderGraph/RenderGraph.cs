@@ -63,7 +63,7 @@ namespace UnityEngine.Rendering.RenderGraphModule
         ///<summary>On Meta XR, this flag can be set to use MSAA shader resolve in the last subpass of a render pass. </summary>
         MultisampledShaderResolve = 1 << 2,
         /// <summary>
-        /// Indicates this pass uses depth texture as input attachment (framebuffer fetch with depth).
+        /// Indicates this pass uses depth texture as both input attachment(framebuffer fetch) and depth attachment.
         /// Required before calling SetInputAttachment() with a depth texture.
         /// </summary>
         DepthAttachmentAsInputAttachment = 1 << 3,

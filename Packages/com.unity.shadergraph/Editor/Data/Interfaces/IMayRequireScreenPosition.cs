@@ -17,6 +17,11 @@ namespace UnityEditor.ShaderGraph
         bool RequiresPixelPosition(ShaderStageCapability stageCapability = ShaderStageCapability.All);
     }
 
+    interface IMayRequireClipPosition
+    {
+        bool RequiresClipPosition(ShaderStageCapability stageCapability = ShaderStageCapability.All);
+    }
+
     static class MayRequireScreenPositionExtensions
     {
         public static bool RequiresScreenPosition(this MaterialSlot slot, ShaderStageCapability stageCapability = ShaderStageCapability.All)
@@ -35,6 +40,12 @@ namespace UnityEditor.ShaderGraph
         {
             var mayRequirePixelPosition = slot as IMayRequirePixelPosition;
             return mayRequirePixelPosition?.RequiresPixelPosition(stageCapability) ?? false;
+        }
+
+        public static bool RequiresClipPosition(this MaterialSlot slot, ShaderStageCapability stageCapability = ShaderStageCapability.All)
+        {
+            var mayRequireClipPosition = slot as IMayRequireClipPosition;
+            return mayRequireClipPosition?.RequiresClipPosition(stageCapability) ?? false;
         }
     }
 }

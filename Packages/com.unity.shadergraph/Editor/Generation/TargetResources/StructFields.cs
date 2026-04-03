@@ -160,6 +160,8 @@ namespace UnityEditor.ShaderGraph
                 subscriptOptions: StructFieldOptions.Optional);
             public static FieldDescriptor PixelPosition = new FieldDescriptor(VertexDescriptionInputs.name, "PixelPosition", "", ShaderValueType.Float2,
                 subscriptOptions: StructFieldOptions.Optional);
+            public static FieldDescriptor ClipPosition = new FieldDescriptor(VertexDescriptionInputs.name, "ClipPosition", "", ShaderValueType.Float2,
+                subscriptOptions: StructFieldOptions.Optional);
 
             public static FieldDescriptor uv0 = new FieldDescriptor(VertexDescriptionInputs.name, "uv0", "", ShaderValueType.Float4,
                 subscriptOptions: StructFieldOptions.Optional);
@@ -261,6 +263,8 @@ namespace UnityEditor.ShaderGraph
             public static FieldDescriptor NDCPosition = new FieldDescriptor(SurfaceDescriptionInputs.name, "NDCPosition", "", ShaderValueType.Float2,
                 subscriptOptions: StructFieldOptions.Optional);
             public static FieldDescriptor PixelPosition = new FieldDescriptor(SurfaceDescriptionInputs.name, "PixelPosition", "", ShaderValueType.Float2,
+                subscriptOptions: StructFieldOptions.Optional);
+            public static FieldDescriptor ClipPosition = new FieldDescriptor(SurfaceDescriptionInputs.name, "ClipPosition", "", ShaderValueType.Float2,
                 subscriptOptions: StructFieldOptions.Optional);
 
             public static FieldDescriptor uv0 = new FieldDescriptor(SurfaceDescriptionInputs.name, "uv0", "", ShaderValueType.Float4,

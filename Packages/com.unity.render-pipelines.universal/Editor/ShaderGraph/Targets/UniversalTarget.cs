@@ -1722,6 +1722,7 @@ namespace UnityEditor.Rendering.Universal.ShaderGraph
         public static readonly PragmaCollection Forward = new PragmaCollection
         {
             { Pragma.Target(ShaderModel.Target20) },
+            { Pragma.TargetForKeyword(ShaderModel.Target45, ShaderKeywordStrings.DEPTH_AS_INPUT_ATTACHMENT_MSAA) },
             { Pragma.MultiCompileInstancing },
             { Pragma.InstancingOptions(InstancingOptions.RenderingLayer) },
             { Pragma.Vertex("vert") },

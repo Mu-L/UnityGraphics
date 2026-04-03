@@ -199,6 +199,8 @@ namespace UnityEditor.Rendering.Universal
         LocalKeyword m_Instancing;
         LocalKeyword m_DotsInstancing;
         LocalKeyword m_ProceduralInstancing;
+        LocalKeyword m_DepthAsInputAttachment;
+        LocalKeyword m_DepthAsInputAttachmentMSAA;
 
         private LocalKeyword TryGetLocalKeyword(Shader shader, string name)
         {
@@ -251,6 +253,8 @@ namespace UnityEditor.Rendering.Universal
             m_EditorVisualization = TryGetLocalKeyword(shader, ShaderKeywordStrings.EDITOR_VISUALIZATION);
             m_LODFadeCrossFade = TryGetLocalKeyword(shader, ShaderKeywordStrings.LOD_FADE_CROSSFADE);
             m_LightCookies = TryGetLocalKeyword(shader, ShaderKeywordStrings.LightCookies);
+            m_DepthAsInputAttachment = TryGetLocalKeyword(shader, ShaderKeywordStrings.DEPTH_AS_INPUT_ATTACHMENT);
+            m_DepthAsInputAttachmentMSAA = TryGetLocalKeyword(shader, ShaderKeywordStrings.DEPTH_AS_INPUT_ATTACHMENT_MSAA);
 
             m_ScreenCoordOverride = TryGetLocalKeyword(shader, ShaderKeywordStrings.SCREEN_COORD_OVERRIDE);
             m_LightmapBicubicSampling = TryGetLocalKeyword(shader, ShaderKeywordStrings.LIGHTMAP_BICUBIC_SAMPLING);
@@ -830,6 +834,20 @@ namespace UnityEditor.Rendering.Universal
             return strippingData.stripUnusedXRVariants;
         }
 
+        internal bool StripUnusedFeatures_RenderObjectDepthInputAttachment(ref IShaderScriptableStrippingData strippingData)
+        {
+            if (!strippingData.IsShaderFeatureEnabled(ShaderFeatures.RenderObjectDepthInputAttachment))
+            {
+                if (strippingData.IsKeywordEnabled(m_DepthAsInputAttachment))
+                    return true;
+
+                if (strippingData.IsKeywordEnabled(m_DepthAsInputAttachmentMSAA))
+                    return true;
+            }
+
+            return false;
+        }
+        
         internal bool StripUnusedFeatures_CrossFadeLod(ref IShaderScriptableStrippingData strippingData)
         {
             if (!strippingData.IsKeywordEnabled(m_LODFadeCrossFade))
@@ -959,6 +977,9 @@ namespace UnityEditor.Rendering.Universal
                 return true;
 
             if (StripUnusedFeatures_XRMotionVector(ref strippingData))
+                return true;
+
+            if (StripUnusedFeatures_RenderObjectDepthInputAttachment(ref strippingData))
                 return true;
 
             return false;

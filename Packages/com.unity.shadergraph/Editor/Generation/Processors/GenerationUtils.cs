@@ -523,6 +523,7 @@ namespace UnityEditor.ShaderGraph
                 new ConditionalField(StructFields.VertexDescriptionInputs.ScreenPosition,                               requirements.requiresScreenPosition),
                 new ConditionalField(StructFields.VertexDescriptionInputs.NDCPosition,                                  requirements.requiresNDCPosition),
                 new ConditionalField(StructFields.VertexDescriptionInputs.PixelPosition,                                requirements.requiresPixelPosition),
+                new ConditionalField(StructFields.VertexDescriptionInputs.ClipPosition,                                 requirements.requiresClipPosition),
 
                 new ConditionalField(StructFields.VertexDescriptionInputs.VertexColor,                                  requirements.requiresVertexColor),
 
@@ -603,6 +604,7 @@ namespace UnityEditor.ShaderGraph
                 new ConditionalField(StructFields.SurfaceDescriptionInputs.ScreenPosition,                              requirements.requiresScreenPosition),
                 new ConditionalField(StructFields.SurfaceDescriptionInputs.NDCPosition,                                 requirements.requiresNDCPosition),
                 new ConditionalField(StructFields.SurfaceDescriptionInputs.PixelPosition,                               requirements.requiresPixelPosition),
+                new ConditionalField(StructFields.SurfaceDescriptionInputs.ClipPosition,                                requirements.requiresClipPosition),
 
                 new ConditionalField(StructFields.SurfaceDescriptionInputs.VertexColor,                                 requirements.requiresVertexColor),
                 new ConditionalField(StructFields.SurfaceDescriptionInputs.FaceSign,                                    requirements.requiresFaceSign),
@@ -950,6 +952,9 @@ namespace UnityEditor.ShaderGraph
                 if (requirements.requiresPixelPosition)
                     sb.AppendLine("float2 {0};", ShaderGeneratorNames.PixelPosition);
 
+                if (requirements.requiresClipPosition)
+                    sb.AppendLine("float2 {0};", ShaderGeneratorNames.ClipPosition);
+
                 if (requirements.requiresFaceSign)
                     sb.AppendLine("float {0};", ShaderGeneratorNames.FaceSign);
 
@@ -1001,6 +1006,9 @@ namespace UnityEditor.ShaderGraph
 
             if (requirements.requiresPixelPosition)
                 sb.AppendLine($"{variableName}.{ShaderGeneratorNames.PixelPosition} = IN.{ShaderGeneratorNames.PixelPosition};");
+
+            if (requirements.requiresClipPosition)
+                sb.AppendLine($"{variableName}.{ShaderGeneratorNames.ClipPosition} = IN.{ShaderGeneratorNames.ClipPosition};");
 
             if (requirements.requiresFaceSign)
                 sb.AppendLine($"{variableName}.{ShaderGeneratorNames.FaceSign} = IN.{ShaderGeneratorNames.FaceSign};");
@@ -1173,11 +1181,7 @@ namespace UnityEditor.ShaderGraph
             }
 
             activeNode.CollectShaderProperties(shaderProperties, mode);
-
-            if (activeNode is SubGraphNode subGraphNode)
-            {
-                subGraphNode.CollectShaderKeywords(shaderKeywords, mode);
-            }
+            activeNode.CollectShaderKeywords(shaderKeywords, mode);
         }
 
         static void GenerateSurfaceDescriptionRemap(

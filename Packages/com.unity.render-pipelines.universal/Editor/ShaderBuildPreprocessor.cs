@@ -79,6 +79,7 @@ namespace UnityEditor.Rendering.Universal
 #if URP_SCREEN_SPACE_REFLECTION
         ScreenSpaceReflection = (1L << 54),
 #endif
+        RenderObjectDepthInputAttachment = (1L << 55),
         All = ~0
     }
 
@@ -931,6 +932,20 @@ namespace UnityEditor.Rendering.Universal
 
                     if (decal.requiresDecalLayers)
                         shaderFeatures |= ShaderFeatures.DecalLayers;
+                }
+
+                // Render Object Feature
+                RenderObjects renderObject = rendererFeature as RenderObjects;
+                if (renderObject != null && rendererRequirements.isUniversalRenderer)
+                {
+                    // We don't add disabled renderer features if "Strip Unused Variants" is enabled.
+                    if (!renderObject.isActive)
+                        continue;
+
+                    RenderObjects.RenderObjectsSettings renderObjectSettings = renderObject.settings;
+
+                    if (renderObjectSettings.depthInputAttachment)
+                        shaderFeatures |= ShaderFeatures.RenderObjectDepthInputAttachment;
                 }
             }
 

@@ -995,6 +995,9 @@ namespace UnityEngine.Rendering.Universal
         public static GlobalKeyword META_QUEST_NO_SPOTLIGHTS_LIGHT_LOOP;
 #endif
         public static GlobalKeyword APPLICATION_SPACE_WARP_MOTION_TRANSPARENT;
+        public static GlobalKeyword DEPTH_AS_INPUT_ATTACHMENT;
+        public static GlobalKeyword DEPTH_AS_INPUT_ATTACHMENT_MSAA;
+
         // TODO: Move following keywords to Local keywords?
         // https://docs.unity3d.com/ScriptReference/Rendering.LocalKeyword.html
         //public static GlobalKeyword TonemapACES;
@@ -1116,6 +1119,8 @@ namespace UnityEngine.Rendering.Universal
             ShaderGlobalKeywords.META_QUEST_NO_SPOTLIGHTS_LIGHT_LOOP = GlobalKeyword.Create(ShaderKeywordStrings.META_QUEST_NO_SPOTLIGHTS_LIGHT_LOOP);            
 #endif
             ShaderGlobalKeywords.APPLICATION_SPACE_WARP_MOTION_TRANSPARENT = GlobalKeyword.Create(ShaderKeywordStrings.APPLICATION_SPACE_WARP_MOTION_TRANSPARENT);
+            ShaderGlobalKeywords.DEPTH_AS_INPUT_ATTACHMENT = GlobalKeyword.Create(ShaderKeywordStrings.DEPTH_AS_INPUT_ATTACHMENT); 
+            ShaderGlobalKeywords.DEPTH_AS_INPUT_ATTACHMENT_MSAA = GlobalKeyword.Create(ShaderKeywordStrings.DEPTH_AS_INPUT_ATTACHMENT_MSAA);
         }
     }
 
@@ -1473,6 +1478,12 @@ namespace UnityEngine.Rendering.Universal
 
         /// <summary> Keyword used for Multi Sampling Anti-Aliasing (MSAA) with 4 per pixel sample count. </summary>
         public const string Msaa4 = "_MSAA_4";
+
+        /// <summary> Keyword used for depth as input attachment. </summary>
+        public const string DEPTH_AS_INPUT_ATTACHMENT = "DEPTH_AS_INPUT_ATTACHMENT";
+
+        /// <summary> Keyword used for depth as input attachment MSAA. </summary>
+        public const string DEPTH_AS_INPUT_ATTACHMENT_MSAA = "DEPTH_AS_INPUT_ATTACHMENT_MSAA";
     }
 
     public sealed partial class UniversalRenderPipeline

@@ -119,6 +119,12 @@ namespace UnityEngine.Rendering.Universal
             /// The camera settings to use.
             /// </summary>
             public CustomCameraSettings cameraSettings = new CustomCameraSettings();
+
+            /// <summary>
+            /// Enable depth input attachment for efficient tile-based depth reading.
+            /// Only valid when <see cref="SystemInfo.supportsDepthAttachmentAsInputAttachment"/> is true.
+            /// </summary>
+            public bool depthInputAttachment = false;
         }
 
         /// <summary>
@@ -237,6 +243,10 @@ namespace UnityEngine.Rendering.Universal
             if (renderingData.cameraData.cameraType == CameraType.Preview
                 || UniversalRenderer.IsOffscreenDepthTexture(ref renderingData.cameraData))
                 return;
+
+            bool enableDepthInputAttachment = settings.depthInputAttachment;
+            renderObjectsPass.SetDepthInputAttachment(enableDepthInputAttachment);
+
             renderer.EnqueuePass(renderObjectsPass);
         }
     }
