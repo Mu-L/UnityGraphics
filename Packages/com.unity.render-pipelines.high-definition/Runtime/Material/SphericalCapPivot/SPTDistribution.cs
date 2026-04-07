@@ -4,18 +4,11 @@ namespace UnityEngine.Rendering.HighDefinition
 {
     partial class SPTDistribution
     {
+        static readonly int _PivotData = Shader.PropertyToID(nameof(_PivotData));
+
         static SPTDistribution s_Instance;
 
-        public static SPTDistribution instance
-        {
-            get
-            {
-                if (s_Instance == null)
-                    s_Instance = new SPTDistribution();
-
-                return s_Instance;
-            }
-        }
+        public static SPTDistribution instance => s_Instance ??= new SPTDistribution();
 
         int m_refCounting;
 
@@ -79,7 +72,24 @@ namespace UnityEngine.Rendering.HighDefinition
 
         public void Bind(CommandBuffer cmd)
         {
-            cmd.SetGlobalTexture("_PivotData", m_PivotData);
+            cmd.SetGlobalTexture(_PivotData, m_PivotData);
         }
+
+        void Clear()
+        {
+            m_refCounting = 0;
+
+            CoreUtils.Destroy(m_PivotData);
+            m_PivotData = null;
+        }
+
+#if UNITY_EDITOR
+        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+        static void ResetStaticsOnLoad()
+        {
+            s_Instance?.Clear();
+            s_Instance = null;
+        }
+#endif
     }
 }
