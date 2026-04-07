@@ -450,7 +450,7 @@ namespace UnityEngine.Rendering.HighDefinition
                 }
             }
 
-            var decalDatasCount = Math.Min(DecalSystem.m_DecalDatasCount, m_MaxDecalsOnScreen);
+            var decalDatasCount = Math.Min(DecalSystem.instance.DecalDatasCount, m_MaxDecalsOnScreen);
 
             cb.g_iNrVisibLights = totalLightCount;
             cb.g_screenSize = hdCamera.screenSize; // TODO remove and use global one.

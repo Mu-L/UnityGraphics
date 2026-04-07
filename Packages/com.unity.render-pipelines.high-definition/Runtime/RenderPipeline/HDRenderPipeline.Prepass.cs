@@ -1325,8 +1325,8 @@ namespace UnityEngine.Rendering.HighDefinition
 
         void SetupDBufferTargets(RenderGraph renderGraph, bool use4RTs, ref PrepassOutput output, IUnsafeRenderGraphBuilder builder, bool canReadBoundDepthBuffer)
         {
-            GraphicsFormat[] rtFormat;
-            Decal.GetMaterialDBufferDescription(out rtFormat);
+            bool useHighPrecision = currentPlatformRenderPipelineSettings.supportSurfaceGradient &&
+                                    currentPlatformRenderPipelineSettings.decalNormalBufferHP;
             output.dbuffer.dBufferCount = use4RTs ? 4 : 3;
 
             // for alpha compositing, color is cleared to 0, alpha to 1
@@ -1334,7 +1334,7 @@ namespace UnityEngine.Rendering.HighDefinition
             for (int dbufferIndex = 0; dbufferIndex < output.dbuffer.dBufferCount; ++dbufferIndex)
             {
                 output.dbuffer.mrt[dbufferIndex] = renderGraph.CreateTexture(
-                    new TextureDesc(Vector2.one, true, true) { format = rtFormat[dbufferIndex], name = s_DBufferNames[dbufferIndex], clearBuffer = true, clearColor = s_DBufferClearColors[dbufferIndex] });
+                    new TextureDesc(Vector2.one, true, true) { format = Decal.GetMaterialDBufferDescription(dbufferIndex, useHighPrecision), name = s_DBufferNames[dbufferIndex], clearBuffer = true, clearColor = s_DBufferClearColors[dbufferIndex] });
                 builder.SetRenderAttachment(output.dbuffer.mrt[dbufferIndex], dbufferIndex);
             }
 

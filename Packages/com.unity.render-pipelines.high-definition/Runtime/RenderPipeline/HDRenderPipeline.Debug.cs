@@ -1646,7 +1646,7 @@ namespace UnityEngine.Rendering.HighDefinition
 #endif
                     passData.outputDepth = depth;
                     builder.SetRenderAttachmentDepth(depth, AccessFlags.ReadWrite);
-                    
+
                     builder.AllowGlobalStateModification(true);
 
                     // When rendering debug material we shouldn't rely on a depth prepass for optimizing the alpha clip test. As it is control on the material inspector side
@@ -1657,7 +1657,7 @@ namespace UnityEngine.Rendering.HighDefinition
                     passData.transparentRendererList = renderGraph.CreateRendererList(CreateTransparentRendererListDesc(cull, hdCamera.camera, m_AllTransparentPassNames, rendererConfiguration: m_CurrentRendererConfigurationBakedLighting, stateBlock: m_DepthStateNoWrite));
                     builder.UseRendererList(passData.transparentRendererList);
 
-                    passData.decalsEnabled = (hdCamera.frameSettings.IsEnabled(FrameSettingsField.Decals)) && (DecalSystem.m_DecalDatasCount > 0);
+                    passData.decalsEnabled = (hdCamera.frameSettings.IsEnabled(FrameSettingsField.Decals)) && (DecalSystem.instance.DecalDatasCount > 0);
 
                     if (m_CurrentDebugDisplaySettings.data.lightingDebugSettings.tileClusterDebug == TileClusterDebug.Cluster)
                     {

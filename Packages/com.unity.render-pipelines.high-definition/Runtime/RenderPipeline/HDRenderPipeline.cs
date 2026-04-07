@@ -2767,18 +2767,20 @@ namespace UnityEngine.Rendering.HighDefinition
                 {
                     using (new ProfilingScope(cmd, ProfilingSampler.Get(HDProfileId.DBufferPrepareDrawData)))
                     {
+                        DecalSystem decalSystem = DecalSystem.instance;
+
                         // TODO: update singleton with DecalCullResults
-                        DecalSystem.instance.CurrentCamera = hdCamera.camera; // Singletons are extremely dangerous...
+                        decalSystem.CurrentCamera = hdCamera.camera; // Singletons are extremely dangerous...
                         if (hdCamera.IsPathTracingEnabled())
-                            DecalSystem.m_CullingMode = DecalSystem.DecalCullingMode.WorldspaceBasedCulling;
+                            decalSystem.CullingMode = DecalSystem.DecalCullingMode.WorldspaceBasedCulling;
                         else if (hdCamera.IsRayTracingEnabled())
-                            DecalSystem.m_CullingMode = DecalSystem.DecalCullingMode.WorldspaceBasedCulling | DecalSystem.DecalCullingMode.ViewspaceBasedCulling;
+                            decalSystem.CullingMode = DecalSystem.DecalCullingMode.WorldspaceBasedCulling | DecalSystem.DecalCullingMode.ViewspaceBasedCulling;
                         else
-                            DecalSystem.m_CullingMode = DecalSystem.DecalCullingMode.ViewspaceBasedCulling;
-                        DecalSystem.instance.LoadCullResults(decalCullingResults);
-                        DecalSystem.instance.UpdateCachedMaterialData(); // textures, alpha or fade distances could've changed
-                        DecalSystem.instance.CreateDrawData();          // prepare data is separate from draw
-                        DecalSystem.instance.UpdateTextureAtlas(cmd);   // as this is only used for transparent pass, would've been nice not to have to do this if no transparent renderers are visible, needs to happen after CreateDrawData
+                            decalSystem.CullingMode = DecalSystem.DecalCullingMode.ViewspaceBasedCulling;
+                        decalSystem.LoadCullResults(decalCullingResults);
+                        decalSystem.UpdateCachedMaterialData(); // textures, alpha or fade distances could've changed
+                        decalSystem.CreateDrawData();          // prepare data is separate from draw
+                        decalSystem.UpdateTextureAtlas(cmd);   // as this is only used for transparent pass, would've been nice not to have to do this if no transparent renderers are visible, needs to happen after CreateDrawData
                     }
                 }
 

@@ -1282,7 +1282,7 @@ namespace UnityEngine.Rendering.HighDefinition
 
                 // enable d-buffer flag value is being interpreted more like enable decals in general now that we have clustered
                 // decal datas count is 0 if no decals affect transparency
-                passData.decalsEnabled = (hdCamera.frameSettings.IsEnabled(FrameSettingsField.Decals)) && (DecalSystem.m_DecalDatasCount > 0);
+                passData.decalsEnabled = (hdCamera.frameSettings.IsEnabled(FrameSettingsField.Decals)) && (DecalSystem.instance.DecalDatasCount > 0);
                 passData.renderMotionVecForTransparent = NeedMotionVectorForTransparent(hdCamera.frameSettings);
                 passData.colorMaskTransparentVel = colorMaskTransparentVel;
                 passData.volumetricLighting = volumetricLighting;
