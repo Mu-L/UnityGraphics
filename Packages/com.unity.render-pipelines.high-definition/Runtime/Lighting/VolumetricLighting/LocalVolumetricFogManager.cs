@@ -11,18 +11,10 @@ namespace UnityEngine.Rendering.HighDefinition
     class LocalVolumetricFogManager
     {
         // Allocate graphics buffers by chunk to avoid reallocating them too often
-        private static readonly int k_IndirectBufferChunkSize = 50;
+        private const int k_IndirectBufferChunkSize = 50;
 
-        static LocalVolumetricFogManager m_Manager;
-        public static LocalVolumetricFogManager manager
-        {
-            get
-            {
-                if (m_Manager == null)
-                    m_Manager = new LocalVolumetricFogManager();
-                return m_Manager;
-            }
-        }
+        static LocalVolumetricFogManager s_Manager;
+        public static LocalVolumetricFogManager manager => s_Manager ??= new LocalVolumetricFogManager();
 
         List<LocalVolumetricFog> m_Volumes = null;
 
@@ -137,6 +129,28 @@ namespace UnityEngine.Rendering.HighDefinition
 
         public bool IsInitialized() => globalIndirectBuffer != null && globalIndirectBuffer.IsValid();
 
+        void Cleanup()
+        {
+            m_Volumes.Clear();
+            m_Volumes = null;
+
+            CleanupGraphicsBuffers();
+
+            globalIndirectBuffer = null;
+            globalIndirectionBuffer = null;
+            volumetricMaterialIndexBuffer = null;
+            volumetricMaterialDataBuffer = null;
+        }
+
+#if UNITY_EDITOR
+        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+        static void ResetStaticsOnLoad()
+        {
+            s_Manager?.Cleanup();
+            s_Manager = null;
+        }
+#endif
+
         public static class RegisterLocalVolumetricFogEarlyUpdate
         {
 #if UNITY_EDITOR
@@ -153,10 +167,10 @@ namespace UnityEngine.Rendering.HighDefinition
 
             internal static void PrepareFogDrawCalls()
             {
-                if (!LocalVolumetricFogManager.manager?.IsInitialized() ?? true)
+                if (!LocalVolumetricFogManager.s_Manager?.IsInitialized() ?? true)
                     return;
 
-                var volumes = LocalVolumetricFogManager.m_Manager.m_Volumes;
+                var volumes = LocalVolumetricFogManager.s_Manager.m_Volumes;
                 for (int i = 0; i < volumes.Count; i++)
                     volumes[i].PrepareDrawCall(i);
             }
