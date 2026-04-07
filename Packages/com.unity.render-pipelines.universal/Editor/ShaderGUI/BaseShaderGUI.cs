@@ -542,7 +542,11 @@ namespace UnityEditor
         ////////////////////////////////////
         #region DrawingFunctions
 
-        internal void DrawShaderGraphProperties(Material material, IEnumerable<MaterialProperty> properties)
+        /// <summary>
+        /// Draws the Shader Graph properties for the given material.
+        /// </summary>
+        /// <param name="properties">The material properties to draw.</param>
+        public void DrawShaderGraphProperties(IEnumerable<MaterialProperty> properties)
         {
             if (properties == null)
                 return;
