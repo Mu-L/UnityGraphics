@@ -31,33 +31,22 @@ namespace UnityEngine.Rendering.HighDefinition
     /// </summary>
     public sealed class HDComputeThickness
     {
-        private static HDComputeThickness m_Instance = null;
+        private static HDComputeThickness s_Instance = null;
 
         private TextureHandle m_ThicknessArrayRT;
         private GraphicsBuffer m_ReindexMapCB;
-        private uint m_UsedLayersCountCurrentFrame;
 
         /// <summary>
         /// Max RT of Thickness we can computed in a single frame
         /// </summary>
         // Should be paired with: COMPUTE_THICKNESS_MAX_LAYER_COUNT in
         // 'Packages/com.unity.render-pipelines.high-definition/Runtime/ShaderLibrary/ShaderVariables.hlsl'
-        public static uint computeThicknessMaxLayer = 32; // bitscount(LayerMask)
+        public static readonly uint computeThicknessMaxLayer = 32; // bitscount(LayerMask)
 
         /// <summary>
         /// Current unique instance
         /// </summary>
-        public static HDComputeThickness Instance
-        {
-            get
-            {
-                if (m_Instance == null)
-                {
-                    m_Instance = new HDComputeThickness();
-                }
-                return m_Instance;
-            }
-        }
+        public static HDComputeThickness Instance => s_Instance ??= new HDComputeThickness();
 
         private HDComputeThickness()
         {
@@ -98,5 +87,20 @@ namespace UnityEngine.Rendering.HighDefinition
         {
             return m_ReindexMapCB;
         }
+
+        void Clear()
+        {
+            m_ReindexMapCB = null;
+            m_ThicknessArrayRT = TextureHandle.nullHandle;
+        }
+
+#if UNITY_EDITOR
+        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+        static void ResetStaticsOnLoad()
+        {
+            s_Instance?.Clear();
+            s_Instance = null;
+        }
+#endif
     }
 }
