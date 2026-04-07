@@ -132,19 +132,10 @@ namespace UnityEngine.Rendering
 
         /// <summary>
         /// Static allocation of per-view configurations
-        /// </summary>
-        static PerViewConfig[] s_PerViewConfigs = new PerViewConfig[kMaxPerViewConfigs];
-
-        /// <summary>
-        /// Static allocation of per-view configurations
         /// Users are expected to populate this during STP configuration and then assign it to the relevant
         /// configuration structure field(s) to avoid unnecessary allocations.
         /// </summary>
-        public static PerViewConfig[] perViewConfigs
-        {
-            get { return s_PerViewConfigs; }
-            set { s_PerViewConfigs = value; }
-        }
+        public static PerViewConfig[] perViewConfigs { get; set; } = new PerViewConfig[kMaxPerViewConfigs];
 
         /// <summary>
         /// Top-level configuration structure required for STP execution
@@ -1351,5 +1342,13 @@ namespace UnityEngine.Rendering
 
             return taaData.output;
         }
+
+#if UNITY_EDITOR
+        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+        static void ResetStaticsOnLoad()
+        {
+            perViewConfigs = new PerViewConfig[kMaxPerViewConfigs];
+        }
+#endif
     }
 }
