@@ -7,31 +7,31 @@ namespace UnityEngine.Rendering.HighDefinition
     {
         static class Uniforms
         {
-            internal static int _OutputWidth = Shader.PropertyToID("_OutputWidth");
-            internal static int _OutputHeight = Shader.PropertyToID("_OutputHeight");
-            internal static int _OutputDepth = Shader.PropertyToID("_OutputDepth");
-            internal static int _OutputSlice = Shader.PropertyToID("_OutputSlice");
-            internal static int _UseCorneaSymmetryMirroring = Shader.PropertyToID("_UseCorneaSymmetryMirroring");
-            internal static int _ExtraScleraMargin = Shader.PropertyToID("_ExtraScleraMargin");
+            internal static readonly int _OutputWidth = Shader.PropertyToID("_OutputWidth");
+            internal static readonly int _OutputHeight = Shader.PropertyToID("_OutputHeight");
+            internal static readonly int _OutputDepth = Shader.PropertyToID("_OutputDepth");
+            internal static readonly int _OutputSlice = Shader.PropertyToID("_OutputSlice");
+            internal static readonly int _UseCorneaSymmetryMirroring = Shader.PropertyToID("_UseCorneaSymmetryMirroring");
+            internal static readonly int _ExtraScleraMargin = Shader.PropertyToID("_ExtraScleraMargin");
 
-            internal static int _LightWidth = Shader.PropertyToID("_LightWidth");
-            internal static int _LightHeight = Shader.PropertyToID("_LightHeight");
-            internal static int _LightDistance = Shader.PropertyToID("_LightDistance");
+            internal static readonly int _LightWidth = Shader.PropertyToID("_LightWidth");
+            internal static readonly int _LightHeight = Shader.PropertyToID("_LightHeight");
+            internal static readonly int _LightDistance = Shader.PropertyToID("_LightDistance");
 
-            internal static int _LightLuminousFlux = Shader.PropertyToID("_LightLuminousFlux");
-            internal static int _LightGrazingAngleCos = Shader.PropertyToID("_LightGrazingAngleCos");
+            internal static readonly int _LightLuminousFlux = Shader.PropertyToID("_LightLuminousFlux");
+            internal static readonly int _LightGrazingAngleCos = Shader.PropertyToID("_LightGrazingAngleCos");
 
-            internal static int _CorneaFlatteningFactor = Shader.PropertyToID("_CorneaFlatteningFactor");
-            internal static int _CorneaApproxPrimitive = Shader.PropertyToID("_CorneaApproxPrimitive");
-            internal static int _CorneaPowerFactor = Shader.PropertyToID("_CorneaPowerFactor");
+            internal static readonly int _CorneaFlatteningFactor = Shader.PropertyToID("_CorneaFlatteningFactor");
+            internal static readonly int _CorneaApproxPrimitive = Shader.PropertyToID("_CorneaApproxPrimitive");
+            internal static readonly int _CorneaPowerFactor = Shader.PropertyToID("_CorneaPowerFactor");
 
-            internal static int _RandomNumbers = Shader.PropertyToID("_RandomNumbers");
+            internal static readonly int _RandomNumbers = Shader.PropertyToID("_RandomNumbers");
 
-            internal static int _NumberOfSamplesAccumulated = Shader.PropertyToID("_NumberOfSamplesAccumulated");
+            internal static readonly int _NumberOfSamplesAccumulated = Shader.PropertyToID("_NumberOfSamplesAccumulated");
 
-            internal static int _GeneratedSamplesBuffer = Shader.PropertyToID("_GeneratedSamplesBuffer");
+            internal static readonly int _GeneratedSamplesBuffer = Shader.PropertyToID("_GeneratedSamplesBuffer");
 
-            internal static int _OutputLutTex = Shader.PropertyToID("_OutputLutTex");
+            internal static readonly int _OutputLutTex = Shader.PropertyToID("_OutputLutTex");
 
             public static readonly int _PreIntegratedEyeCaustic = Shader.PropertyToID("_PreIntegratedEyeCaustic");
         }
@@ -65,17 +65,19 @@ namespace UnityEngine.Rendering.HighDefinition
         private const int LUT_GEN_NUMBER_OF_DISPATCHES = 512 * 32;
         private const int LUT_GEN_SAMPLES_PER_SLICE = LUT_GEN_NUMBER_OF_DISPATCHES * LUT_GEN_KERNEL_SIZE;
 
-        private static ComputeShader s_Shader;
-        private static int[] s_Kernels = new int[3];
+        private ComputeShader m_Shader;
+        private int m_SampleCausticKernel;
+        private int m_CopyToLUTKernel;
+        private int m_ClearBufferKernel;
 
         private void CreateLUTGenResources()
         {
-            if (s_Shader == null)
+            if (m_Shader == null)
             {
-                s_Shader = GraphicsSettings.GetRenderPipelineSettings<HDRenderPipelineRuntimeShaders>().eyeMaterialCS;
-                s_Kernels[0] = s_Shader.FindKernel("SampleCaustic");
-                s_Kernels[1] = s_Shader.FindKernel("CopyToLUT");
-                s_Kernels[2] = s_Shader.FindKernel("ClearBuffer");
+                m_Shader = GraphicsSettings.GetRenderPipelineSettings<HDRenderPipelineRuntimeShaders>().eyeMaterialCS;
+                m_SampleCausticKernel = m_Shader.FindKernel("SampleCaustic");
+                m_CopyToLUTKernel = m_Shader.FindKernel("CopyToLUT");
+                m_ClearBufferKernel = m_Shader.FindKernel("ClearBuffer");
             }
 
 
@@ -110,6 +112,8 @@ namespace UnityEngine.Rendering.HighDefinition
         {
             randomSamplesBuffer.Release();
             generatedLutStagingBuffer.Release();
+
+            m_Shader = null;
         }
 
         private void GenerateLUT()
@@ -145,30 +149,30 @@ namespace UnityEngine.Rendering.HighDefinition
             samples.Dispose();
 
             CommandBuffer cmd = CommandBufferPool.Get();
-            int kernel = s_Kernels[0];
+            int kernel = m_SampleCausticKernel;
 
-            cmd.SetComputeIntParam(s_Shader, Uniforms._OutputWidth, lutWidth);
-            cmd.SetComputeIntParam(s_Shader, Uniforms._OutputHeight, lutHeight);
-            cmd.SetComputeIntParam(s_Shader, Uniforms._OutputSlice, currentDepthSlice);
-            cmd.SetComputeFloatParam(s_Shader, Uniforms._ExtraScleraMargin, lutExtraScleraMargin);
-            cmd.SetComputeFloatParam(s_Shader, Uniforms._UseCorneaSymmetryMirroring, useCorneaSymmetryMirroring ? 1 : 0);
+            cmd.SetComputeIntParam(m_Shader, Uniforms._OutputWidth, lutWidth);
+            cmd.SetComputeIntParam(m_Shader, Uniforms._OutputHeight, lutHeight);
+            cmd.SetComputeIntParam(m_Shader, Uniforms._OutputSlice, currentDepthSlice);
+            cmd.SetComputeFloatParam(m_Shader, Uniforms._ExtraScleraMargin, lutExtraScleraMargin);
+            cmd.SetComputeFloatParam(m_Shader, Uniforms._UseCorneaSymmetryMirroring, useCorneaSymmetryMirroring ? 1 : 0);
 
-            cmd.SetComputeFloatParam(s_Shader, Uniforms._LightWidth, lightSize);
-            cmd.SetComputeFloatParam(s_Shader, Uniforms._LightHeight, lightSize);
-            cmd.SetComputeFloatParam(s_Shader, Uniforms._LightDistance, lightDistance);
+            cmd.SetComputeFloatParam(m_Shader, Uniforms._LightWidth, lightSize);
+            cmd.SetComputeFloatParam(m_Shader, Uniforms._LightHeight, lightSize);
+            cmd.SetComputeFloatParam(m_Shader, Uniforms._LightDistance, lightDistance);
             float cosGrazingAngle = Mathf.Cos(Mathf.PI * 0.5f + Mathf.Deg2Rad * lightDipBelowHorizonDegrees);
-            cmd.SetComputeFloatParam(s_Shader, Uniforms._LightGrazingAngleCos, cosGrazingAngle );
-            cmd.SetComputeFloatParam(s_Shader, Uniforms._LightLuminousFlux, lightLuminousFlux );
+            cmd.SetComputeFloatParam(m_Shader, Uniforms._LightGrazingAngleCos, cosGrazingAngle );
+            cmd.SetComputeFloatParam(m_Shader, Uniforms._LightLuminousFlux, lightLuminousFlux );
 
-            cmd.SetComputeIntParam(s_Shader, Uniforms._CorneaApproxPrimitive, (int)selectedCorneaApproxPrim);
-            cmd.SetComputeFloatParam(s_Shader, Uniforms._CorneaFlatteningFactor, corneaFlatteningFactor);
-            cmd.SetComputeFloatParam(s_Shader, Uniforms._CorneaPowerFactor, corneaPowerFactor);
+            cmd.SetComputeIntParam(m_Shader, Uniforms._CorneaApproxPrimitive, (int)selectedCorneaApproxPrim);
+            cmd.SetComputeFloatParam(m_Shader, Uniforms._CorneaFlatteningFactor, corneaFlatteningFactor);
+            cmd.SetComputeFloatParam(m_Shader, Uniforms._CorneaPowerFactor, corneaPowerFactor);
 
-            cmd.SetComputeBufferParam(s_Shader, kernel, Uniforms._RandomNumbers, randomSamplesBuffer);
+            cmd.SetComputeBufferParam(m_Shader, kernel, Uniforms._RandomNumbers, randomSamplesBuffer);
 
-            cmd.SetComputeBufferParam(s_Shader, kernel, Uniforms._GeneratedSamplesBuffer, generatedLutStagingBuffer);
+            cmd.SetComputeBufferParam(m_Shader, kernel, Uniforms._GeneratedSamplesBuffer, generatedLutStagingBuffer);
 
-            cmd.DispatchCompute(s_Shader, kernel, LUT_GEN_NUMBER_OF_DISPATCHES, 1, 1);
+            cmd.DispatchCompute(m_Shader, kernel, LUT_GEN_NUMBER_OF_DISPATCHES, 1, 1);
             Graphics.ExecuteCommandBuffer(cmd);
 
             CommandBufferPool.Release(cmd);
@@ -179,19 +183,19 @@ namespace UnityEngine.Rendering.HighDefinition
 
             int sampleCount = LUT_GEN_SAMPLES_PER_SLICE;
             CommandBuffer cmd = CommandBufferPool.Get();
-            int kernel = s_Kernels[1];
+            int kernel = m_CopyToLUTKernel;
 
-            cmd.SetComputeIntParam(s_Shader, Uniforms._OutputWidth, lutWidth);
-            cmd.SetComputeIntParam(s_Shader, Uniforms._OutputHeight, lutHeight);
-            cmd.SetComputeIntParam(s_Shader, Uniforms._OutputDepth, lutDepth);
-            cmd.SetComputeIntParam(s_Shader, Uniforms._OutputSlice, currentDepthSlice);
-            cmd.SetComputeIntParam(s_Shader, Uniforms._NumberOfSamplesAccumulated, sampleCount);
+            cmd.SetComputeIntParam(m_Shader, Uniforms._OutputWidth, lutWidth);
+            cmd.SetComputeIntParam(m_Shader, Uniforms._OutputHeight, lutHeight);
+            cmd.SetComputeIntParam(m_Shader, Uniforms._OutputDepth, lutDepth);
+            cmd.SetComputeIntParam(m_Shader, Uniforms._OutputSlice, currentDepthSlice);
+            cmd.SetComputeIntParam(m_Shader, Uniforms._NumberOfSamplesAccumulated, sampleCount);
 
 
-            cmd.SetComputeBufferParam(s_Shader, kernel, Uniforms._GeneratedSamplesBuffer, generatedLutStagingBuffer);
-            cmd.SetComputeTextureParam(s_Shader, kernel, Uniforms._OutputLutTex, generatedLUT);
+            cmd.SetComputeBufferParam(m_Shader, kernel, Uniforms._GeneratedSamplesBuffer, generatedLutStagingBuffer);
+            cmd.SetComputeTextureParam(m_Shader, kernel, Uniforms._OutputLutTex, generatedLUT);
 
-            cmd.DispatchCompute(s_Shader, kernel, (lutWidth + 7) / 8,
+            cmd.DispatchCompute(m_Shader, kernel, (lutWidth + 7) / 8,
                 (lutHeight + 7) / 8, 1);
 
             Graphics.ExecuteCommandBuffer(cmd);
@@ -202,16 +206,16 @@ namespace UnityEngine.Rendering.HighDefinition
         void ClearStaging()
         {
             CommandBuffer cmd = CommandBufferPool.Get();
-            int kernel = s_Kernels[2];
+            int kernel = m_ClearBufferKernel;
 
             int entries = lutWidth * lutHeight;
 
-            cmd.SetComputeIntParam(s_Shader, Uniforms._OutputWidth, lutWidth);
-            cmd.SetComputeIntParam(s_Shader, Uniforms._OutputHeight, lutHeight);
+            cmd.SetComputeIntParam(m_Shader, Uniforms._OutputWidth, lutWidth);
+            cmd.SetComputeIntParam(m_Shader, Uniforms._OutputHeight, lutHeight);
 
-            cmd.SetComputeBufferParam(s_Shader, kernel, Uniforms._GeneratedSamplesBuffer, generatedLutStagingBuffer);
+            cmd.SetComputeBufferParam(m_Shader, kernel, Uniforms._GeneratedSamplesBuffer, generatedLutStagingBuffer);
 
-            cmd.DispatchCompute(s_Shader, kernel, (entries + 63) / 64, 1, 1);
+            cmd.DispatchCompute(m_Shader, kernel, (entries + 63) / 64, 1, 1);
 
             Graphics.ExecuteCommandBuffer(cmd);
 
