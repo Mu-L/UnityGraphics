@@ -319,7 +319,9 @@ namespace UnityEditor.PathTracing.LightBakerBridge
 
         static float GetLightShadowRadius(UnityEngine.LightType lightType, in LightData lightData)
         {
-            return (Util.IsPunctualLightType(lightType) && lightType != UnityEngine.LightType.Pyramid && lightType != UnityEngine.LightType.Box) ? lightData.shape0 : 0.0f;
+            if (lightType == UnityEngine.LightType.Pyramid)
+                return lightData.shape1;  // For pyramid lights, shadow radius is in shape1 (shape0 is aspect ratio)
+            return (Util.IsPunctualLightType(lightType) && lightType != UnityEngine.LightType.Box) ? lightData.shape0 : 0.0f;
         }
 
         internal static void InjectEnvironmentLight(

@@ -134,6 +134,11 @@ namespace UnityEngine.Rendering.HighDefinition
                     pyramid.entityId = light.GetEntityId();
                     pyramid.shadow = light.shadows != LightShadows.None;
                     pyramid.mode = lightMode;
+#if UNITY_EDITOR
+                    pyramid.sphereRadius = light.shadows != LightShadows.None ? light.shapeRadius : 0.0f;
+#else
+                    pyramid.sphereRadius = 0.0f;
+#endif
                     pyramid.position = light.transform.position;
                     pyramid.orientation = light.transform.rotation;
                     pyramid.color = directColor;
