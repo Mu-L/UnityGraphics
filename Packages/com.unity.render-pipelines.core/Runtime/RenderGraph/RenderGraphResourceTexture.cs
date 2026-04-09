@@ -99,7 +99,7 @@ namespace UnityEngine.Rendering.RenderGraphModule
     [MovedFrom(true, "UnityEngine.Experimental.Rendering.RenderGraphModule", "UnityEngine.Rendering.RenderGraphModule")]
     public readonly struct TextureHandle : IEquatable<TextureHandle>
     {
-        private static TextureHandle s_NullHandle = new TextureHandle();
+        private static readonly TextureHandle s_NullHandle = new TextureHandle();
 
         /// <summary>
         /// Returns a null texture handle
@@ -561,6 +561,14 @@ namespace UnityEngine.Rendering.RenderGraphModule
     class TextureResource : RenderGraphResource<TextureDesc, RTHandle>
     {
         static int m_TextureCreationIndex;
+
+#if UNITY_EDITOR
+        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterAssembliesLoaded)]
+        static void ResetStaticsOnLoad()
+        {
+            m_TextureCreationIndex = 0;
+        }
+#endif
 
         internal TextureUVOriginSelection textureUVOrigin;
 

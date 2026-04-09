@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using System.Diagnostics;
+using Unity.Scripting.LifecycleManagement;
 using UnityEngine.Experimental.Rendering;
 using UnityEngine.Rendering.RenderGraphModule.NativeRenderPassCompiler;
 
@@ -9,7 +10,8 @@ namespace UnityEngine.Rendering.RenderGraphModule
     {
         internal static class RenderGraphExceptionMessages
         {
-            internal static bool enableCaller = true;
+            [NoAutoStaticsCleanup]
+            internal static bool enableCaller = true; // Only used from tests
 
             internal const string k_RenderGraphExecutionError = "Render Graph Execution error";
 

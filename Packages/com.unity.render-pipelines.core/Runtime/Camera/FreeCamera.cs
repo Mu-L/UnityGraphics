@@ -38,15 +38,15 @@ namespace UnityEngine.Rendering
         public float m_Turbo = 10.0f;
 
 #if !USE_INPUT_SYSTEM
-        private static string kMouseX = "Mouse X";
-        private static string kMouseY = "Mouse Y";
-        private static string kRightStickX = "Controller Right Stick X";
-        private static string kRightStickY = "Controller Right Stick Y";
-        private static string kVertical = "Vertical";
-        private static string kHorizontal = "Horizontal";
+        private static readonly string kMouseX = "Mouse X";
+        private static readonly string kMouseY = "Mouse Y";
+        private static readonly string kRightStickX = "Controller Right Stick X";
+        private static readonly string kRightStickY = "Controller Right Stick Y";
+        private static readonly string kVertical = "Vertical";
+        private static readonly string kHorizontal = "Horizontal";
 
-        private static string kYAxis = "YAxis";
-        private static string kSpeedAxis = "Speed Axis";
+        private static readonly string kYAxis = "YAxis";
+        private static readonly string kSpeedAxis = "Speed Axis";
 #endif
 
 #if USE_INPUT_SYSTEM

@@ -782,7 +782,7 @@ namespace UnityEngine.Rendering
 
 
             // Space-delimit PascalCase (https://stackoverflow.com/questions/155303/net-how-can-you-split-a-caps-delimited-string-into-an-array)
-            static Regex s_NicifyRegEx = new("([a-z](?=[A-Z])|[A-Z](?=[A-Z][a-z]))", RegexOptions.Compiled);
+            static readonly Regex s_NicifyRegEx = new("([a-z](?=[A-Z])|[A-Z](?=[A-Z][a-z]))", RegexOptions.Compiled);
 
             /// <summary>
             /// Automatically fills the enum names with a given <see cref="Type"/>

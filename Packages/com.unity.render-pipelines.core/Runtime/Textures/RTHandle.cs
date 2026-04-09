@@ -20,6 +20,14 @@ namespace UnityEngine.Rendering
         /// </summary>
         public static RTHandle s_RTHandleWrapper;
 
+#if UNITY_EDITOR
+        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterAssembliesLoaded)]
+        static void ResetStaticsOnLoad()
+        {
+            s_RTHandleWrapper = null;
+        }
+#endif
+
         /// <summary>
         /// Set static RTHandle wrapper given a RTid. The static RTHandle wrapper is treated as external handle in RTHandleSystem
         /// Get the static wrapper through `RTHandleStaticHelpers.s_RTHandleWrapper`.

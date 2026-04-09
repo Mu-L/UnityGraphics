@@ -4,6 +4,7 @@ using System.IO;
 using System.Collections.Generic;
 using UnityEngine.Experimental.Rendering;
 using System.Runtime.CompilerServices;
+using Unity.Scripting.LifecycleManagement;
 #if UNITY_6000_5_OR_NEWER
 using UnityEngine.Assemblies;
 #endif
@@ -15,7 +16,6 @@ using System.Reflection;
 
 namespace UnityEngine.Rendering
 {
-    using static UnityEngine.Rendering.HableCurve;
     using UnityObject = UnityEngine.Object;
 
     /// <summary>
@@ -139,6 +139,7 @@ namespace UnityEngine.Rendering
         [Obsolete(obsoletePriorityMessage)]
         public const int gameObjectMenuPriority = 10;
 
+        [NoAutoStaticsCleanup]
         static Cubemap m_BlackCubeTexture;
         /// <summary>
         /// Black cubemap texture.
@@ -159,6 +160,7 @@ namespace UnityEngine.Rendering
             }
         }
 
+        [NoAutoStaticsCleanup]
         static Cubemap m_MagentaCubeTexture;
         /// <summary>
         /// Magenta cubemap texture.
@@ -179,6 +181,7 @@ namespace UnityEngine.Rendering
             }
         }
 
+        [NoAutoStaticsCleanup]
         static CubemapArray m_MagentaCubeTextureArray;
         /// <summary>
         /// Black cubemap array texture.
@@ -202,6 +205,7 @@ namespace UnityEngine.Rendering
             }
         }
 
+        [NoAutoStaticsCleanup]
         static Cubemap m_WhiteCubeTexture;
         /// <summary>
         /// White cubemap texture.
@@ -222,6 +226,7 @@ namespace UnityEngine.Rendering
             }
         }
 
+        [NoAutoStaticsCleanup]
         static RenderTexture m_EmptyUAV;
         /// <summary>
         /// Empty 1x1 texture usable as a dummy UAV.
@@ -241,6 +246,7 @@ namespace UnityEngine.Rendering
             }
         }
 
+        [NoAutoStaticsCleanup]
         static GraphicsBuffer m_EmptyBuffer;
         /// <summary>
         /// Empty 4-Byte buffer resource usable as a dummy.
@@ -258,6 +264,7 @@ namespace UnityEngine.Rendering
             }
         }
 
+        [NoAutoStaticsCleanup]
         static Texture3D m_BlackVolumeTexture;
         /// <summary>
         /// Black 3D texture.
@@ -278,6 +285,7 @@ namespace UnityEngine.Rendering
             }
         }
 
+        [NoAutoStaticsCleanup]
         internal static Texture3D m_WhiteVolumeTexture;
 
         /// <summary>
@@ -430,7 +438,7 @@ namespace UnityEngine.Rendering
         {
             SetRenderTarget(cmd, colorBuffers, depthBuffer, clearFlag, Color.clear);
         }
-        
+
         /// <summary>
         /// Set the current multiple render texture.
         /// </summary>
@@ -1383,7 +1391,7 @@ namespace UnityEngine.Rendering
             var baseType = typeof(T);
             foreach (var type in GetAllAssemblyTypes())
             {
-                if (type.IsSubclassOf(baseType)) 
+                if (type.IsSubclassOf(baseType))
                     derivedTypes.Add(type);
             }
             return derivedTypes;

@@ -26,7 +26,7 @@ class RenderGraphCompilationCache
             return 0;
     }
 
-    static DynamicArray<HashEntry<CompilerContextData>>.SortComparer s_NativeEntryComparer = HashEntryComparer<CompilerContextData>;
+    static readonly DynamicArray<HashEntry<CompilerContextData>>.SortComparer s_NativeEntryComparer = HashEntryComparer<CompilerContextData>;
 
     const int k_CachedGraphCount = 20;
 
@@ -38,13 +38,20 @@ class RenderGraphCompilationCache
         }
     }
 
-    // Avoid GC in lambda.
-    static int s_Hash;
+    // Looping manually instead of using DynamicArray.FindIndex to avoid GC caused by the lambda capture of the hash
+    static int FindHashEntryIndex(DynamicArray<HashEntry<CompilerContextData>> hashEntries, int hash)
+    {
+        for (int i = 0; i < hashEntries.size; ++i)
+        {
+            if (hashEntries[i].hash == hash)
+                return i;
+        }
+        return -1;
+    }
 
     bool GetCompilationCache(int hash, int frameIndex, out CompilerContextData outGraph, DynamicArray<HashEntry<CompilerContextData>> hashEntries, Stack<CompilerContextData> pool, DynamicArray<HashEntry<CompilerContextData>>.SortComparer comparer)
     {
-        s_Hash = hash;
-        int index = hashEntries.FindIndex(value => value.hash == s_Hash);
+        int index = FindHashEntryIndex(hashEntries, hash);
         if (index != -1)
         {
             ref var entry = ref hashEntries[index];
@@ -119,4 +126,5 @@ class RenderGraphCompilationCache
             nativeCompiledGraphs[i].Dispose();
         }
     }
+
 }

@@ -10,6 +10,14 @@ namespace UnityEngine.Rendering
     {
         static ObjectPool<CommandBuffer> s_BufferPool = new ObjectPool<CommandBuffer>(null, x => x.Clear());
 
+#if UNITY_EDITOR
+        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterAssembliesLoaded)]
+        static void ResetStaticsOnLoad()
+        {
+            s_BufferPool = new ObjectPool<CommandBuffer>(null, x => x.Clear());
+        }
+#endif
+
         /// <summary>
         /// Get a new Command Buffer.
         /// </summary>

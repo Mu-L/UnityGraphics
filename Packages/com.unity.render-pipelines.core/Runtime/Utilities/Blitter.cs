@@ -108,6 +108,27 @@ namespace UnityEngine.Rendering
         static int[] s_BlitShaderPassIndicesMap;
         static int[] s_BlitColorAndDepthShaderPassIndicesMap;
 
+#if UNITY_EDITOR
+        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterAssembliesLoaded)]
+        static void ResetStaticsOnLoad()
+        {
+            s_Copy = null;
+            s_Blit = null;
+            s_BlitTexArray = null;
+            s_BlitTexArraySingleSlice = null;
+            s_BlitColorAndDepth = null;
+            s_PropertyBlock.Clear();
+            s_TriangleMesh = null;
+            s_QuadMesh = null;
+            s_DecodeHdrKeyword = default;
+            s_ResolveDepthMSAA2X = default;
+            s_ResolveDepthMSAA4X = default;
+            s_ResolveDepthMSAA8X = default;
+            s_BlitShaderPassIndicesMap = null;
+            s_BlitColorAndDepthShaderPassIndicesMap = null;
+        }
+#endif
+
         /// <summary>
         /// Initializes the Blitter resources. This must be called once before any use.
         /// </summary>
@@ -553,7 +574,7 @@ namespace UnityEngine.Rendering
         /// Blitter.BlitTexture2D(cmd, source, new Vector4(1, 0.5, 0, 0.5), 4, false);
         /// ]]></code>
         /// </example>
-        
+
         public static void BlitTexture2D(RasterCommandBuffer cmd, RTHandle source, Vector4 scaleBias, float mipLevel, bool bilinear)
         {
             BlitTexture2D(cmd.m_WrappedCommandBuffer, source, scaleBias, mipLevel, bilinear);

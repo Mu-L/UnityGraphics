@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using Unity.Collections;
 using Unity.Collections.LowLevel.Unsafe;
+using Unity.Scripting.LifecycleManagement;
 using Unity.Profiling;
 
 namespace UnityEngine.Rendering.RenderGraphModule.NativeRenderPassCompiler
@@ -39,6 +40,7 @@ namespace UnityEngine.Rendering.RenderGraphModule.NativeRenderPassCompiler
         // Contains the index of the non culled passes for native render passes that has at least one pass culled.
         internal NativeList<int> m_NonCulledPassIndicesForRasterPasses;
 
+        [NoAutoStaticsCleanup]
         internal static bool s_ForceGenerateAuditsForTests = false;
 
         public NativePassCompiler(RenderGraphCompilationCache cache)
@@ -583,7 +585,7 @@ namespace UnityEngine.Rendering.RenderGraphModule.NativeRenderPassCompiler
                         producerData.culled = true;
                         producerData.DisconnectFromResources(ctx, unusedVersionedResourceIdCullingStack, type);
                     }
-                    else 
+                    else
                     {
                         // Producer is still necessary for now, but if the previous version is only implicitly read by it to write the unused resource
                         // then we can consider this version useless as well and add it to the stack.
@@ -1333,7 +1335,11 @@ namespace UnityEngine.Rendering.RenderGraphModule.NativeRenderPassCompiler
         }
 
 #if UNITY_EDITOR || DEVELOPMENT_BUILD
+        // s_EmptyLoadAudit and s_EmptyStoreAudit don't need to be reset when entering playmode. In practical terms,
+        // they are read-only, but we can't actually mark them readonly due to ref var usage in DetermineLoadStoreActions.
+        [NoAutoStaticsCleanup]
         static LoadAudit s_EmptyLoadAudit = new LoadAudit(LoadReason.InvalidReason);
+        [NoAutoStaticsCleanup]
         static StoreAudit s_EmptyStoreAudit = new StoreAudit(StoreReason.InvalidReason);
 #endif
 

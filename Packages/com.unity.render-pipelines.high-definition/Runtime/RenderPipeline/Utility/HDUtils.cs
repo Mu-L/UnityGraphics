@@ -94,6 +94,16 @@ namespace UnityEngine.Rendering.HighDefinition
             }
         }
 
+#if UNITY_EDITOR
+        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterAssembliesLoaded)]
+        static void ResetStaticsOnLoad()
+        {
+            CoreUtils.Destroy(m_ClearTexture3D);
+            m_ClearTexture3D = null;
+            m_ClearTexture3DRTH = null;
+        }
+#endif
+
         /// <summary>
         /// Returns the HDRP default blit material.
         /// </summary>

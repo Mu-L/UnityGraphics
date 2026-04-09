@@ -29,6 +29,7 @@ namespace UnityEngine.Rendering.RenderGraphModule
         public override void Dispose()
         {
             base.Dispose();
+            onDebugDataUpdated -= SendDebugDataToEditor;
             PlayerConnection.instance.UnregisterConnection(OnEditorConnected);
             PlayerConnection.instance.UnregisterDisconnection(OnEditorDisconnected);
             m_MessageHandler.UnregisterAll();

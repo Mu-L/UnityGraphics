@@ -2,6 +2,7 @@ using System;
 using System.Diagnostics;
 using System.Collections.Generic;
 using System.Runtime.CompilerServices;
+using Unity.Scripting.LifecycleManagement;
 
 namespace UnityEngine.Rendering.RenderGraphModule
 {
@@ -658,6 +659,8 @@ namespace UnityEngine.Rendering.RenderGraphModule
     internal sealed class RenderGraphPass<PassData> : BaseRenderGraphPass<PassData, RenderGraphContext>
         where PassData : class, new()
     {
+        // Variable is reused by overwriting its contents in FromInternalContext() before usage, so no need to reset it when entering play mode.
+        [NoAutoStaticsCleanup]
         internal static RenderGraphContext c = new RenderGraphContext();
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -681,6 +684,8 @@ namespace UnityEngine.Rendering.RenderGraphModule
     internal sealed class ComputeRenderGraphPass<PassData> : BaseRenderGraphPass<PassData, ComputeGraphContext>
     where PassData : class, new()
     {
+        // Variable is reused by overwriting its contents in FromInternalContext() before usage, so no need to reset it when entering play mode.
+        [NoAutoStaticsCleanup]
         internal static ComputeGraphContext c = new ComputeGraphContext();
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -704,6 +709,8 @@ namespace UnityEngine.Rendering.RenderGraphModule
     internal sealed class RasterRenderGraphPass<PassData> : BaseRenderGraphPass<PassData, RasterGraphContext>
     where PassData : class, new()
     {
+        // Variable is reused by overwriting its contents in FromInternalContext() before usage, so no need to reset it when entering play mode.
+        [NoAutoStaticsCleanup]
         internal static RasterGraphContext c = new RasterGraphContext();
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -727,6 +734,8 @@ namespace UnityEngine.Rendering.RenderGraphModule
     internal sealed class UnsafeRenderGraphPass<PassData> : BaseRenderGraphPass<PassData, UnsafeGraphContext>
         where PassData : class, new()
     {
+        // Variable is reused by overwriting its contents in FromInternalContext() before usage, so no need to reset it when entering play mode.
+        [NoAutoStaticsCleanup]
         internal static UnsafeGraphContext c = new UnsafeGraphContext();
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]

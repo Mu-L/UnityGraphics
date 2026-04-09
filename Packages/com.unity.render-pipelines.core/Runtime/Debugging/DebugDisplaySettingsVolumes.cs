@@ -429,7 +429,7 @@ namespace UnityEngine.Rendering
                 return new DebugUI.Value() { displayName = name, getter = () => Strings.parameterNotCalculated, };
             }
 
-            static DebugUI.Value s_EmptyDebugUIValue = new DebugUI.Value { getter = () => string.Empty };
+            static readonly DebugUI.Value s_EmptyDebugUIValue = new DebugUI.Value { getter = () => string.Empty };
 
             struct VolumeParameterChain
             {

@@ -14,7 +14,7 @@ namespace UnityEngine.Rendering.RenderGraphModule.NativeRenderPassCompiler
         /// <summary>
         /// Returns an empty array.
         /// </summary>
-        public static FixedAttachmentArray<DataType> Empty = new FixedAttachmentArray<DataType>(0);
+        public static readonly FixedAttachmentArray<DataType> Empty = new FixedAttachmentArray<DataType>(0);
 
         /// <summary>
         /// The maximum number of elements that can be stored in the array.
