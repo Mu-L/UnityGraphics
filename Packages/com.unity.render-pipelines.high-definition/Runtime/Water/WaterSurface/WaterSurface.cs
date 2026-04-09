@@ -1,10 +1,11 @@
 using System;
+using System.Buffers;
 using System.Collections.Generic;
-using UnityEditor;
 using Unity.Mathematics;
 using UnityEngine.Serialization;
 
 #if UNITY_EDITOR
+using UnityEditor;
 using UnityEditor.SceneManagement;
 #endif
 
@@ -87,39 +88,58 @@ namespace UnityEngine.Rendering.HighDefinition
         #region Instance Management
         // Management to avoid memory allocations at fetch time
         // NOTE: instances tracks active instances, disabled instances can exist and are not included.
-        internal static HashSet<WaterSurface> instances = new HashSet<WaterSurface>();
+        static HashSet<WaterSurface> instances = new HashSet<WaterSurface>();
         internal static WaterSurface[] instancesAsArray = null;
-        internal static int instanceCount = 0;
+        internal static int instanceCount => instances.Count;
 
-        internal static void RegisterInstance(WaterSurface surface)
+        static void RegisterInstance(WaterSurface surface)
         {
-            instances.Add(surface);
-            instanceCount = instances.Count;
-            if (instanceCount > 0)
+            if (instances.Add(surface))
             {
-                instancesAsArray = new WaterSurface[instanceCount];
+                if (instancesAsArray == null || instanceCount > instancesAsArray.Length)
+                {
+                    if (instancesAsArray != null)
+                    {
+                        ArrayPool<WaterSurface>.Shared.Return(instancesAsArray, true);
+                    }
+
+                    instancesAsArray = ArrayPool<WaterSurface>.Shared.Rent(instanceCount);
+                }
+
                 instances.CopyTo(instancesAsArray);
-            }
-            else
-            {
-                instancesAsArray = null;
             }
         }
 
-        internal static void UnregisterInstance(WaterSurface surface)
+        static void UnregisterInstance(WaterSurface surface)
         {
-            instances.Remove(surface);
-            instanceCount = instances.Count;
-            if (instanceCount > 0)
+            if (instances.Remove(surface))
             {
-                instancesAsArray = new WaterSurface[instanceCount];
-                instances.CopyTo(instancesAsArray);
+                if (instanceCount > 0)
+                {
+                    instances.CopyTo(instancesAsArray);
+                }
+                else
+                {
+                    ArrayPool<WaterSurface>.Shared.Return(instancesAsArray, true);
+                    instancesAsArray = null;
+                }
             }
-            else
+        }
+
+#if UNITY_EDITOR
+        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+        static void ResetStaticsOnLoad()
+        {
+            instances?.Clear();
+            instances = new HashSet<WaterSurface>();
+
+            if (instancesAsArray != null)
             {
+                ArrayPool<WaterSurface>.Shared.Return(instancesAsArray, true);
                 instancesAsArray = null;
             }
         }
+#endif
         #endregion
 
         #region Water General
@@ -209,7 +229,7 @@ namespace UnityEngine.Rendering.HighDefinition
         public float tessellationFactorFadeRange = 1850.0f;
 
 #if UNITY_EDITOR
-        static internal bool IsWaterMaterial(Material material)
+        internal static bool IsWaterMaterial(Material material)
         {
             return material.shader.FindSubshaderTagValue(0, (ShaderTagId)"ShaderGraphTargetId").name == "WaterSubTarget";
         }

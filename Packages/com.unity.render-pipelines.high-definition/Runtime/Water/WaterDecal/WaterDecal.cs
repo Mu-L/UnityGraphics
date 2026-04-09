@@ -163,5 +163,14 @@ namespace UnityEngine.Rendering.HighDefinition
             UnregisterInstance(this);
         }
         #endregion
+
+#if UNITY_EDITOR
+        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+        static void ResetStaticsOnLoad()
+        {
+            instances?.Clear();
+            instances = new List<WaterDecal>();
+        }
+#endif
     }
 }
