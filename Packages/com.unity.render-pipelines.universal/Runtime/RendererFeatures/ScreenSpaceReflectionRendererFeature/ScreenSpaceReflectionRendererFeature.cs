@@ -19,6 +19,9 @@ namespace UnityEngine.Rendering.Universal
         Shader m_Shader = null;
         Material m_Material = null;
 
+        Shader m_BlitShader = null;
+        Material m_BlitMaterial = null;
+
         /// <inheritdoc/>
         public override void Create()
         {
@@ -33,6 +36,7 @@ namespace UnityEngine.Rendering.Universal
             m_TransparentDepthNormalPass = null;
             m_SSRPass = null;
             CoreUtils.Destroy(m_Material);
+            CoreUtils.Destroy(m_BlitMaterial);
         }
 
         /// <inheritdoc/>
@@ -58,7 +62,7 @@ namespace UnityEngine.Rendering.Universal
             if (!settings.linearMarching.value && !SystemInfo.supportsComputeShaders)
                 Debug.LogWarning("Screen Space Reflection settings are incompatible with the current platform. Linear Marching must be enabled on platforms without computer shader support. Falling back to linear marching.");
 
-            bool shouldAdd = m_SSRPass.Setup(renderer, m_Material, afterOpaque, universalRenderingData, universalCameraData.cameraType);
+            bool shouldAdd = m_SSRPass.Setup(renderer, m_Material, m_BlitMaterial, afterOpaque, universalRenderingData, universalCameraData.cameraType);
             if (shouldAdd)
             {
                 if (settings.ShouldRenderTransparents())
@@ -80,7 +84,7 @@ namespace UnityEngine.Rendering.Universal
                     m_TransparentDepthNormalPass = new(RenderPassEvent.AfterRenderingPrePasses, RenderQueueRange.transparent, transparentLayerMask);
             }
 
-            if (m_Shader == null)
+            if (m_Shader == null || m_BlitShader == null)
             {
                 if (!GraphicsSettings.TryGetRenderPipelineSettings<ScreenSpaceReflectionPersistentResources>(out var ssrPersistentResources))
                 {
@@ -90,12 +94,16 @@ namespace UnityEngine.Rendering.Universal
                 }
 
                 m_Shader = ssrPersistentResources.Shader;
+                m_BlitShader = ssrPersistentResources.BlitShader;
             }
 
             if (m_Material == null && m_Shader != null)
                 m_Material = CoreUtils.CreateEngineMaterial(m_Shader);
 
-            if (m_Material == null)
+            if (m_BlitMaterial == null && m_BlitShader != null)
+                m_BlitMaterial = CoreUtils.CreateEngineMaterial(m_BlitShader);
+
+            if (m_Material == null || m_BlitMaterial == null)
             {
                 Debug.LogError($"{GetType().Name}.AddRenderPasses(): Missing material. {name} render pass will not be added.");
                 return false;

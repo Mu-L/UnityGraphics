@@ -81,6 +81,7 @@ namespace UnityEngine.Rendering.Universal
 
         // Private Variables
         Material m_Material;
+        Material m_BlitMaterial;
         LocalKeywordSet m_LocalKeywords;
         bool m_AfterOpaque;
 
@@ -117,9 +118,10 @@ namespace UnityEngine.Rendering.Universal
             m_MipGenerator.Release();
         }
 
-        internal bool Setup(ScriptableRenderer renderer, Material material, bool afterOpaque, UniversalRenderingData renderingData, CameraType cameraType)
+        internal bool Setup(ScriptableRenderer renderer, Material material, Material blitMaterial, bool afterOpaque, UniversalRenderingData renderingData, CameraType cameraType)
         {
             m_AfterOpaque = afterOpaque;
+            m_BlitMaterial = blitMaterial;
 
             if (m_Material != material)
             {
@@ -159,7 +161,7 @@ namespace UnityEngine.Rendering.Universal
 
             ConfigureInput(requiredInputs);
 
-            return m_Material != null;
+            return m_Material != null && m_BlitMaterial != null;
         }
 
 
@@ -253,7 +255,8 @@ namespace UnityEngine.Rendering.Universal
                 {
                     using (new RenderGraphProfilingScope(renderGraph, m_DepthPyramidSampler))
                     {
-                        renderGraph.AddBlitPass(cameraDepthTexture, depthPyramidTexture, new(1f, 2f), Vector2.zero, filterMode: BlitFilterMode.ClampNearest, passName: "Copy depth to mip 0");
+                        var blitParam = new BlitMaterialParameters(cameraDepthTexture, depthPyramidTexture, new(1f, 2f), Vector2.zero, m_BlitMaterial, 0);
+                        renderGraph.AddBlitPass(blitParam, passName: "Copy depth to mip 0");
                         m_PackedMipChainInfo.ComputePackedMipChainInfo(new Vector2Int(cameraData.cameraTargetDescriptor.width / (int)settings.resolution.value, cameraData.cameraTargetDescriptor.height / (int)settings.resolution.value), 0);
                         m_MipGenerator.RenderMinDepthPyramid(renderGraph, depthPyramidTexture, ref m_PackedMipChainInfo);
                     }
@@ -441,7 +444,8 @@ namespace UnityEngine.Rendering.Universal
 
                         if (settings.upscalingMethod == UpscalingMethod.None)
                         {
-                            renderGraph.AddBlitPass(ssrTexture, upscaleTexture, Vector2.one, Vector2.zero, passName: "Nearest", filterMode: RenderGraphModule.Util.RenderGraphUtils.BlitFilterMode.ClampNearest);
+                            var blitParam = new BlitMaterialParameters(ssrTexture, upscaleTexture, Vector2.one, Vector2.zero, m_BlitMaterial, 0);
+                            renderGraph.AddBlitPass(blitParam, passName: "Nearest");
                         }
                         else if (settings.upscalingMethod == UpscalingMethod.Kawase)
                         {

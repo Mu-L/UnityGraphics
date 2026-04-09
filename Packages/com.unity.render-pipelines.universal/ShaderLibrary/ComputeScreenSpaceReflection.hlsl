@@ -217,7 +217,7 @@ bool TraceScreenSpaceRayHiZ(
     float3 raySign  = float3(rcpRayDir.x >= 0 ? 1 : -1,
                              rcpRayDir.y >= 0 ? 1 : -1,
                              rcpRayDir.z >= 0 ? 1 : -1);
-    bool   rayTowardsEye  =  rcpRayDir.z >= 0;
+    bool rayTowardsEye = COMPARE_DEVICE_DEPTH_CLOSEREQUAL(rcpRayDir.z, 0);
 
     // Extend and clip the end point to the frustum.
     float tMax;
@@ -230,7 +230,10 @@ bool TraceScreenSpaceRayHiZ(
         bounds.y = (rcpRayDir.y >= 0) ? screenSize.y - halfTexel : halfTexel;
         // If we do not want to intersect the skybox, it is more efficient to not trace too far.
         float maxDepth = (_ReflectSky != 0) ? -0.00000024 : 0.00000024; // 2^-22
-        bounds.z = (rcpRayDir.z >= 0) ? 1 : maxDepth;
+        #if !defined(UNITY_REVERSED_Z)
+        maxDepth = 1.0-maxDepth;
+        #endif
+        bounds.z = rayTowardsEye ? (1.0-UNITY_RAW_FAR_CLIP_VALUE) : maxDepth;
 
         float3 dist = bounds * rcpRayDir - (rayOrigin * rcpRayDir);
         tMax = Min3(dist.x, dist.y, dist.z);
@@ -326,7 +329,7 @@ bool TraceScreenSpaceRayHiZ(
     }
 
     // Treat intersections with the sky as misses.
-    miss = miss || ((_ReflectSky == 0) && (rayPos.z == 0));
+    miss = miss || ((_ReflectSky == 0) && (rayPos.z == UNITY_RAW_FAR_CLIP_VALUE));
     hit  = hit && !miss;
 
     rayHitPosNDC = float3(floor(rayPos.xy) / screenSize + (0.5 / screenSize), rayPos.z);
