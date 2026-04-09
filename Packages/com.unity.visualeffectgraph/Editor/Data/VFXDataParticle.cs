@@ -15,7 +15,7 @@ namespace UnityEditor.VFX
         string GetCodeOffset(VFXAttribute attrib, uint capacity, string index, string instanceIndex);
         uint GetBufferSize(uint capacity);
 
-        VFXGPUBufferDesc GetBufferDesc(uint capacity, ComputeBufferMode mode = ComputeBufferMode.Immutable);
+        VFXGPUBufferDesc GetBufferDesc(uint capacity, ComputeBufferMode mode, string debugName);
     }
 
     class StructureOfArrayProvider : ILayoutProvider
@@ -145,7 +145,7 @@ namespace UnityEditor.VFX
             return (uint)m_BucketOffsets.LastOrDefault() + capacity * (uint)m_BucketSizes.LastOrDefault();
         }
 
-        public VFXGPUBufferDesc GetBufferDesc(uint capacity, ComputeBufferMode mode = ComputeBufferMode.Immutable)
+        public VFXGPUBufferDesc GetBufferDesc(uint capacity, ComputeBufferMode mode = ComputeBufferMode.Immutable, string debugName = "VFXAttributeBuffer")
         {
             var layout = m_AttributeLayout.Select(o => new VFXLayoutElementDesc()
             {
@@ -160,7 +160,7 @@ namespace UnityEditor.VFX
             });
             return new VFXGPUBufferDesc()
             {
-                debugName = "VFXAttributeBuffer",
+                debugName = debugName,
                 target = GraphicsBuffer.Target.Raw,
                 size = GetBufferSize(capacity),
                 stride = 4,
@@ -873,7 +873,7 @@ namespace UnityEditor.VFX
                 }
 
                 attributeSourceBufferIndex = outBufferDescs.Count;
-                outBufferDescs.Add(m_layoutAttributeSource.GetBufferDesc(staticSourceCount, ComputeBufferMode.Dynamic));
+                outBufferDescs.Add(m_layoutAttributeSource.GetBufferDesc(staticSourceCount, ComputeBufferMode.Dynamic, "VFXSourceAttributeBuffer"));
             }
 
             if (attributeSourceBufferIndex != -1)
@@ -890,7 +890,6 @@ namespace UnityEditor.VFX
             if (hasKill)
             {
                 systemFlag |= VFXSystemFlag.SystemHasKill;
-
                 if (!hasStrip) // No dead list for strips
                 {
                     deadListBufferIndex = outBufferDescs.Count;
