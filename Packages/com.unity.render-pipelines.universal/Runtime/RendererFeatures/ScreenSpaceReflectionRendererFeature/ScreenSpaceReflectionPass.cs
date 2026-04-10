@@ -57,7 +57,6 @@ namespace UnityEngine.Rendering.Universal
             internal static readonly int _MaxRaySteps = Shader.PropertyToID("_MaxRaySteps");
             internal static readonly int _Downsample = Shader.PropertyToID("_Downsample");
             internal static readonly int _ThicknessScaleAndBias = Shader.PropertyToID("_ThicknessScaleAndBias");
-            internal static readonly int _ScreenSpaceReflectionFinalTexture = Shader.PropertyToID(k_ScreenSpaceReflectionTextureName);
             internal static readonly int _CameraProjections = Shader.PropertyToID("_CameraProjections");
             internal static readonly int _CameraInverseProjections = Shader.PropertyToID("_CameraInverseProjections");
             internal static readonly int _CameraInverseViewProjections = Shader.PropertyToID("_CameraInverseViewProjections");

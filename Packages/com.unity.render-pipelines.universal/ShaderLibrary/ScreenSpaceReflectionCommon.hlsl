@@ -32,11 +32,17 @@ float GetSSRTextureLastValidMipIndex()
 float GetSSRBlurConeHalfAngle(float perceptualRoughness)
 {
     float roughness = PerceptualRoughnessToRoughness(perceptualRoughness);
-    float roughnessSquared = roughness * roughness;
 
-    // Inspired by http://pascal.lecocq.home.free.fr/publications/lecocq_i3D2016_specularAreaLighting.pdf
-    float k = (1.0 - roughnessSquared) / (2.0 - roughnessSquared);
-    return (PI / 3.0) * sqrt(1 - 4.0 * k * k);
+    // Ref: "Moving Frostbite to PBR", p. 72. But using a different E value to match the reflection probe
+    // roughness curve.
+    //
+    // const float e = 0.85;
+    // return atan(e*roughness/(1.0 - e));
+
+    // (Hopefully) Faster polynomial approximation of above
+    float shininess = 1.0 - roughness;
+    float shininess2 = shininess * shininess;
+    return 0.2094 * (roughness + 5.6667 * (1.0 - shininess2 * shininess2));
 }
 
 float GetSSRMipLevelFromPerceptualRoughness(float3 positionWS, float perceptualRoughness)
