@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using UnityEditor.Rendering;
 using UnityEngine;
 using UnityEngine.Rendering;
+using UnityEngine.UIElements;
 using Object = UnityEngine.Object;
 using UnityEngine.VFX.SDF;
 
@@ -20,6 +21,9 @@ namespace UnityEditor.VFX.SDF
         [SerializeField]
         private SdfBakerSettings m_Settings;
 
+        private TwoPaneSplitView m_SplitView;
+        private IMGUIContainer m_MeshPreviewContainer;
+        private IMGUIContainer m_TexturePreviewContainer;
         private SerializedObject m_SettingsSO;
 
         private RenderTexture m_BakedSDF;
@@ -97,7 +101,43 @@ namespace UnityEditor.VFX.SDF
         private Vector3 m_ActualBoxSize;
 
 
-        protected void OnGUI()
+        protected void CreateGUI()
+        {
+            m_SplitView = new TwoPaneSplitView(1, 300f, TwoPaneSplitViewOrientation.Vertical);
+            m_SplitView.viewDataKey = "SDFBakeTool_MainSplit";
+            m_SplitView.style.flexGrow = 1;
+
+            // Top pane: scrollable controls panel.
+            var topPane = new VisualElement();
+            topPane.style.flexGrow = 1;
+            topPane.style.minHeight = 50;
+            var scrollView = new ScrollView(ScrollViewMode.Vertical);
+            scrollView.style.flexGrow = 1;
+            scrollView.Add(new IMGUIContainer(DrawControls));
+            topPane.Add(scrollView);
+            m_SplitView.Add(topPane);
+
+            // Bottom pane: preview panels stacked vertically, each filling equal height.
+            var bottomPane = new VisualElement();
+            bottomPane.style.flexDirection = FlexDirection.Column;
+            bottomPane.style.flexGrow = 1;
+            bottomPane.style.minHeight = 50;
+
+            m_MeshPreviewContainer = new IMGUIContainer(UpdateMeshPreview);
+            m_MeshPreviewContainer.style.flexGrow = 1;
+            bottomPane.Add(m_MeshPreviewContainer);
+
+            m_TexturePreviewContainer = new IMGUIContainer(UpdateTexture3dPreview);
+            m_TexturePreviewContainer.style.flexGrow = 1;
+            bottomPane.Add(m_TexturePreviewContainer);
+
+            m_SplitView.Add(bottomPane);
+            rootVisualElement.Add(m_SplitView);
+
+            UpdatePreviewVisibility();
+        }
+
+        private void DrawControls()
         {
             if (m_Settings == null)
             {
@@ -107,6 +147,7 @@ namespace UnityEditor.VFX.SDF
             bool needsUpdate = false;
             Undo.RecordObject(this, "Settings Asset change");
             Undo.RecordObject(m_Settings, "SDF Baker Parameter change");
+
             GUILayout.BeginHorizontal();
 
 
@@ -334,18 +375,27 @@ namespace UnityEditor.VFX.SDF
             GUILayout.BeginHorizontal();
             previewObject = (PreviewChoice)EditorGUILayout.EnumPopup(Contents.previewChoice, previewObject);
             GUILayout.EndHorizontal();
-            if ((previewObject & PreviewChoice.Mesh) != 0)
-            {
-                UpdateMeshPreview();
-            }
-
-            if ((previewObject & PreviewChoice.Texture) != 0)
-            {
-                UpdateTexture3dPreview();
-            }
+            UpdatePreviewVisibility();
 
             if (needsUpdate)
                 EditorUtility.SetDirty(m_Settings);
+        }
+
+        private void UpdatePreviewVisibility()
+        {
+            if (m_MeshPreviewContainer == null || m_TexturePreviewContainer == null || m_SplitView == null)
+                return;
+
+            bool showMesh = (previewObject & PreviewChoice.Mesh) != 0;
+            bool showTexture = (previewObject & PreviewChoice.Texture) != 0;
+
+            m_MeshPreviewContainer.style.display = showMesh ? DisplayStyle.Flex : DisplayStyle.None;
+            m_TexturePreviewContainer.style.display = showTexture ? DisplayStyle.Flex : DisplayStyle.None;
+
+            if (showMesh || showTexture)
+                m_SplitView.UnCollapse();
+            else
+                m_SplitView.CollapseChild(1);
         }
 
         private void UpdateTexture3dPreview()
@@ -357,8 +407,11 @@ namespace UnityEditor.VFX.SDF
                 GUILayout.BeginHorizontal();
                 m_TexturePreview.OnPreviewSettings(new Object[] { m_BakedSDF });
                 GUILayout.EndHorizontal();
-                Rect rect = GUILayoutUtility.GetRect(100, 2000, 100, 2000, GUIStyle.none);
-                m_TexturePreview.OnPreviewGUI(rect, GUIStyle.none);
+                Rect rect = GUILayoutUtility.GetRect(0, float.MaxValue, 0, float.MaxValue, GUIStyle.none);
+                if (rect.height > 0 && rect.width > 0)
+                {
+                    m_TexturePreview.OnPreviewGUI(rect, GUIStyle.none);
+                }
                 EditorGUI.DropShadowLabel(rect, m_TexturePreview.GetInfoString());
             }
         }
@@ -375,15 +428,18 @@ namespace UnityEditor.VFX.SDF
                 m_MeshPreview.sizeBoxReference = boxSizeReference;
                 m_MeshPreview.actualSizeBox = m_ActualBoxSize;
                 m_MeshPreview.centerBox = boxCenter;
-                m_MeshPreview?.OnPreviewGUI(GUILayoutUtility.GetRect(100, 2000, 100, 2000, GUIStyle.none),
-                    GUIStyle.none);
+                Rect rect = GUILayoutUtility.GetRect(0, float.MaxValue, 0, float.MaxValue, GUIStyle.none);
+                if (rect.height > 0 && rect.width > 0)
+                {
+                    m_MeshPreview?.OnPreviewGUI(rect, GUIStyle.none);
+                }
             }
         }
 
         private void OnEnable()
         {
             titleContent = Contents.title;
-            minSize = new Vector2(300.0f, 400.0f);
+            minSize = new Vector2(300f, 400f);
             if (m_Settings == null)
             {
                 m_Settings = CreateInstance<SdfBakerSettings>();
