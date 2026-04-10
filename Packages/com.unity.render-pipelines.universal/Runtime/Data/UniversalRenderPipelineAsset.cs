@@ -425,7 +425,7 @@ namespace UnityEngine.Rendering.Universal
 
         private const int k_LastVersion = 13;
         // Default values set when a new UniversalRenderPipeline asset is created
-        [SerializeField] int k_AssetVersion = k_LastVersion;
+        [SerializeField] internal int k_AssetVersion = k_LastVersion;
         [SerializeField] int k_AssetPreviousVersion = k_LastVersion;
 
         // Deprecated settings for upgrading sakes
