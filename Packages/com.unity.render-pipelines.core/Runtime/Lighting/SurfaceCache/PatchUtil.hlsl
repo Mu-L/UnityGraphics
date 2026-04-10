@@ -6,22 +6,10 @@
 #include "Common.hlsl"
 #include "RingBuffer.hlsl"
 
-#if defined(PATCH_UTIL_USE_RW_IRRADIANCE_BUFFER)
-#define IrradianceBufferType RWStructuredBuffer<SphericalHarmonics::RGBL1>
+#if defined(PATCH_UTIL_USE_RW_PATCH_IRRADIANCE_BUFFER)
+#define PatchIrradianceBufferType RWStructuredBuffer<SphericalHarmonics::RGBL1>
 #else
-#define IrradianceBufferType StructuredBuffer<SphericalHarmonics::RGBL1>
-#endif
-
-#if defined(PATCH_UTIL_USE_RW_CELL_INDEX_BUFFER)
-#define CellPatchIndexBufferType RWStructuredBuffer<uint>
-#else
-#define CellPatchIndexBufferType StructuredBuffer<uint>
-#endif
-
-#if defined(PATCH_UTIL_USE_RW_CELL_ALLOCATION_MARK_BUFFER)
-#define CellAllocationMarkBufferType RWStructuredBuffer<uint>
-#else
-#define CellAllocationMarkBufferType StructuredBuffer<uint>
+#define PatchIrradianceBufferType StructuredBuffer<SphericalHarmonics::RGBL1>
 #endif
 
 #if defined(PATCH_UTIL_USE_RW_PATCH_GEOMETRY_BUFFER)
@@ -37,9 +25,15 @@
 #endif
 
 #if defined(PATCH_UTIL_USE_RW_CELL_PATCH_INDEX_BUFFER)
-#define CellPatchndexBufferType RWStructuredBuffer<uint>
+#define CellPatchIndexBufferType RWStructuredBuffer<uint>
 #else
 #define CellPatchIndexBufferType StructuredBuffer<uint>
+#endif
+
+#if defined(PATCH_UTIL_USE_RW_CELL_ALLOCATION_MARK_BUFFER)
+#define CellAllocationMarkBufferType RWStructuredBuffer<uint>
+#else
+#define CellAllocationMarkBufferType StructuredBuffer<uint>
 #endif
 
 namespace PatchUtil
@@ -311,7 +305,7 @@ namespace PatchUtil
         return result;
     }
 
-    bool ReadHemisphericalIrradiance(IrradianceBufferType patchIrradiances, CellPatchIndexBufferType cellPatchIndices, uint spatialResolution, uint cascadeIdx, uint3 volumeSpacePosition, float3 worldNormal, out SphericalHarmonics::RGBL1 resultIrradiance)
+    bool ReadHemisphericalIrradiance(PatchIrradianceBufferType patchIrradiances, CellPatchIndexBufferType cellPatchIndices, uint spatialResolution, uint cascadeIdx, uint3 volumeSpacePosition, float3 worldNormal, out SphericalHarmonics::RGBL1 resultIrradiance)
     {
         const uint directionIdx = GetDirectionIndex(worldNormal, volumeAngularResolution);
         const uint cellIdx = GetCellIndex(cascadeIdx, volumeSpacePosition, directionIdx, spatialResolution, volumeAngularResolution);
@@ -361,7 +355,7 @@ namespace PatchUtil
         return patchIdx;
     }
 
-    bool ReadHemisphericalIrradiance(IrradianceBufferType patchIrradiances, CellPatchIndexBufferType cellPatchIndices, VolumeParamSet volumeParams, float3 worldPosition, float3 worldNormal, uint startCascadeIdx, out SphericalHarmonics::RGBL1 resultIrradiance)
+    bool ReadHemisphericalIrradiance(PatchIrradianceBufferType patchIrradiances, CellPatchIndexBufferType cellPatchIndices, VolumeParamSet volumeParams, float3 worldPosition, float3 worldNormal, uint startCascadeIdx, out SphericalHarmonics::RGBL1 resultIrradiance)
     {
         VolumePositionResolution posResolution = ResolveVolumePosition(worldPosition, volumeParams, startCascadeIdx);
         bool resultBool = false;
@@ -377,7 +371,7 @@ namespace PatchUtil
         return resultBool;
     }
 
-    bool ReadHemisphericalIrradiance(IrradianceBufferType patchIrradiances, CellPatchIndexBufferType cellPatchIndices, VolumeParamSet volumeParams, float3 worldPosition, float3 worldNormal, out SphericalHarmonics::RGBL1 resultIrradiance)
+    bool ReadHemisphericalIrradiance(PatchIrradianceBufferType patchIrradiances, CellPatchIndexBufferType cellPatchIndices, VolumeParamSet volumeParams, float3 worldPosition, float3 worldNormal, out SphericalHarmonics::RGBL1 resultIrradiance)
     {
         const uint conservativeStartCascadeIdx = 0;
         return ReadHemisphericalIrradiance(
@@ -390,7 +384,7 @@ namespace PatchUtil
             resultIrradiance);
     }
 
-    float3 ReadPlanarIrradiance(IrradianceBufferType patchIrradiances, CellPatchIndexBufferType cellPatchIndices, uint spatialResolution, uint cascadeIdx, uint3 volumeSpacePosition, float3 worldNormal)
+    float3 ReadPlanarIrradiance(PatchIrradianceBufferType patchIrradiances, CellPatchIndexBufferType cellPatchIndices, uint spatialResolution, uint cascadeIdx, uint3 volumeSpacePosition, float3 worldNormal)
     {
         SphericalHarmonics::RGBL1 resultIrradiance;
         bool resultBool = ReadHemisphericalIrradiance(patchIrradiances, cellPatchIndices, spatialResolution, cascadeIdx, volumeSpacePosition, worldNormal, resultIrradiance);
@@ -400,7 +394,7 @@ namespace PatchUtil
             return invalidIrradiance;
     }
 
-    float3 ReadPlanarIrradiance(IrradianceBufferType patchIrradiances, CellPatchIndexBufferType cellPatchIndices, VolumeParamSet volumeParams, float3 worldPosition, float3 worldNormal)
+    float3 ReadPlanarIrradiance(PatchIrradianceBufferType patchIrradiances, CellPatchIndexBufferType cellPatchIndices, VolumeParamSet volumeParams, float3 worldPosition, float3 worldNormal)
     {
         VolumePositionResolution posResolution = ResolveVolumePosition(worldPosition, volumeParams);
         if (posResolution.isValid())

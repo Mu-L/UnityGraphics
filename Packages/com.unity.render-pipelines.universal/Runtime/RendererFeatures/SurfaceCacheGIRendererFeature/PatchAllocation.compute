@@ -1,8 +1,8 @@
 #pragma only_renderers d3d11 playstation xboxone xboxseries vulkan metal glcore ps5
 #pragma kernel Allocate
 
-#define PATCH_UTIL_USE_RW_IRRADIANCE_BUFFER
-#define PATCH_UTIL_USE_RW_CELL_INDEX_BUFFER
+#define PATCH_UTIL_USE_RW_PATCH_IRRADIANCE_BUFFER
+#define PATCH_UTIL_USE_RW_CELL_PATCH_INDEX_BUFFER
 #define PATCH_UTIL_USE_RW_CELL_ALLOCATION_MARK_BUFFER
 
 #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Core.hlsl"
