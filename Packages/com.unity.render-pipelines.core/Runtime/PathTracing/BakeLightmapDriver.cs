@@ -83,7 +83,7 @@ namespace UnityEngine.PathTracing.Lightmapping
             public uint BounceCount = 4;
             public float AOMaxDistance = 1.0f;
             public float PushOff = 0.00001f;
-            public UInt64 ExpandedBufferSize = 262144;
+            public UInt64 ExpandedBufferSize = 524288;
 
             public LightSamplingMode DirectLightSamplingMode;
             public uint DirectRISCandidateCount;
