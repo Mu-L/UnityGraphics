@@ -30,7 +30,6 @@ namespace UnityEditor.VFX.Test
         public IEnumerator UnitySetUp()
         {
             GraphViewTemplateWindowHelpers.SetLastUsedTemplatePref();
-            GraphViewTemplateWindowHelpers.StopSearchIndexingTasks();
             yield return null;
         }
 
@@ -95,7 +94,6 @@ namespace UnityEditor.VFX.Test
             // Find the "Create new Visual Effect Graph" button and click it
             var window = VFXViewWindow.GetAllWindows().First();
 
-            GraphViewTemplateWindowHelpers.StopSearchIndexingTasks();
             yield return OpenTemplateWindowNoAssetWindow(window);
             var templateWindow = EditorWindow.GetWindowDontShow<GraphViewTemplateWindow>();
             var treeView = GraphViewTemplateWindowHelpers.GetTreeView(templateWindow);

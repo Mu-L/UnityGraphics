@@ -20,7 +20,7 @@ using UnityEngine.UIElements;
 using UnityEngine.VFX;
 using UnityEditor.VFX.Block;
 using UnityEditor.VFX.Operator;
-
+using UnityEngine.UIElements.TestFramework;
 using Debug = UnityEngine.Debug;
 using RangeAttribute = UnityEngine.RangeAttribute;
 
@@ -31,17 +31,29 @@ namespace UnityEditor.VFX.Test
     {
         const string TempDirectoryName = "Assets/TmpTests";
 
-        [OneTimeSetUp]
-        public void Init()
-        {
-            VFXTestCommon.CloseAllUnecessaryWindows();
-        }
-
         [OneTimeTearDown]
         public void DestroyTestAssets()
         {
             VFXViewWindow.GetAllWindows().ToList().ForEach(x => x.Close());
             VFXTestCommon.DeleteAllTemporaryGraph();
+        }
+
+        [SetUp]
+        public void SetUp()
+        {
+            VFXViewWindow.GetAllWindows().ToList().ForEach(x => x.Close());
+            VFXTestCommon.CloseAllUnecessaryWindows();
+            EventHelpers.TestSetUp();
+        }
+
+        [TearDown]
+        public void TearDown()
+        {
+            EventHelpers.TestTearDown();
+            if (EditorWindow.HasOpenInstances<GraphViewTemplateWindow>())
+            {
+                EditorWindow.GetWindow<GraphViewTemplateWindow>().Close();
+            }
         }
 
         [Test]
@@ -909,6 +921,7 @@ namespace UnityEditor.VFX.Test
         [UnityTest]
         public IEnumerator Check_ObjectPropertyRMTextureSearch()
         {
+            var hasEngineOverride = ObjectSelectorSearch.HasEngineOverride();
             try
             {
                 var viewController = VFXTestCommon.StartEditTestAsset();
@@ -922,11 +935,10 @@ namespace UnityEditor.VFX.Test
                 var button = texture2DNodeUI.Q<VisualElement>(null, "unity-object-field__selector");
 
                 VFXGUITestHelper.SendDoubleClick(button, 1);
-                yield return null;
 
                 Assert.IsTrue(EditorWindow.HasOpenInstances<ObjectSelector>());
 
-                if (ObjectSelectorSearch.HasEngineOverride())
+                if (hasEngineOverride)
                 {
                     // Work around a bug in ObjectSelector which property searchFilter do not return correct value when the search mode is advanced
                     var searchWindow = EditorWindow.GetWindowDontShow<SearchPickerWindow>();
@@ -939,14 +951,13 @@ namespace UnityEditor.VFX.Test
             }
             finally
             {
-                if (EditorWindow.HasOpenInstances<ObjectSelector>())
-                {
-                    EditorWindow.GetWindow<ObjectSelector>().Close();
-                }
-
-                if (EditorWindow.HasOpenInstances<SearchPickerWindow>())
+                if (hasEngineOverride)
                 {
                     EditorWindow.GetWindow<SearchPickerWindow>().Close();
+                }
+                else
+                {
+                    EditorWindow.GetWindow<ObjectSelector>().Close();
                 }
             }
         }

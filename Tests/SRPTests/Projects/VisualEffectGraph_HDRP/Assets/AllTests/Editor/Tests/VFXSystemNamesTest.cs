@@ -169,9 +169,7 @@ namespace UnityEditor.VFX.Test
             GraphViewTemplateWindowHelpers.SetLastUsedTemplatePref("d379eac073f73024780a8968d2259cef");
             onCreateAssetMethod.Invoke(vfxViewWindow.graphView, null);
             yield return null;
-            var enumerator = GraphViewTemplateWindowOpening.CheckNewVFXIsCreated();
-            while (enumerator.MoveNext())
-                yield return enumerator.Current;
+            yield return GraphViewTemplateWindowOpening.CheckNewVFXIsCreated(null);
             vfxViewWindow.graphView.OnSave();
 
             // Create a new VFX using the simple loop template
@@ -179,9 +177,7 @@ namespace UnityEditor.VFX.Test
             onCreateAssetMethod.Invoke(vfxViewWindow.graphView, null);
             yield return null;
 
-            enumerator = GraphViewTemplateWindowOpening.CheckNewVFXIsCreated();
-            while (enumerator.MoveNext())
-                yield return enumerator.Current;
+            yield return GraphViewTemplateWindowOpening.CheckNewVFXIsCreated(null);
         }
     }
 }

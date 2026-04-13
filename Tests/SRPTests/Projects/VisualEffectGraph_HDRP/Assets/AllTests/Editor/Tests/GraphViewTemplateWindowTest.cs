@@ -43,20 +43,7 @@ namespace UnityEditor.VFX.Test
     {
         const float kTimeout = 30_000f; // 30 seconds
 
-        public static void StopSearchIndexingTasks()
-        {
-            for (var index = 0; index < Progress.GetCount(); index++)
-            {
-                var id = Progress.GetId(index);
-                var taskName = Progress.GetName(id);
-                if (taskName.Contains("search", StringComparison.InvariantCultureIgnoreCase))
-                {
-                    Progress.Cancel(id);
-                }
-            }
-        }
-
-        public static IEnumerator WaitTemplateSearchCompleted(GraphViewTemplateWindow templateWindow, bool stopIndexing = true)
+        public static IEnumerator WaitTemplateSearchCompleted(GraphViewTemplateWindow templateWindow)
         {
             var searchProviderField = templateWindow.GetType().GetField("m_SearchProvider", BindingFlags.Instance | BindingFlags.NonPublic);
             var searchProvider = (TemplateSearchProvider)searchProviderField?.GetValue(templateWindow);
@@ -189,7 +176,6 @@ namespace UnityEditor.VFX.Test
         public IEnumerator UnitySetUp()
         {
             AssetDatabase.DeleteAsset(k_SampleExpectedPath);
-            GraphViewTemplateWindowHelpers.StopSearchIndexingTasks();
             m_TemplateTree = GraphViewTemplateWindowHelpers.GetTemplateTree(window);
 
             m_SearchField = window.rootVisualElement.Q<ToolbarSearchField>();
@@ -249,7 +235,6 @@ namespace UnityEditor.VFX.Test
 
             // Wait for the search service to operate
             yield return GraphViewTemplateWindowHelpers.WaitTemplateSearchCompleted(window);
-            yield return null;
 
             var items = m_TemplateTree.SelectMany(x => x.children).Select(x => x.data.header).ToArray();
             CollectionAssert.AreEqual(new[] { "Simple Burst", "Simple Loop", "Simple Trail" }, items);
@@ -279,7 +264,8 @@ namespace UnityEditor.VFX.Test
             m_SearchField.value = "xx##yy"; // A string matching no existing template
             simulate.FrameUpdate();
 
-            yield return GraphViewTemplateWindowHelpers.WaitTemplateSearchCompleted(window, false);
+            yield return GraphViewTemplateWindowHelpers.WaitTemplateSearchCompleted(window);
+            simulate.FrameUpdate();
             yield return null;
 
             var emptyResultLabel = window.rootVisualElement.Q<Label>("EmptyResults");

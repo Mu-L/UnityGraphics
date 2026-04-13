@@ -77,7 +77,7 @@ Shader ""Hidden/GraphErrorShader2""
         [SerializeField]
         bool m_ExposeTemplateAsShader;
 
-        [SerializeField]
+        [SerializeField, HideInInspector]
         ShaderGraphIndexedData m_IndexedData;
 
         public bool UseAsTemplate

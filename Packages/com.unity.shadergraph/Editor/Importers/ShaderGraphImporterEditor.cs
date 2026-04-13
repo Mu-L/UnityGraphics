@@ -167,7 +167,7 @@ namespace UnityEditor.ShaderGraph
             }
 
             serializedObject.ApplyModifiedProperties();
-            if (!hasFocus)
+            if (!hasFocus && !ObjectSelector.isVisible)
             {
                 ApplyChanges();
             }
@@ -185,6 +185,8 @@ namespace UnityEditor.ShaderGraph
         public override void OnDisable()
         {
             base.OnDisable();
+            // Also apply changes when the inspector is closed to ensure that any changes to the template settings are not lost.
+            ApplyChanges();
             if (materialEditor != null)
                 DestroyImmediate(materialEditor);
         }
@@ -229,16 +231,19 @@ namespace UnityEditor.ShaderGraph
         void ApplyChanges()
         {
             var importer = (AssetImporter)target;
-            if (needsSaveMetaFile)
-            {
-                AssetDatabase.ForceReserializeAssets(new []{ importer.assetPath }, ForceReserializeAssetsOptions.ReserializeMetadata);
-            }
+
             if (needsReimport || needsSaveMetaFile)
             {
+                if (needsSaveMetaFile)
+                {
+                    needsSaveMetaFile = false;
+                    AssetDatabase.ForceReserializeAssets(new []{ importer.assetPath }, ForceReserializeAssetsOptions.ReserializeMetadata);
+                }
+
+                needsReimport = false;
                 AssetDatabase.ImportAsset(importer.assetPath);
+
             }
-            needsSaveMetaFile = false;
-            needsReimport = false;
         }
     }
 }

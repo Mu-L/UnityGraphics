@@ -36,20 +36,12 @@ namespace UnityEditor.VFX.Test
         [SetUp]
         public void SetUp()
         {
-            GraphViewTemplateWindowHelpers.StopSearchIndexingTasks();
             while (EditorWindow.HasOpenInstances<GraphViewTemplateWindow>())
             {
                 EditorWindow.GetWindow<GraphViewTemplateWindow>()?.Close();
             }
             Directory.CreateDirectory(VFXTestCommon.tempBasePath);
             AssetDatabase.Refresh();
-        }
-
-        [UnitySetUp]
-        public IEnumerator UnitySetUp()
-        {
-            GraphViewTemplateWindowHelpers.StopSearchIndexingTasks();
-            yield return null;
         }
 
         [TearDown]
@@ -63,22 +55,22 @@ namespace UnityEditor.VFX.Test
         public IEnumerator Create_VFX_From_VFXGraph_Editor()
         {
             LoadTempGraph();
-            yield return ClickButton(window.rootVisualElement, "create-button", EventModifiers.Control);
-            yield return CheckNewVFXIsCreated();
+            yield return ClickButton(simulate, window.rootVisualElement, "create-button", modifier: EventModifiers.Control);
+            yield return CheckNewVFXIsCreated(simulate);
         }
 
         [UnityTest]
         public IEnumerator Create_VFX_From_VFXGraph_Editor_NoAsset()
         {
             yield return OpenTemplateWindowNoAssetWindow();
-            yield return CheckNewVFXIsCreated();
+            yield return CheckNewVFXIsCreated(simulate);
         }
 
         [UnityTest]
         public IEnumerator Create_VFX_From_VFXGraph_Editor_Cancel()
         {
             LoadTempGraph();
-            yield return ClickButton(window.rootVisualElement, "create-button", EventModifiers.Control);
+            yield return ClickButton(simulate, window.rootVisualElement, "create-button", modifier: EventModifiers.Control);
 
             var templateWindow = EditorWindow.GetWindowDontShow<GraphViewTemplateWindow>();
             Assert.NotNull(templateWindow);
@@ -93,7 +85,7 @@ namespace UnityEditor.VFX.Test
             treeView.selectedIndex = 3;
 
             // Simulate click on cancel button
-            yield return ClickButton(templateWindow.rootVisualElement, "CancelButton");
+            yield return ClickButton(simulate, templateWindow.rootVisualElement, "CancelButton");
 
             Assert.AreEqual(0, mockSaveFileDialogHelper.CallCount);
             Assert.False(EditorWindow.HasOpenInstances<GraphViewTemplateWindow>());
@@ -105,7 +97,7 @@ namespace UnityEditor.VFX.Test
         {
             yield return CreateWindowFromProjectBrowser();
 
-            yield return CheckNewVFXIsCreated();
+            yield return CheckNewVFXIsCreated(simulate);
         }
 
         [UnityTest]
@@ -113,7 +105,7 @@ namespace UnityEditor.VFX.Test
         {
             yield return CreateWindowFromInspector();
 
-            yield return CheckNewVFXIsCreated();
+            yield return CheckNewVFXIsCreated(simulate);
         }
 
         [UnityTest]
@@ -126,7 +118,7 @@ namespace UnityEditor.VFX.Test
             Assert.AreEqual(0, m_Controller.contexts.Count());
 
             // Get template dropdown from the VFX graph toolbar
-            yield return ClickButton(window.rootVisualElement, "create-button");
+            yield return ClickButton(simulate, window.rootVisualElement, "create-button");
 
             var templateWindow = EditorWindow.GetWindowDontShow<GraphViewTemplateWindow>();
             Assert.NotNull(templateWindow);
@@ -136,7 +128,7 @@ namespace UnityEditor.VFX.Test
             GraphViewTemplateWindowHelpers.TrySetSaveFileDialogHelper(templateWindow, mockSaveFileDialogHelper);
 
             // Simulate click on create button
-            yield return ClickButton(templateWindow.rootVisualElement, "CreateButton");
+            yield return ClickButton(simulate, templateWindow.rootVisualElement, "CreateButton");
 
             Assert.False(EditorWindow.HasOpenInstances<GraphViewTemplateWindow>());
             Assert.AreEqual(0, mockSaveFileDialogHelper.CallCount);
@@ -155,7 +147,7 @@ namespace UnityEditor.VFX.Test
             Assert.AreEqual(0, m_Controller.contexts.Count());
 
             // Get template dropdown from the VFX graph toolbar
-            yield return ClickButton(window.rootVisualElement, "create-button");
+            yield return ClickButton(simulate, window.rootVisualElement, "create-button");
 
             var templateWindow = EditorWindow.GetWindowDontShow<GraphViewTemplateWindow>();
             Assert.NotNull(templateWindow);
@@ -165,7 +157,7 @@ namespace UnityEditor.VFX.Test
             GraphViewTemplateWindowHelpers.TrySetSaveFileDialogHelper(templateWindow, mockSaveFileDialogHelper);
 
             // Simulate click on cancel button
-            yield return ClickButton(templateWindow.rootVisualElement, "CancelButton");
+            yield return ClickButton(simulate, templateWindow.rootVisualElement, "CancelButton");
 
             Assert.False(EditorWindow.HasOpenInstances<GraphViewTemplateWindow>());
             Assert.AreEqual(0, m_Controller.contexts.Count());
@@ -179,7 +171,7 @@ namespace UnityEditor.VFX.Test
             window.graphView.controller = m_Controller;
         }
 
-        internal static IEnumerator CheckNewVFXIsCreated()
+        internal static IEnumerator CheckNewVFXIsCreated(PanelSimulator panelSimulator)
         {
             // Make sure the project browser is opened
             var projectBrowser = EditorWindow.GetWindow<ProjectBrowser>();
@@ -204,7 +196,7 @@ namespace UnityEditor.VFX.Test
             GraphViewTemplateWindowHelpers.TrySetSaveFileDialogHelper(templateWindow, new MockSaveFileDialogHelper(destinationPath));
 
             // Simulate click on create button
-            yield return ClickButton(templateWindow.rootVisualElement, "CreateButton");
+            yield return ClickButton(panelSimulator, templateWindow.rootVisualElement, "CreateButton");
             Assert.False(EditorWindow.HasOpenInstances<GraphViewTemplateWindow>());
 
             // Move focus to end new file name edition
@@ -252,14 +244,22 @@ namespace UnityEditor.VFX.Test
             return treeView;
         }*/
 
-        static IEnumerator ClickButton(VisualElement buttonParent, string buttonName, EventModifiers modifier = EventModifiers.None)
+        static IEnumerator ClickButton(PanelSimulator panelSimulator, VisualElement buttonParent, string buttonName,
+            EventModifiers modifier = EventModifiers.None)
         {
             foreach (var _ in Enumerable.Range(0, 10)) yield return null;
 
             var button = buttonParent.Q<Button>(buttonName);
             Assert.NotNull(button);
             button.style.display = DisplayStyle.Flex;
-            yield return button.SimulateClick(MouseButton.LeftMouse, modifier);
+            if (panelSimulator != null)
+            {
+                panelSimulator.Click(button, MouseButton.LeftMouse, modifier);
+            }
+            else
+            {
+                yield return button.SimulateClick(MouseButton.LeftMouse, modifier);
+            }
         }
 
         IEnumerator CreateWindowFromProjectBrowser()

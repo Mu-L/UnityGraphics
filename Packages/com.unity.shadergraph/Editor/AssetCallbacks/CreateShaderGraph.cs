@@ -11,13 +11,13 @@ namespace UnityEditor.ShaderGraph
         [MenuItem("Assets/Create/Shader Graph/Blank Shader Graph", priority = CoreUtils.Sections.section1 + CoreUtils.Priorities.assetsCreateShaderMenuPriority)]
         public static void CreateBlankShaderGraph()
         {
-            CreateFromTemplate(null, string.Empty);
+            CreateFromTemplate(null, string.Empty, useProjectBrowserIfAvailable:true);
         }
 
         [MenuItem("Assets/Create/Shader Graph/From Template...")]
         public static void CreateFromTemplate()
         {
-            CreateFromTemplate(null);
+            CreateFromTemplate(null, useProjectBrowserIfAvailable:true);
         }
 
         /// <summary>
@@ -26,8 +26,11 @@ namespace UnityEditor.ShaderGraph
         /// </summary>
         /// <param name="callback">Callback to execute with the created shader graph asset.</param>
         /// <param name="templateSourcePath">Shader Graph template file. Use string.Empty for Blank Shader Graph.</param>
+        /// <param name="hiddenQuery">Defines a search query that will pre-filter the list of available templates</param>
+        /// <param name="initialQuery">Defines a search query that will filter the list of available templates (and will be editable by the user)</param>
+        /// <param name="useProjectBrowserIfAvailable">When false, the save file dialog is used, otherwise the project window is used (if visible)</param>
         /// <param name="filename">New Shader Graph filename.</param>
-        internal static void CreateFromTemplate(Action<string> callback = null, string templateSourcePath = null, string filename = null, string hiddenSearchQuery = null, string initialSearchQuery = null)
+        internal static void CreateFromTemplate(Action<string> callback, string templateSourcePath = null, string filename = null, string hiddenQuery = null, string initialQuery = null, bool useProjectBrowserIfAvailable = false)
         {
             if (!string.IsNullOrEmpty(templateSourcePath))
             {
@@ -44,7 +47,7 @@ namespace UnityEditor.ShaderGraph
                 }
             }
 
-            bool projectWindowIsVisible = EditorWindow.HasOpenInstances<ProjectBrowser>();
+            bool projectWindowIsVisible = useProjectBrowserIfAvailable && EditorWindow.HasOpenInstances<ProjectBrowser>();
 
             NewGraphFromTemplateAction action = ScriptableObject.CreateInstance<NewGraphFromTemplateAction>();
 
@@ -58,7 +61,7 @@ namespace UnityEditor.ShaderGraph
 
             if (templateSourcePath == null)
             {
-                GraphViewTemplateWindow.ShowCreateFromTemplate(shaderGraphTemplateHelper, action.CreateAndRenameGraphFromTemplate, showSaveDialog: !projectWindowIsVisible, hiddenSearchQuery: hiddenSearchQuery, initialSearchQuery: initialSearchQuery);
+                GraphViewTemplateWindow.ShowCreateFromTemplate(shaderGraphTemplateHelper, action.CreateAndRenameGraphFromTemplate, showSaveDialog: !projectWindowIsVisible, hiddenSearchQuery: hiddenQuery, initialSearchQuery: initialQuery);
             }
             else
             {
@@ -87,7 +90,7 @@ namespace UnityEditor.ShaderGraph
         /// /// <param name="filename">New Shader Graph filename.</param>
         internal static void CreateGraphAndMaterialFromTemplate(Action<Material> callback = null, string templateSourcePath = null, string filename = null, string hiddenSearchQuery = null, string initialSearchQuery = null)
         {
-            CreateFromTemplate((template) =>
+            CreateFromTemplate(template =>
             {
                 if (!string.IsNullOrEmpty(template))
                 {
