@@ -291,7 +291,7 @@ namespace UnityEngine.Rendering.Universal
             return taaFilterWeights;
         }
 
-        internal static GraphicsFormat[] AccumulationFormatList = new GraphicsFormat[]
+        internal static readonly GraphicsFormat[] AccumulationFormatList = new GraphicsFormat[]
         {
             GraphicsFormat.R16G16B16A16_SFloat,
             GraphicsFormat.B10G11R11_UFloatPack32,
@@ -335,9 +335,7 @@ namespace UnityEngine.Rendering.Universal
             return taaDesc;
         }
 
-        static uint s_warnCounter = 0;
-
-        internal static string ValidateAndWarn(UniversalCameraData cameraData, bool isSTPRequested = false)
+        internal static string ValidateAndWarn(UniversalCameraData cameraData, ref uint warnCounter, bool isSTPRequested = false)
         {
             string reasonWarning = null;
 
@@ -375,9 +373,13 @@ namespace UnityEngine.Rendering.Universal
             if (reasonWarning != null)
             {
                 const int warningThrottleFrames = 60 * 1; // 60 FPS * 1 sec
-                if (s_warnCounter % warningThrottleFrames == 0)
+                if (warnCounter % warningThrottleFrames == 0)
                     Debug.LogWarning("Disabling TAA " + (isSTPRequested ? "and STP " : "") + reasonWarning);
-                s_warnCounter++;
+
+                unchecked
+                {
+                    warnCounter++;
+                }
             }
 
             return reasonWarning;
@@ -529,5 +531,13 @@ namespace UnityEngine.Rendering.Universal
                 cameraData.taaHistory.SetAccumulationVersion(multipassId, Time.frameCount);
             }
         }
+
+#if UNITY_EDITOR
+        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+        static void ResetStaticsOnLoad()
+        {
+            s_JitterFunc = CalculateJitter;
+        }
+#endif
     }
 }
