@@ -57,7 +57,7 @@ void ProcessAndStoreRadianceSample(RWStructuredBuffer<SphericalHarmonics::RGBL1>
     SphericalHarmonics::CosineConvolve(radianceSample);
 
     PatchUtil::PatchStatisticsSet oldStats = patchStatistics[patchIdx];
-    const uint oldUpdateCount = PatchUtil::GetUpdateCount(oldStats.patchCounters);
+    const uint oldUpdateCount = PatchUtil::GetUpdateCount(oldStats.counters);
     const uint newUpdateCount = min(oldUpdateCount + 1, PatchUtil::updateMax);
 
     const SphericalHarmonics::RGBL1 oldIrradiance = patchIrradiances[patchIdx];
@@ -79,9 +79,8 @@ void ProcessAndStoreRadianceSample(RWStructuredBuffer<SphericalHarmonics::RGBL1>
     PatchUtil::PatchStatisticsSet newStats;
     newStats.mean = newL0ShortIrradiance;
     newStats.variance = newVariance;
-    newStats.patchCounters = oldStats.patchCounters;
-    PatchUtil::SetUpdateCount(newStats.patchCounters, newUpdateCount);
-    newStats.rank = oldStats.rank;
+    newStats.counters = oldStats.counters;
+    PatchUtil::SetUpdateCount(newStats.counters, newUpdateCount);
     patchStatistics[patchIdx] = newStats;
 }
 
@@ -223,7 +222,7 @@ void Estimate(UnifiedRT::DispatchInfo dispatchInfo)
     QrngKronecker2D rng;
 
     const PatchUtil::PatchGeometry patchGeo = _PatchGeometries[patchIdx];
-    bool enablePatchAllocation = (_PatchStatistics[patchIdx].rank == 0);
+    bool enablePatchAllocation = (PatchUtil::GetRank(_PatchStatistics[patchIdx].counters) == 0);
 
     MaterialPoolParamSet matPoolParams;
     matPoolParams.materialEntries = _MaterialEntries;

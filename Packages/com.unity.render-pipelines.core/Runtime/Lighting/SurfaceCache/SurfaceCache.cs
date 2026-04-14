@@ -79,7 +79,7 @@ namespace UnityEngine.Rendering
             _irradiances[1] = new GraphicsBuffer(GraphicsBuffer.Target.Structured, capacityInt, irradianceStride);
             _irradiances[2] = new GraphicsBuffer(GraphicsBuffer.Target.Structured, capacityInt, irradianceStride);
 
-            _statistics = new GraphicsBuffer(GraphicsBuffer.Target.Structured, capacityInt, sizeof(float) * 3 * 2 + sizeof(uint) + sizeof(uint));
+            _statistics = new GraphicsBuffer(GraphicsBuffer.Target.Structured, capacityInt, sizeof(float) * 3 * 2 + sizeof(uint));
         }
 
         public void Dispose()
@@ -302,6 +302,7 @@ namespace UnityEngine.Rendering
             internal GraphicsBuffer CellAllocationMarks;
             internal GraphicsBuffer CellPatchIndices;
             internal uint RingConfigOffset;
+            internal bool BouncePatchAllocation;
             internal uint FrameIdx;
         }
 
@@ -385,7 +386,7 @@ namespace UnityEngine.Rendering
             internal int KernelIndex;
             internal uint3 ThreadGroupSize;
             internal GraphicsBuffer InputPatchIrradiances;
-            internal GraphicsBuffer OutputPatchIrradiances;
+            internal GraphicsBuffer InputOutputPatchIrradiances;
             internal GraphicsBuffer PatchStatistics;
             internal GraphicsBuffer RingConfigBuffer;
             internal uint PatchCapacity;
@@ -396,6 +397,7 @@ namespace UnityEngine.Rendering
         internal static class ShaderIDs
         {
             public static readonly int _CellAllocationMarks = Shader.PropertyToID("_CellAllocationMarks");
+            public static readonly int _BouncePatchAllocation = Shader.PropertyToID("_BouncePatchAllocation");
             public static readonly int _CellPatchIndices = Shader.PropertyToID("_CellPatchIndices");
             public static readonly int _MaterialEntries = Shader.PropertyToID("_MaterialEntries");
             public static readonly int _AlbedoTextures = Shader.PropertyToID("_AlbedoTextures");
@@ -404,7 +406,6 @@ namespace UnityEngine.Rendering
             public static readonly int _DirectionalLightIntensity = Shader.PropertyToID("_DirectionalLightIntensity");
             public static readonly int _MaterialAtlasTexelSize = Shader.PropertyToID("_MaterialAtlasTexelSize");
             public static readonly int _PunctualLightCount = Shader.PropertyToID("_PunctualLightCount");
-            public static readonly int _TransmissionTextures = Shader.PropertyToID("_TransmissionTextures");
             public static readonly int _EmissionTextures = Shader.PropertyToID("_EmissionTextures");
             public static readonly int _VolumeTargetPos = Shader.PropertyToID("_VolumeTargetPos");
             public static readonly int _EnvironmentCubemap = Shader.PropertyToID("_EnvironmentCubemap");
@@ -423,6 +424,7 @@ namespace UnityEngine.Rendering
             public static readonly int _Radius = Shader.PropertyToID("_Radius");
             public static readonly int _InputPatchIrradiances = Shader.PropertyToID("_InputPatchIrradiances");
             public static readonly int _OutputPatchIrradiances = Shader.PropertyToID("_OutputPatchIrradiances");
+            public static readonly int _InputOutputPatchIrradiances = Shader.PropertyToID("_InputOutputPatchIrradiances");
             public static readonly int _PatchIrradiances = Shader.PropertyToID("_PatchIrradiances");
             public static readonly int _FrameIdx = Shader.PropertyToID("_FrameIdx");
             public static readonly int _CascadeOffsets = Shader.PropertyToID("_CascadeOffsets");
@@ -528,6 +530,7 @@ namespace UnityEngine.Rendering
                 passData.ThreadGroupSize = _resources.EvictionKernelGroupSize;
                 passData.RingConfigBuffer = RingConfig.Buffer;
                 passData.RingConfigOffset = RingConfig.OffsetA;
+                passData.BouncePatchAllocation = _estimationParams.BouncePatchAllocation;
                 passData.PatchCellIndices = Patches.CellIndices;
                 passData.PatchStatistics = Patches.Statistics;
                 passData.CellAllocationMarks = Volume.CellAllocationMarks;
@@ -580,7 +583,7 @@ namespace UnityEngine.Rendering
                     passData.KernelIndex = _resources.TemporalFilteringKernel;
                     passData.ThreadGroupSize = _resources.TemporalFilteringKernelGroupSize;
                     passData.InputPatchIrradiances = Patches.Irradiances[outputIrradianceBufferIdx];
-                    passData.OutputPatchIrradiances = Patches.Irradiances[2];
+                    passData.InputOutputPatchIrradiances = Patches.Irradiances[2];
                     passData.PatchStatistics = Patches.Statistics;
                     passData.RingConfigBuffer = RingConfig.Buffer;
                     passData.PatchCapacity = Patches.Capacity;
@@ -814,7 +817,7 @@ namespace UnityEngine.Rendering
             cmd.SetComputeBufferParam(shader, kernelIndex, ShaderIDs._RingConfigBuffer, data.RingConfigBuffer);
             cmd.SetComputeBufferParam(shader, kernelIndex, ShaderIDs._PatchStatistics, data.PatchStatistics);
             cmd.SetComputeBufferParam(shader, kernelIndex, ShaderIDs._InputPatchIrradiances, data.InputPatchIrradiances);
-            cmd.SetComputeBufferParam(shader, kernelIndex, ShaderIDs._OutputPatchIrradiances, data.OutputPatchIrradiances);
+            cmd.SetComputeBufferParam(shader, kernelIndex, ShaderIDs._InputOutputPatchIrradiances, data.InputOutputPatchIrradiances);
             cmd.SetComputeIntParam(shader, ShaderIDs._RingConfigOffset, (int)data.RingConfigOffset);
             cmd.SetComputeFloatParam(shader, ShaderIDs._ShortHysteresis, data.ShortHysteresis);
 
@@ -875,6 +878,7 @@ namespace UnityEngine.Rendering
             cmd.SetComputeBufferParam(shader, kernelIndex, ShaderIDs._CellPatchIndices, passData.CellPatchIndices);
             cmd.SetComputeIntParam(shader, ShaderIDs._FrameIdx, (int)passData.FrameIdx);
             cmd.SetComputeIntParam(shader, ShaderIDs._RingConfigOffset, (int)passData.RingConfigOffset);
+            cmd.SetComputeIntParam(shader, ShaderIDs._BouncePatchAllocation, passData.BouncePatchAllocation ? 1 : 0);
 
             uint3 groupCount = DivUp(new uint3(passData.PatchCapacity, 1, 1), passData.ThreadGroupSize);
             cmd.DispatchCompute(shader, kernelIndex, (int)groupCount.x, (int)groupCount.y, 1);

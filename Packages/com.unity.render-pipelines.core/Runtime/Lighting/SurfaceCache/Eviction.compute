@@ -11,12 +11,7 @@ RWStructuredBuffer<uint> _PatchCellIndices;
 
 uint _RingConfigOffset;
 uint _FrameIdx;
-
-uint ModuloDistance(uint a, uint b, uint modulo)
-{
-    int dif = abs(int(a) - int(b));
-    return min(dif, modulo - dif);
-}
+uint _BouncePatchAllocation;
 
 [numthreads(256, 1, 1)]
 void Evict(uint patchIdx : SV_DispatchThreadID)
@@ -24,28 +19,32 @@ void Evict(uint patchIdx : SV_DispatchThreadID)
     if (!RingBuffer::IsPositionInUse(_RingConfigBuffer, _RingConfigOffset, patchIdx))
         return;
 
-    const uint evictionThreshold = _PatchStatistics[patchIdx].rank == 0 ? 60 * 4 : 60 * 1; // patches allocated from bounce hits are evicted sooner
-
-    // Reset all patches rank to 1 (that is not allowed to spawn more patches on bounces hit)
-    // Rank will be updated to 0 by the PatchAllocation.compute shader for patches that are seen from the camera
-    _PatchStatistics[patchIdx].rank = 1;
-
     const uint cellIdx = _PatchCellIndices[patchIdx];
     if (cellIdx == PatchUtil::invalidCellIndex)
         return;
 
-    const PatchUtil::PatchCounterSet counterSet = _PatchStatistics[patchIdx].patchCounters;
-    const uint lastAccessFrameIdx = PatchUtil::GetLastAccessFrame(counterSet);
+    PatchUtil::PatchStatisticsSet stats = _PatchStatistics[patchIdx];
 
-    // Here we take into account that last frame access index is in [0, 2^16-1].
-    // We use that the last frame index can never be later than current frame index.
-    const uint modulo = 65536; // 2^16
-    const uint frameSinceLastUse = ModuloDistance(_FrameIdx % modulo, lastAccessFrameIdx, modulo);
+    const uint frameSinceLastAccess = PatchUtil::GetFramesSinceLastAccess(_FrameIdx, PatchUtil::GetLastAccessFrame(stats.counters));
 
-    if (evictionThreshold < frameSinceLastUse)
+    if (PatchUtil::evictionThreshold < frameSinceLastAccess)
     {
-        _PatchCellIndices[patchIdx] = PatchUtil::invalidCellIndex;
-        _CellAllocationMarks[cellIdx] = 0;
-        _CellPatchIndices[cellIdx] = PatchUtil::invalidPatchIndex;
+        // If Bounce Patch Allocation is enabled, then rank 0 patches are
+        // first demoted to rank 1, then later they are evicted.
+        // If Bounce Patch Allocation is disabled we go directly to
+        // eviction.
+        if (_BouncePatchAllocation && PatchUtil::GetRank(stats.counters) == 0)
+        {
+            PatchUtil::SetRank(stats.counters, 1);
+            PatchUtil::SetLastAccessFrame(stats.counters, _FrameIdx);
+            _PatchStatistics[patchIdx] = stats;
+        }
+        else
+        {
+            _PatchCellIndices[patchIdx] = PatchUtil::invalidCellIndex;
+            _CellAllocationMarks[cellIdx] = 0;
+            _CellPatchIndices[cellIdx] = PatchUtil::invalidPatchIndex;
+        }
     }
+
 }
