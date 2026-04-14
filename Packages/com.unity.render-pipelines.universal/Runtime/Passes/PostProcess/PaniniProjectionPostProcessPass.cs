@@ -16,7 +16,7 @@ namespace UnityEngine.Rendering.Universal
             this.renderPassEvent = RenderPassEvent.AfterRenderingPostProcessing - 1;
             this.profilingSampler = URPProfilingSamplers.PaniniProjection;
 
-            m_Material = PostProcessUtils.LoadShader(shader, passName);
+            m_Material = PostProcessUtils.LoadShader(shader, passName, logLevel: LogType.Log);
             m_IsValid = m_Material != null;
         }
 

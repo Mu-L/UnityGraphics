@@ -14,8 +14,9 @@ namespace UnityEngine.Rendering.Universal
         /// </summary>
         /// <param name="shader">Shader used for the material</param>
         /// <param name="passName">Pass name for error messages.</param>
-        /// <returns>A new Material instance using the provided shader. Null if the shader is not supported.</returns>
-        internal static Material LoadShader(Shader shader, string passName = "")
+        /// <param name="logLevel">LogType for the message if the shader is not supported.</param>
+        /// <returns>A new Material instance using the provided shader. Null if the shader is not supported or it's missing.</returns>
+        internal static Material LoadShader(Shader shader, string passName = "", LogType logLevel = LogType.Warning)
         {
             if (shader == null)
             {
@@ -24,7 +25,7 @@ namespace UnityEngine.Rendering.Universal
             }
             else if (!shader.isSupported)
             {
-                Debug.LogWarning($"Shader '{shader.name}' is not supported (in '{passName}'). PostProcessing render passes will not execute.");
+                Debug.unityLogger.Log(logLevel, $"Shader '{shader.name}' is not supported or has been stripped from the build (in '{passName}'). PostProcessing render passes will not execute.");
                 return null;
             }
 
@@ -34,6 +35,7 @@ namespace UnityEngine.Rendering.Universal
         /// <summary>
         /// Creates a texture compatible with post-processing effects.
         /// </summary>
+
         /// <param name="renderGraph">RenderGraph that creates the texture.</param>
         /// <param name="source">Source texture for the texture descriptor.</param>
         /// <param name="name">Texture name.</param>
