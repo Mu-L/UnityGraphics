@@ -35,7 +35,7 @@ float shadergraph_LWSampleSceneDepth(float2 uv)
 #endif
 }
 
-#if defined(DEPTH_AS_INPUT_ATTACHMENT)
+#if defined(_DEPTH_AS_INPUT_ATTACHMENT)
     float shadergraph_LWFetchSceneDepth(float2 fragCoord)
     {
         #if defined(REQUIRE_DEPTH_TEXTURE)
@@ -44,7 +44,7 @@ float shadergraph_LWSampleSceneDepth(float2 uv)
             return 0;
         #endif
     }
-#elif defined(DEPTH_AS_INPUT_ATTACHMENT_MSAA)
+#elif defined(_DEPTH_AS_INPUT_ATTACHMENT_MSAA)
     float shadergraph_LWFetchSceneDepth(float2 fragCoord)
     {
     #if defined(REQUIRE_DEPTH_TEXTURE)

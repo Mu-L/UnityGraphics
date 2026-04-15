@@ -1480,10 +1480,10 @@ namespace UnityEngine.Rendering.Universal
         public const string Msaa4 = "_MSAA_4";
 
         /// <summary> Keyword used for depth as input attachment. </summary>
-        public const string DEPTH_AS_INPUT_ATTACHMENT = "DEPTH_AS_INPUT_ATTACHMENT";
+        public const string DEPTH_AS_INPUT_ATTACHMENT = "_DEPTH_AS_INPUT_ATTACHMENT";
 
         /// <summary> Keyword used for depth as input attachment MSAA. </summary>
-        public const string DEPTH_AS_INPUT_ATTACHMENT_MSAA = "DEPTH_AS_INPUT_ATTACHMENT_MSAA";
+        public const string DEPTH_AS_INPUT_ATTACHMENT_MSAA = "_DEPTH_AS_INPUT_ATTACHMENT_MSAA";
     }
 
     public sealed partial class UniversalRenderPipeline

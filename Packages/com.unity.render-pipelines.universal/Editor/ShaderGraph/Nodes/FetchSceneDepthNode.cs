@@ -94,7 +94,7 @@ namespace UnityEditor.ShaderGraph
             return
 @"
 {
-    #if defined(DEPTH_AS_INPUT_ATTACHMENT) || defined(DEPTH_AS_INPUT_ATTACHMENT_MSAA)
+    #if defined(_DEPTH_AS_INPUT_ATTACHMENT) || defined(_DEPTH_AS_INPUT_ATTACHMENT_MSAA)
         // Fetch depth from tile memory using input attachment
         float rawDepth = shadergraph_LWFetchSceneDepth(clipPos.xy);
         Out = Linear01Depth(rawDepth, _ZBufferParams);
@@ -113,7 +113,7 @@ namespace UnityEditor.ShaderGraph
             return
 @"
 {
-    #if defined(DEPTH_AS_INPUT_ATTACHMENT) || defined(DEPTH_AS_INPUT_ATTACHMENT_MSAA)
+    #if defined(_DEPTH_AS_INPUT_ATTACHMENT) || defined(_DEPTH_AS_INPUT_ATTACHMENT_MSAA)
         // Fetch raw depth from tile memory using input attachment
         Out = shadergraph_LWFetchSceneDepth(clipPos.xy);
     #else
@@ -131,7 +131,7 @@ namespace UnityEditor.ShaderGraph
             return
 @"
 {
-    #if defined(DEPTH_AS_INPUT_ATTACHMENT) || defined(DEPTH_AS_INPUT_ATTACHMENT_MSAA)
+    #if defined(_DEPTH_AS_INPUT_ATTACHMENT) || defined(_DEPTH_AS_INPUT_ATTACHMENT_MSAA)
         // Fetch depth from tile memory using input attachment
         float rawDepth = shadergraph_LWFetchSceneDepth(clipPos.xy);
         {

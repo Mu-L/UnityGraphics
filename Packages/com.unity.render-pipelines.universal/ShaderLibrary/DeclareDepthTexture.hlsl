@@ -10,7 +10,7 @@ float4 _CameraDepthTexture_TexelSize;
 #define sampler_CameraDepthTexture sampler_PointClamp
 
 // Framebuffer fetch API for depth input attachment
-#if defined(DEPTH_AS_INPUT_ATTACHMENT)
+#if defined(_DEPTH_AS_INPUT_ATTACHMENT)
     FRAMEBUFFER_INPUT_X_FLOAT(0);
 
     float FetchSceneDepth(float2 fragCoord)
@@ -18,7 +18,7 @@ float4 _CameraDepthTexture_TexelSize;
         float depth = LOAD_FRAMEBUFFER_INPUT_X(0, fragCoord).r;
         return depth; 
     }
-#elif defined(DEPTH_AS_INPUT_ATTACHMENT_MSAA)
+#elif defined(_DEPTH_AS_INPUT_ATTACHMENT_MSAA)
     FRAMEBUFFER_INPUT_X_FLOAT_MS(0);
     
     float FetchSceneDepth(float2 fragCoord, int sampleIndx) 

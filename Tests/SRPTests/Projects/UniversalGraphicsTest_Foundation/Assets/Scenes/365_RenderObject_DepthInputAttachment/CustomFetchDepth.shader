@@ -20,7 +20,7 @@ Shader "CustomFetchDepth"
             #pragma vertex Vert
             #pragma fragment FragDepthVisualization
             #pragma target 4.5
-            #pragma multi_compile _ DEPTH_AS_INPUT_ATTACHMENT DEPTH_AS_INPUT_ATTACHMENT_MSAA
+            #pragma multi_compile _ _DEPTH_AS_INPUT_ATTACHMENT _DEPTH_AS_INPUT_ATTACHMENT_MSAA
             #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Core.hlsl"
             #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/DeclareDepthTexture.hlsl"
 
@@ -47,7 +47,7 @@ Shader "CustomFetchDepth"
                 return output;
             }
 
-#if defined(DEPTH_AS_INPUT_ATTACHMENT)
+#if defined(_DEPTH_AS_INPUT_ATTACHMENT)
             float4 FragDepthVisualization(Varyings input) : SV_Target0
             {
                 UNITY_SETUP_STEREO_EYE_INDEX_POST_VERTEX(input);
@@ -55,7 +55,7 @@ Shader "CustomFetchDepth"
                 float depth = FetchSceneDepth(input.positionCS.xy);
                 return float4(depth, 0.0f, 0.0f, 1.0);
             }
-#elif defined(DEPTH_AS_INPUT_ATTACHMENT_MSAA)    
+#elif defined(_DEPTH_AS_INPUT_ATTACHMENT_MSAA)    
             float4 FragDepthVisualization(Varyings input) : SV_Target0
             {
                 UNITY_SETUP_STEREO_EYE_INDEX_POST_VERTEX(input);
