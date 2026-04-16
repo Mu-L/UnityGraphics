@@ -239,8 +239,8 @@ namespace UnityEngine.Rendering
                 if (item.Value.Length > 1)
                 {
                     var nextFirst = item.Value[item.Value.Length - 1];
-                    for (int i = 0, c = item.Value.Length - 1; i < c; ++i)
-                        item.Value[i + 1] = item.Value[i];
+                    for (int i = item.Value.Length - 1; i > 0; --i)
+                        item.Value[i] = item.Value[i - 1];
                     item.Value[0] = nextFirst;
 
                     // First is autoresize, other are on demand
