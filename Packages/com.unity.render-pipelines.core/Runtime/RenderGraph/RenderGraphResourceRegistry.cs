@@ -96,6 +96,14 @@ namespace UnityEngine.Rendering.RenderGraphModule
             }
         }
 
+#if UNITY_EDITOR
+        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterAssembliesLoaded)]
+        static void ResetStaticsOnLoad()
+        {
+            m_CurrentRegistry = null;
+        }
+#endif
+
         delegate bool ResourceCreateCallback(InternalRenderGraphContext rgContext, IRenderGraphResource res);
         delegate void ResourceCallback(InternalRenderGraphContext rgContext, IRenderGraphResource res);
 
@@ -361,7 +369,7 @@ namespace UnityEngine.Rendering.RenderGraphModule
             CheckHandleValidity(res);
             m_RenderGraphResources[res.iType].resourceArray[res.index].IncrementReadCount();
         }
-        
+
         internal ResourceHandle GetLatestVersionHandle(in ResourceHandle res)
         {
             CheckHandleValidity(res);
@@ -668,8 +676,7 @@ namespace UnityEngine.Rendering.RenderGraphModule
             return texHandle;
         }
 
-        static RenderTargetIdentifier emptyId = RenderTargetIdentifier.Invalid;
-        static RenderTargetIdentifier builtinCameraRenderTarget = new RenderTargetIdentifier(BuiltinRenderTextureType.CameraTarget);
+        static readonly RenderTargetIdentifier emptyId = RenderTargetIdentifier.Invalid;
 
         [Conditional("DEVELOPMENT_BUILD"), Conditional("UNITY_EDITOR")]
         private void ValidateRenderTarget(in ResourceHandle res)

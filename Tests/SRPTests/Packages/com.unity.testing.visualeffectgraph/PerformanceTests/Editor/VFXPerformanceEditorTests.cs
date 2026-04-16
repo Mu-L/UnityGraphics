@@ -36,6 +36,39 @@ namespace UnityEditor.VFX.PerformanceTest
             EditorSettings.asyncShaderCompilation = m_PreviousAsyncShaderCompilation;
         }
 
+        static readonly string[] kVisualEffectAssetSelectionForPerformance = new string[]
+        {
+            "24_MotionVector",
+            "23_ParameterBinders",
+            "HDRP_VolumetricOutput",
+            "20_SpawnerLoop",
+            "HDRPFog",
+            "LitCapsules",
+            "SmokeSGAndRegular",
+            "VFX - CustomInterpolator",
+            "VFX - VertexRotation",
+            "ScreenAndWorldPos",
+            "006_StripAttributes",
+            "17_GPUEvent_Simple",
+            "VFX - Keywords",
+            "018_Collision",
+            "11_SpaceBis",
+            "007_MeshSampling",
+            "028_BaseColorMap",
+            "103_Lit",
+            "014_PositionBlock",
+            "105_MotionVectors",
+            "103_StdPrimitive",
+            "106_URPDecalsReceiver",
+            "025_ShaderKeywords",
+            "102_ShaderGraphShadow",
+            "102_RenderDepth",
+            "007_MeshSampling_Skinned",
+            "100_Fog",
+            "014_PositionBlock_ZeroScale",
+
+        };
+
         static IEnumerable<string> allVisualEffectAsset
         {
             get
@@ -44,8 +77,30 @@ namespace UnityEditor.VFX.PerformanceTest
                 foreach (var guid in vfxAssetsGuid)
                 {
                     var assetPath = AssetDatabase.GUIDToAssetPath(guid);
-                    yield return System.IO.Path.GetFileNameWithoutExtension(assetPath);
+
+                    bool found = false;
+                    foreach (var filteredAsset in kVisualEffectAssetSelectionForPerformance)
+                    {
+                        if (assetPath.Contains(filteredAsset, System.StringComparison.OrdinalIgnoreCase))
+                        {
+                            found = true;
+                            break;
+                        }
+                    }
+
+                    if (found)
+                        yield return System.IO.Path.GetFileNameWithoutExtension(assetPath);
                 }
+            }
+        }
+        static string[] s_SelectedVisualEffectAsset;
+        static IEnumerable<string> SelectedVisualEffectAsset
+        {
+            get
+            {
+                if (s_SelectedVisualEffectAsset == null)
+                    s_SelectedVisualEffectAsset = new List<string>(allVisualEffectAsset).ToArray();
+                return s_SelectedVisualEffectAsset;
             }
         }
 
@@ -257,7 +312,7 @@ namespace UnityEditor.VFX.PerformanceTest
 
         static readonly string[] allForceShaderValidation = { "ShaderValidation_On", "ShaderValidation_Off" };
         [Timeout(k_BuildTimeout), Version(k_Version), Test, Performance]
-        public void Compilation([ValueSource(nameof(allActiveSRP))] string srp, /*[ValueSource("allForceShaderValidation")] string forceShaderValidationModeName,*/ [ValueSource("allCompilationMode")] string compilationModeName, [ValueSource("allVisualEffectAsset")] string vfxAssetPath)
+        public void Compilation([ValueSource(nameof(allActiveSRP))] string srp, /*[ValueSource("allForceShaderValidation")] string forceShaderValidationModeName,*/ [ValueSource("allCompilationMode")] string compilationModeName, [ValueSource(nameof(SelectedVisualEffectAsset))] string vfxAssetPath)
         {
             VFXCompilationMode compilationMode;
             Enum.TryParse<VFXCompilationMode>(compilationModeName, out compilationMode);

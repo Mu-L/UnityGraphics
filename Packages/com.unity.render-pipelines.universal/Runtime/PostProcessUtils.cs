@@ -14,8 +14,9 @@ namespace UnityEngine.Rendering.Universal
         /// </summary>
         /// <param name="shader">Shader used for the material</param>
         /// <param name="passName">Pass name for error messages.</param>
-        /// <returns>A new Material instance using the provided shader. Null if the shader is not supported.</returns>
-        internal static Material LoadShader(Shader shader, string passName = "")
+        /// <param name="logLevel">LogType for the message if the shader is not supported.</param>
+        /// <returns>A new Material instance using the provided shader. Null if the shader is not supported or it's missing.</returns>
+        internal static Material LoadShader(Shader shader, string passName = "", LogType logLevel = LogType.Warning)
         {
             if (shader == null)
             {
@@ -24,7 +25,7 @@ namespace UnityEngine.Rendering.Universal
             }
             else if (!shader.isSupported)
             {
-                Debug.LogWarning($"Shader '{shader.name}' is not supported (in '{passName}'). PostProcessing render passes will not execute.");
+                Debug.unityLogger.Log(logLevel, $"Shader '{shader.name}' is not supported or has been stripped from the build (in '{passName}'). PostProcessing render passes will not execute.");
                 return null;
             }
 
@@ -34,6 +35,7 @@ namespace UnityEngine.Rendering.Universal
         /// <summary>
         /// Creates a texture compatible with post-processing effects.
         /// </summary>
+
         /// <param name="renderGraph">RenderGraph that creates the texture.</param>
         /// <param name="source">Source texture for the texture descriptor.</param>
         /// <param name="name">Texture name.</param>
@@ -275,6 +277,21 @@ namespace UnityEngine.Rendering.Universal
         }
 #endregion
 
+#if ENABLE_VR && ENABLE_XR_MODULE
+        /// <summary>
+        /// Configures UV remapping for Quad View multi-resolution rendering in XR.
+        /// Sets shader parameters for screen-space effects to align with inner view coordinates.
+        /// </summary>
+        /// <param name="material">The material to configure.</param>
+        /// <param name="xrPass">The XR pass containing UV scale/offset parameters.</param>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        internal static void SetupXRUVRemapping(Material material, XRPass xrPass)
+        {
+            material.SetVector(ShaderConstants._Quad_View_Uv_Remap_scalesXR, xrPass.uvScales);
+            material.SetVector(ShaderConstants._Quad_View_Uv_Remap_offsetsXR, xrPass.uvOffsets);
+        }
+#endif
+
 #region Blit
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -333,7 +350,7 @@ namespace UnityEngine.Rendering.Universal
             SetGlobalShaderSourceSize(CommandBufferHelpers.GetRasterCommandBuffer(cmd), source);
         }
 
-        internal static void ScaleViewport(RasterCommandBuffer cmd, RTHandle dest, UniversalCameraData cameraData, bool isFinalPass)
+        internal static void ScaleViewport(RasterCommandBuffer cmd, RTHandle dest, UniversalCameraData cameraData, bool isActiveTargetBackBuffer)
         {
             RenderTargetIdentifier cameraTarget = BuiltinRenderTextureType.CameraTarget;
 #if ENABLE_VR && ENABLE_XR_MODULE
@@ -342,7 +359,7 @@ namespace UnityEngine.Rendering.Universal
 #endif
             if (dest.nameID == cameraTarget || cameraData.targetTexture != null)
             {
-                if (!isFinalPass || !cameraData.resolveFinalTarget)
+                if (!isActiveTargetBackBuffer)
                 {
                     // Inside the camera stack the target is the shared intermediate target, which can be scaled with render scale.
                     // camera.pixelRect is the viewport of the final target in pixels, so it cannot be used for the intermediate target.
@@ -366,19 +383,19 @@ namespace UnityEngine.Rendering.Universal
             }
         }
 
-        internal static void ScaleViewportAndBlit(RasterGraphContext context, in TextureHandle sourceTexture, in TextureHandle destTexture, UniversalCameraData cameraData, Material material, bool isFinalPass)
+        internal static void ScaleViewportAndBlit(RasterGraphContext context, in TextureHandle sourceTexture, in TextureHandle destTexture, UniversalCameraData cameraData, Material material, bool isActiveTargetBackBuffer)
         {
             Vector4 scaleBias = RenderingUtils.GetFinalBlitScaleBias(context, sourceTexture, destTexture);
-            ScaleViewport(context.cmd, destTexture, cameraData, isFinalPass);
+            ScaleViewport(context.cmd, destTexture, cameraData, isActiveTargetBackBuffer);
 
             Blitter.BlitTexture(context.cmd, sourceTexture, scaleBias, material, 0);
         }
 
-        internal static void ScaleViewportAndDrawVisibilityMesh(RasterGraphContext context, in TextureHandle sourceTexture, in TextureHandle destTexture, UniversalCameraData cameraData, Material material, bool isFinalPass)
+        internal static void ScaleViewportAndDrawVisibilityMesh(RasterGraphContext context, in TextureHandle sourceTexture, in TextureHandle destTexture, UniversalCameraData cameraData, Material material, bool isActiveTargetBackBuffer)
         {
 #if ENABLE_VR && ENABLE_XR_MODULE
             Vector4 scaleBias = RenderingUtils.GetFinalBlitScaleBias(context, sourceTexture, destTexture);
-            ScaleViewport(context.cmd, destTexture, cameraData, isFinalPass);
+            ScaleViewport(context.cmd, destTexture, cameraData, isActiveTargetBackBuffer);
 
             // Set property block for blit shader
             MaterialPropertyBlock xrPropertyBlock = XRSystemUniversal.GetMaterialPropertyBlock();
@@ -398,6 +415,9 @@ namespace UnityEngine.Rendering.Universal
 
             public static readonly int _BlueNoise_Texture = Shader.PropertyToID("_BlueNoise_Texture");
             public static readonly int _Dithering_Params = Shader.PropertyToID("_Dithering_Params");
+
+            public static readonly int _Quad_View_Uv_Remap_scalesXR = Shader.PropertyToID("_Quad_View_Uv_Remap_scalesXR");
+            public static readonly int _Quad_View_Uv_Remap_offsetsXR = Shader.PropertyToID("_Quad_View_Uv_Remap_offsetsXR");
 
             public static readonly int _SourceSize = Shader.PropertyToID("_SourceSize");
         }

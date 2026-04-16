@@ -79,7 +79,7 @@ namespace UnityEngine.Rendering.HighDefinition
         /// <summary>Current debug dsplay settings.</summary>
         public DebugDisplaySettings debugSettings;
         /// <summary>Null color buffer render target identifier.</summary>
-        public static RenderTargetIdentifier nullRT = -1;
+        public static readonly RenderTargetIdentifier nullRT = -1;
         /// <summary>Index of the current cubemap face to render (Unknown for texture2D).</summary>
         public CubemapFace cubemapFace = CubemapFace.Unknown;
         /// <summary>Fallback for structured buffer of CelestialBodyData.</summary>
@@ -175,16 +175,16 @@ namespace UnityEngine.Rendering.HighDefinition
         public VolumeStack lightingOverrideVolumeStack { get; private set; }
         public LayerMask lightingOverrideLayerMask { get; private set; } = -1;
 
-        static Dictionary<int, Type> m_SkyTypesDict = null;
-        public static Dictionary<int, Type> skyTypesDict { get { if (m_SkyTypesDict == null) UpdateSkyTypes(); return m_SkyTypesDict; } }
+        static Dictionary<int, Type> s_SkyTypesDict = null;
+        public static Dictionary<int, Type> skyTypesDict { get { if (s_SkyTypesDict == null) UpdateSkyTypes(); return s_SkyTypesDict; } }
 
-        static Dictionary<int, Type> m_CloudTypesDict = null;
-        public static Dictionary<int, Type> cloudTypesDict { get { if (m_CloudTypesDict == null) UpdateCloudTypes(); return m_CloudTypesDict; } }
+        static Dictionary<int, Type> s_CloudTypesDict = null;
+        public static Dictionary<int, Type> cloudTypesDict { get { if (s_CloudTypesDict == null) UpdateCloudTypes(); return s_CloudTypesDict; } }
 
         // This list will hold the static lighting sky that should be used for baking ambient probe.
         // We can have multiple but we only want to use the one from the active scene
-        private static Dictionary<int, StaticLightingSky> m_StaticLightingSkies = new ();
-        private static StaticLightingSky m_ActiveStaticSky;
+        private static Dictionary<int, StaticLightingSky> s_StaticLightingSkies = new();
+        private static StaticLightingSky s_ActiveStaticSky;
 
         // Only show the procedural sky upgrade message once
         static bool logOnce = true;
@@ -288,9 +288,9 @@ namespace UnityEngine.Rendering.HighDefinition
 
         static void UpdateSkyTypes()
         {
-            if (m_SkyTypesDict == null)
+            if (s_SkyTypesDict == null)
             {
-                m_SkyTypesDict = new Dictionary<int, Type>();
+                s_SkyTypesDict = new Dictionary<int, Type>();
 
                 var skyTypes = CoreUtils.GetAllTypesDerivedFrom<SkySettings>().Where(t => !t.IsAbstract);
                 foreach (Type skyType in skyTypes)
@@ -310,13 +310,13 @@ namespace UnityEngine.Rendering.HighDefinition
                         }
 
                         Type value;
-                        if (m_SkyTypesDict.TryGetValue(uniqueID, out value))
+                        if (s_SkyTypesDict.TryGetValue(uniqueID, out value))
                         {
                             Debug.LogWarningFormat("SkyUniqueID {0} used in class {1} is already used in class {2}. Class won't be registered as an available sky.", uniqueID, skyType, value);
                             continue;
                         }
 
-                        m_SkyTypesDict.Add(uniqueID, skyType);
+                        s_SkyTypesDict.Add(uniqueID, skyType);
                     }
                 }
             }
@@ -324,9 +324,9 @@ namespace UnityEngine.Rendering.HighDefinition
 
         static void UpdateCloudTypes()
         {
-            if (m_CloudTypesDict == null)
+            if (s_CloudTypesDict == null)
             {
-                m_CloudTypesDict = new Dictionary<int, Type>();
+                s_CloudTypesDict = new Dictionary<int, Type>();
 
                 var types = CoreUtils.GetAllTypesDerivedFrom<CloudSettings>().Where(t => !t.IsAbstract);
                 foreach (Type type in types)
@@ -346,13 +346,13 @@ namespace UnityEngine.Rendering.HighDefinition
                         }
 
                         Type value;
-                        if (m_CloudTypesDict.TryGetValue(uniqueID, out value))
+                        if (s_CloudTypesDict.TryGetValue(uniqueID, out value))
                         {
                             Debug.LogWarningFormat("CloudUniqueID {0} used in class {1} is already used in class {2}. Class won't be registered as an available cloud type.", uniqueID, type, value);
                             continue;
                         }
 
-                        m_CloudTypesDict.Add(uniqueID, type);
+                        s_CloudTypesDict.Add(uniqueID, type);
                     }
                 }
             }
@@ -1273,7 +1273,7 @@ namespace UnityEngine.Rendering.HighDefinition
                 // because we only maintain one static sky. Since we don't care that the static lighting may be a bit different in the preview we never recompute
                 // and we use the one from the main camera.
                 bool forceStaticUpdate = false;
-                m_ActiveStaticSky = m_StaticLightingSkies.GetValueOrDefault(SceneManager.GetActiveScene().GetHashCode(), null);
+                s_ActiveStaticSky = s_StaticLightingSkies.GetValueOrDefault(SceneManager.GetActiveScene().GetHashCode(), null);
 #if UNITY_EDITOR
                 // In the editor, we might need the static sky ready for baking lightmaps/lightprobes regardless of the current ambient mode so we force it to update in this case if it's not been computed yet..
                 // We always force an update of the static sky when we're in scene view mode. Previous behaviour was to prevent forced updates if the hash of the static sky was non-null, but this was preventing
@@ -1283,11 +1283,11 @@ namespace UnityEngine.Rendering.HighDefinition
 #endif
                 if ((ambientMode == SkyAmbientMode.Static || forceStaticUpdate) && hdCamera.camera.cameraType != CameraType.Preview)
                 {
-                    if (m_ActiveStaticSky != null)
+                    if (s_ActiveStaticSky != null)
                     {
-                        m_StaticLightingSky.skySettings = m_ActiveStaticSky.skySettings;
-                        m_StaticLightingSky.cloudSettings = m_ActiveStaticSky.cloudSettings;
-                        m_StaticLightingSky.volumetricClouds = m_ActiveStaticSky.volumetricClouds;
+                        m_StaticLightingSky.skySettings = s_ActiveStaticSky.skySettings;
+                        m_StaticLightingSky.cloudSettings = s_ActiveStaticSky.cloudSettings;
+                        m_StaticLightingSky.volumetricClouds = s_ActiveStaticSky.volumetricClouds;
                     }
                     UpdateEnvironment(renderGraph, hdCamera, m_StaticLightingSky, sunLight, m_StaticSkyUpdateRequired || m_UpdateRequired, true, true, SkyAmbientMode.Static);
                     m_StaticSkyUpdateRequired = false;
@@ -1657,12 +1657,12 @@ namespace UnityEngine.Rendering.HighDefinition
             }
         }
 
-        static public StaticLightingSky GetStaticLightingSky()
+        public static StaticLightingSky GetStaticLightingSky()
         {
-            return m_ActiveStaticSky;
+            return s_ActiveStaticSky;
         }
 
-        static public void RegisterStaticLightingSky(StaticLightingSky staticLightingSky)
+        public static void RegisterStaticLightingSky(StaticLightingSky staticLightingSky)
         {
             #if UNITY_EDITOR
             if (staticLightingSky.staticLightingSkyUniqueID == (int)SkyType.Procedural && !skyTypesDict.TryGetValue((int)SkyType.Procedural, out var dummy))
@@ -1672,12 +1672,12 @@ namespace UnityEngine.Rendering.HighDefinition
             }
             #endif
 
-            m_StaticLightingSkies[staticLightingSky.gameObject.scene.GetHashCode()] = staticLightingSky;
+            s_StaticLightingSkies[staticLightingSky.gameObject.scene.GetHashCode()] = staticLightingSky;
         }
 
-        static public void UnRegisterStaticLightingSky(StaticLightingSky staticLightingSky)
+        public static void UnRegisterStaticLightingSky(StaticLightingSky staticLightingSky)
         {
-            m_StaticLightingSkies.Remove(staticLightingSky.gameObject.scene.GetHashCode());
+            s_StaticLightingSkies.Remove(staticLightingSky.gameObject.scene.GetHashCode());
         }
 
         public Texture2D ExportSkyToTexture(Camera camera)
@@ -1781,6 +1781,20 @@ namespace UnityEngine.Rendering.HighDefinition
             DynamicGI.UpdateEnvironment();
         }
 
+        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+        static void ResetStaticsOnLoad()
+        {
+            s_ActiveStaticSky = null;
+
+            s_CloudTypesDict?.Clear();
+            s_CloudTypesDict = null;
+
+            s_SkyTypesDict?.Clear();
+            s_SkyTypesDict = null;
+
+            s_StaticLightingSkies?.Clear();
+            s_StaticLightingSkies = new();
+        }
 #endif
     }
 }

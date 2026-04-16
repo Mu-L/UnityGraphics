@@ -207,7 +207,7 @@ namespace UnityEditor.VFX
         private string attributeName => m_attribute.name;
         public override VFXValueType valueType => m_attribute.type;
         public override VFXExpressionOperation operation => VFXExpressionOperation.ReadEventAttribute;
-        protected override int[] additionnalOperands => new int[] { (int)m_elementOffset, (int)m_attribute.type };
+        internal override int[] additionalOperands => new int[] { (int)m_elementOffset, (int)m_attribute.type };
     }
 
 #pragma warning restore 0659

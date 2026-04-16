@@ -741,6 +741,15 @@ namespace UnityEngine.Rendering.RenderGraphModule.NativeRenderPassCompiler
             primitiveShadingRateCombiner = pass.primitiveShadingRateCombiner;
             fragmentShadingRateCombiner = pass.fragmentShadingRateCombiner;
 
+            // Depth input attachment needs special handling if the native pass doesn't have depth but has depth input attachment
+            // Backend require depth input attachment to be set as depth attachment.
+            // Jira work tracking the depth input attachment only use case investigation (not set as depth attachment): https://jira.unity3d.com/projects/GXR/issues/GXR-214
+            bool fragmentInfoHasDepthInputAttachment = extendedFeatureFlags.HasFlag(ExtendedFeatureFlags.DepthAttachmentAsInputAttachment) && pass.numFragmentInputs > 0;
+            if (!hasDepth && fragmentInfoHasDepthInputAttachment)
+            {
+                AddDepthAttachmentFromDepthInputAttachment(ctx, ctx.fragmentData[pass.firstFragmentInput]);
+            }
+
             // Graph pass is added as the first native subpass
             TryMergeNativeSubPass(ctx, ref this, ref pass);
         }
@@ -1242,7 +1251,7 @@ namespace UnityEngine.Rendering.RenderGraphModule.NativeRenderPassCompiler
             }
 
             // Check if depth is used as input attachment
-            if (passToMerge.extendedFeatureFlags.HasFlag(ExtendedFeatureFlags.DepthAttachmentAsInputAttachment) && nativePass.hasDepth)
+            if (passToMerge.extendedFeatureFlags.HasFlag(ExtendedFeatureFlags.DepthAttachmentAsInputAttachment))
             {
                 // Depth input attachments are read-only
                 flags = SubPassFlags.ReadOnlyDepth;
@@ -1367,7 +1376,7 @@ namespace UnityEngine.Rendering.RenderGraphModule.NativeRenderPassCompiler
             }
 
             // Check if depth is used as input attachment
-            if (passToMerge.extendedFeatureFlags.HasFlag(ExtendedFeatureFlags.DepthAttachmentAsInputAttachment) && nativePass.hasDepth)
+            if (passToMerge.extendedFeatureFlags.HasFlag(ExtendedFeatureFlags.DepthAttachmentAsInputAttachment))
             {
                 // Depth input attachments are read-only
                 desc.flags = SubPassFlags.ReadOnlyDepth;
@@ -1398,6 +1407,80 @@ namespace UnityEngine.Rendering.RenderGraphModule.NativeRenderPassCompiler
             }
 
             passToMerge.nativeSubPassIndex = nativePass.numNativeSubPasses - 1;
+        }
+
+        // Setup depth input attachment as depth attachment for the native pass
+        void AddDepthAttachmentFromDepthInputAttachment(CompilerContextData contextData, in PassFragmentData depthInputAttachment)
+        {
+            // If there is already depth. No need to setup depth.
+            Debug.Assert(!hasDepth);
+
+            // Try find the input attachment in native pass fragments list. 
+            int depthInputAttachmentIdx = -1;
+            for (int fragmentId = 0; fragmentId < fragments.size; ++fragmentId)
+            {
+                if (PassFragmentData.SameSubResource(fragments[fragmentId], depthInputAttachment))
+                {
+                    depthInputAttachmentIdx = fragmentId;
+                    break;
+                }
+            }
+
+            // Rare case, depth input attachment is the first attachment but it is not used as depth attachment.
+            if (depthInputAttachmentIdx == 0)
+            {
+                // Set it as depth attachment. We are done.
+                hasDepth = true;
+                return; 
+            }
+            // attachment is not added to native fragments list yet
+            else if(depthInputAttachmentIdx == -1)
+            {
+                // Add it to attachment list and.
+                fragments.Add(depthInputAttachment);
+
+                // If depth is the only attachment of the native pass, set it as depth attachment. We are done
+                if (fragments.size == 1)
+                {
+                    hasDepth = true;
+                    return;
+                }
+                // In this case, we are adding depth input attachment to a native pass with other existing attachments
+                depthInputAttachmentIdx = fragments.size - 1;
+            }
+
+            // Place the depth input attachment as the first attachment and set it as depth attachment.
+            (fragments[0], fragments[depthInputAttachmentIdx]) = (fragments[depthInputAttachmentIdx], fragments[0]);
+            hasDepth = true;
+
+            // Update previous subpasses descriptor
+            for (var nativeSubPassIndex = firstNativeSubPass; nativeSubPassIndex < firstNativeSubPass + numNativeSubPasses; nativeSubPassIndex++)
+            {
+                ref var subPassDesc = ref contextData.nativeSubPassData.ElementAt(nativeSubPassIndex);
+
+                // Updating subpass color outputs
+                for (int i = 0; i < subPassDesc.colorOutputs.Length; i++)
+                {
+                    if (subPassDesc.colorOutputs[i] == 0)
+                    {
+                        subPassDesc.colorOutputs[i] = depthInputAttachmentIdx;
+                    }
+                }
+
+                // Updating subpass color inputs (framebuffer fetch)
+                for (int i = 0; i < subPassDesc.inputs.Length; i++)
+                {
+                    if (subPassDesc.inputs[i] == 0)
+                    {
+                        subPassDesc.inputs[i] = depthInputAttachmentIdx;
+                    }
+                }
+            }
+
+            if (hasShadingRateImage && shadingRateImageIndex == 0)
+            {
+                shadingRateImageIndex = depthInputAttachmentIdx;
+            }
         }
 
         // Call this function while merging a graph pass and you need to add the depth attachment used by this graph pass
@@ -1490,6 +1573,15 @@ namespace UnityEngine.Rendering.RenderGraphModule.NativeRenderPassCompiler
             if (!nativePass.hasDepth && passToMerge.fragmentInfoHasDepth)
             {
                 nativePass.AddDepthAttachmentFirstDuringMerge(contextData, contextData.fragmentData[passToMerge.firstFragment]);
+            }
+
+            // Depth input attachment needs special handling if the native pass doesn't have depth and merges with a graph pass that has depth input attachment
+            // Backend require depth input attachment to be set as depth attachment.
+            // Jira work tracking the depth input attachment only use case investigation (not set as depth attachment): https://jira.unity3d.com/projects/GXR/issues/GXR-214
+            bool fragmentInfoHasDepthInputAttachment = passToMerge.extendedFeatureFlags.HasFlag(ExtendedFeatureFlags.DepthAttachmentAsInputAttachment) && passToMerge.numFragmentInputs > 0;
+            if (!nativePass.hasDepth && fragmentInfoHasDepthInputAttachment)
+            {
+                nativePass.AddDepthAttachmentFromDepthInputAttachment(contextData, contextData.fragmentData[passToMerge.firstFragmentInput]);
             }
 
             // Update versions and flags of existing attachments and

@@ -34,13 +34,13 @@ namespace UnityEngine.Rendering.Universal
             this.renderPassEvent = RenderPassEvent.AfterRenderingPostProcessing - 1;
             this.profilingSampler = URPProfilingSamplers.Bloom;
 
-            m_Material = PostProcessUtils.LoadShader(shader, passName);
+            m_Material = PostProcessUtils.LoadShader(shader, passName, logLevel: LogType.Log);
 
             // Array for bloom pyramid materials.
             // Materials are references in the command buffer, so we need a separate material for each mip level.
             m_MaterialPyramid = new Material[k_MaxPyramidSize];
             for (uint i = 0; i < k_MaxPyramidSize; ++i)
-                m_MaterialPyramid[i] = PostProcessUtils.LoadShader(shader, passName);
+                m_MaterialPyramid[i] = PostProcessUtils.LoadShader(shader, passName, logLevel: LogType.Log);
 
             // Check if the pass init was successful.
             m_IsValid = m_Material != null;

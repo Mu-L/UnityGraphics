@@ -2,7 +2,7 @@
 #define UNIVERSAL_SSR_INCLUDED
 
 // Includes
-#include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Core.hlsl"
+#include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/ScreenSpaceReflectionCommon.hlsl"
 #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/ShaderVariablesFunctions.hlsl"
 #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/DeclareDepthTexture.hlsl"
 #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/DeclareNormalsTexture.hlsl"
@@ -19,6 +19,8 @@ SAMPLER(sampler_SmoothnessTexture);
 
 TEXTURE2D_X(_MotionVectorColorTexture);
 SAMPLER(sampler_MotionVectorColorTexture);
+
+TEXTURE2D_X(_LastFrameCameraDepthTexture);
 
 SAMPLER(sampler_BlitTexture);
 
@@ -215,7 +217,7 @@ bool TraceScreenSpaceRayHiZ(
     float3 raySign  = float3(rcpRayDir.x >= 0 ? 1 : -1,
                              rcpRayDir.y >= 0 ? 1 : -1,
                              rcpRayDir.z >= 0 ? 1 : -1);
-    bool   rayTowardsEye  =  rcpRayDir.z >= 0;
+    bool rayTowardsEye = COMPARE_DEVICE_DEPTH_CLOSEREQUAL(rcpRayDir.z, 0);
 
     // Extend and clip the end point to the frustum.
     float tMax;
@@ -228,7 +230,10 @@ bool TraceScreenSpaceRayHiZ(
         bounds.y = (rcpRayDir.y >= 0) ? screenSize.y - halfTexel : halfTexel;
         // If we do not want to intersect the skybox, it is more efficient to not trace too far.
         float maxDepth = (_ReflectSky != 0) ? -0.00000024 : 0.00000024; // 2^-22
-        bounds.z = (rcpRayDir.z >= 0) ? 1 : maxDepth;
+        #if !defined(UNITY_REVERSED_Z)
+        maxDepth = 1.0-maxDepth;
+        #endif
+        bounds.z = rayTowardsEye ? (1.0-UNITY_RAW_FAR_CLIP_VALUE) : maxDepth;
 
         float3 dist = bounds * rcpRayDir - (rayOrigin * rcpRayDir);
         tMax = Min3(dist.x, dist.y, dist.z);
@@ -324,7 +329,7 @@ bool TraceScreenSpaceRayHiZ(
     }
 
     // Treat intersections with the sky as misses.
-    miss = miss || ((_ReflectSky == 0) && (rayPos.z == 0));
+    miss = miss || ((_ReflectSky == 0) && (rayPos.z == UNITY_RAW_FAR_CLIP_VALUE));
     hit  = hit && !miss;
 
     rayHitPosNDC = float3(floor(rayPos.xy) / screenSize + (0.5 / screenSize), rayPos.z);
@@ -354,17 +359,13 @@ float4 ComputeSSR(Varyings input) : SV_Target
     float perceptualSmoothness = SampleSmoothness(positionNDC);
     UNITY_BRANCH if (perceptualSmoothness <= GetMinimumSmoothness())
     {
-        #if UNITY_REVERSED_Z
-        float alpha = deviceDepth != 0;
-        #else
-        float alpha = deviceDepth != 1;
-        #endif
         // Output the framebuffer color ->
         //   avoids bleeding black/uninitialized texels into reflections when blurring.
         // If the pixel is showing skybox, output 0 alpha ->
         //   avoids bleeding the skybox color into reflections when blurring, which would cause haloing.
         // If the pixel is showing an object, output 1 alpha ->
         //   avoids bleeding 0 alpha into reflections when blurring, which would cause peter-panning.
+        float alpha = deviceDepth != UNITY_RAW_FAR_CLIP_VALUE;
         return float4(SAMPLE_TEXTURE2D_X_LOD(_CameraColorTexture, sampler_CameraColorTexture, positionNDC, 0).rgb, alpha);
     }
 
@@ -423,10 +424,48 @@ float4 ComputeSSR(Varyings input) : SV_Target
     UNITY_BRANCH if (hit)
     {
         #ifdef _USE_MOTION_VECTORS
+        // Reproject position
+        const float2 downsampledScreenSize = screenSizeWithInverse.zw * _Downsample;
         rayHitPosNDC.xy -= SampleMotionVector(rayHitPosNDC.xy);
-        #endif
+        const int2 topLeftReprojectedPixelPos = int2(rayHitPosNDC.xy * downsampledScreenSize - 0.5);
 
+        // Manually apply bilinear filter at the reprojected position
+        float3 hitColor = 0;
+        float weightSum = 0;
+        for (int dx = 0; dx < 2; dx++)
+        {
+            for (int dy = 0; dy < 2; dy++)
+            {
+                const int2 samplePixelPos = topLeftReprojectedPixelPos + int2(dx, dy);
+                const float2 samplePixelCenter = float2(samplePixelPos) + 0.5;
+
+                // Reject samples that are off-screen
+                const bool isInView = all(0 <= samplePixelPos && samplePixelPos < downsampledScreenSize);
+                if (!isInView)
+                    continue;
+
+                // Reject samples that land on the skybox (unless we are intentionally reflecting skybox)
+                const float sampleDeviceDepth = LOAD_TEXTURE2D_X_LOD(_LastFrameCameraDepthTexture, samplePixelPos, 0).x;
+                if (sampleDeviceDepth == UNITY_RAW_FAR_CLIP_VALUE && rayHitPosNDC.z != UNITY_RAW_FAR_CLIP_VALUE)
+                    continue;
+
+                // Calculate bilinear weight and accumulate
+                const float weight =
+                    (1.0f - abs(rayHitPosNDC.x * downsampledScreenSize.x - samplePixelCenter.x)) *
+                    (1.0f - abs(rayHitPosNDC.y * downsampledScreenSize.y - samplePixelCenter.y));
+                const float3 sampleColor = LOAD_TEXTURE2D_X_LOD(_CameraColorTexture, samplePixelPos, 0).rgb;
+                hitColor += weight * sampleColor;
+                weightSum += weight;
+            }
+        }
+        // If we got no valid samples, just return the existing framebuffer color.
+        if (weightSum == 0)
+            return float4(SAMPLE_TEXTURE2D_X_LOD(_CameraColorTexture, sampler_CameraColorTexture, positionNDC, 0).rgb, 0);
+        else
+            hitColor /= weightSum;
+        #else
         float3 hitColor = SAMPLE_TEXTURE2D_X_LOD(_CameraColorTexture, sampler_CameraColorTexture, rayHitPosNDC.xy, 0).rgb;
+        #endif
 
         // Fade rays pointing toward camera.
         float viewDotRay = dot(SafeNormalize(positionVS), rayDirVS);
@@ -467,11 +506,16 @@ float4 CompositeSSRAfterOpaque(Varyings input) : SV_Target
 
     float2 uv = UnityStereoTransformScreenSpaceTex(input.texcoord);
 
+    // Reconstruct world position
+    float2 positionNDC = uv;
+    float deviceDepth = SampleSceneDepth(uv).r;
+    float3 positionWS = ComputeWorldSpacePosition(positionNDC, deviceDepth, _CameraInverseViewProjections[unity_eyeIndex]);
+
     float perceptualSmoothness = SAMPLE_TEXTURE2D_X(_SmoothnessTexture, sampler_SmoothnessTexture, uv).a;
+    float perceptualRoughness = PerceptualSmoothnessToPerceptualRoughness(perceptualSmoothness);
 
     // Map roughness to mip level to get blur.
-    float perceptualRoughness = PerceptualSmoothnessToPerceptualRoughness(perceptualSmoothness);
-    float mipLevel = PerceptualRoughnessToMipmapLevel(perceptualRoughness);
+    float mipLevel = GetSSRMipLevelFromPerceptualRoughness(positionWS, perceptualRoughness);
     float4 reflColor = SAMPLE_TEXTURE2D_X_LOD(_BlitTexture, sampler_TrilinearClamp, uv, mipLevel);
 
     // Fade out reflections with smoothness.

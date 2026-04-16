@@ -33,18 +33,18 @@ namespace UnityEngine.Rendering.HighDefinition
         //                                                  {-1.0, 1.0}, {0.0, 1.0}, {1.0, 1.0}
 
         // Set of pre-generated weights (L->R, T->B). After experimentation, the final weighting function is exp(-distance^2)
-        static internal float[] distanceBasedWeights_3x3 = new float[] { 0.324652f, 0.535261f, 0.119433f, 0.535261f, 0.882497f, 0.196912f, 0.119433f, 0.196912f, 0.0439369f,
+        internal static readonly float[] distanceBasedWeights_3x3 = new float[] { 0.324652f, 0.535261f, 0.119433f, 0.535261f, 0.882497f, 0.196912f, 0.119433f, 0.196912f, 0.0439369f,
                                                               0.119433f, 0.535261f, 0.324652f, 0.196912f, 0.882497f, 0.535261f, 0.0439369f, 0.196912f, 0.119433f,
                                                               0.119433f, 0.196912f, 0.0439369f, 0.535261f, 0.882497f, 0.196912f, 0.324652f, 0.535261f, 0.119433f,
                                                               0.0439369f, 0.196912f, 0.119433f, 0.196912f, 0.882497f, 0.535261f, 0.119433f, 0.535261f, 0.324652f};
 
         // Set of pre-generated weights (L->R, T->B). After experimentation, the final weighting function is exp(-distance^2)
-        static internal float[] distanceBasedWeights_2x2 = new float[] {  0.324652f, 0.535261f, 0.535261f, 0.882497f,
+        internal static readonly float[] distanceBasedWeights_2x2 = new float[] {  0.324652f, 0.535261f, 0.535261f, 0.882497f,
                                                                 0.535261f, 0.324652f, 0.882497f, 0.535261f,
                                                                 0.535261f, 0.882497f, 0.324652f, 0.535261f,
                                                                 0.882497f, 0.535261f, 0.535261f, 0.324652f};
 
-        static internal float[] tapOffsets_2x2 = new float[] { -1.0f, -1.0f, 0.0f, -1.0f, -1.0f, 0.0f, 0.0f, 0.0f,
+        internal static readonly float[] tapOffsets_2x2 = new float[] { -1.0f, -1.0f, 0.0f, -1.0f, -1.0f, 0.0f, 0.0f, 0.0f,
                                                                 0.0f, -1.0f, 1.0f, -1.0f, 0.0f, 0.0f, 1.0f, 0.0f,
                                                                 -1.0f, 0.0f, 0.0f, 0.0f, -1.0f, 1.0f, 0.0f, 1.0f,
                                                                 0.0f, 0.0f, 1.0f, 0.0f, 0.0f, 1.0f, 1.0f, 1.0f};

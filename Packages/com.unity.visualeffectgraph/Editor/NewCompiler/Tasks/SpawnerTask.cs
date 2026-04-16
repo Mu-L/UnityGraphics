@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using Unity.GraphCommon.LowLevel.Editor;
+using UnityEngine;
 
 namespace UnityEditor.VFX
 {
@@ -12,11 +13,7 @@ namespace UnityEditor.VFX
         /// Gets the name of the template associated with the task.
         /// </summary>
         public string TemplateName { get; }
-
-        /// <summary>
-        /// Gets the collection of task snippets that compose the task.
-        /// </summary>
-        public List<SubtaskDescription> Blocks { get; } = new();
+        public VFXTaskType SpawnerType { get; }
 
         IDataKey m_SpawnDataKey;
 
@@ -25,12 +22,12 @@ namespace UnityEditor.VFX
         /// and task snippets.
         /// </summary>
         /// <param name="templateName">The name of the template associated with the task.</param>
-        /// <param name="blocks">The initial collection of <see cref="SubtaskDescription"/> objects that compose the task.</param>
+        /// <param name="spawnerType">The spawner task type.</param>
         /// <param name="spawnDataKey"> The data key for the spawn data</param>
-        public SpawnerTask(string templateName, IEnumerable<SubtaskDescription> blocks, IDataKey spawnDataKey)
+        public SpawnerTask(string templateName, VFXTaskType spawnerType, IDataKey spawnDataKey)
         {
+            SpawnerType = spawnerType;
             TemplateName = templateName;
-            Blocks.AddRange(blocks);
             m_SpawnDataKey = spawnDataKey;
         }
 

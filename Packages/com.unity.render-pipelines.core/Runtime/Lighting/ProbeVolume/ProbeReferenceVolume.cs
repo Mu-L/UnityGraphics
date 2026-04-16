@@ -3,22 +3,17 @@
 #endif
 
 using System;
-using System.Diagnostics;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Reflection;
-using UnityEngine.Profiling;
-using UnityEngine.SceneManagement;
-using Chunk = UnityEngine.Rendering.ProbeBrickPool.BrickChunkAlloc;
-using Brick = UnityEngine.Rendering.ProbeBrickIndex.Brick;
 using Unity.Collections;
-using Unity.Profiling;
 using Unity.Mathematics;
+using Unity.Profiling;
+using Unity.Profiling.LowLevel;
 using UnityEngine.Experimental.Rendering;
-
-#if UNITY_EDITOR
-using System.Linq.Expressions;
-using UnityEditor;
-#endif
+using UnityEngine.SceneManagement;
+using Brick = UnityEngine.Rendering.ProbeBrickIndex.Brick;
+using Chunk = UnityEngine.Rendering.ProbeBrickPool.BrickChunkAlloc;
 
 namespace UnityEngine.Rendering
 {
@@ -793,6 +788,16 @@ namespace UnityEngine.Rendering
         bool m_HasChangedIndex = false;
 
         int m_CBShaderID = Shader.PropertyToID("ShaderVariablesProbeVolumes");
+
+        /// <summary>
+        /// Performs a one-time initialization that allocates the brick pool, blending pool, brick
+        /// index (plus defrag index when GPU streaming is enabled), global indirection textures,
+        /// and the intermediate data location. Cost depends on memory budget and enabled
+        /// features (L2, sky occlusion, rendering layers).
+        /// </summary>
+        static readonly ProfilerMarker k_InitializeReferenceVolume =
+            new ProfilerMarker(ProfilerCategory.Render, "Initialize Reference Volume",
+                MarkerFlags.VerbosityAdvanced);
 
         ProbeVolumeTextureMemoryBudget m_MemoryBudget;
         ProbeVolumeBlendingTextureMemoryBudget m_BlendingMemoryBudget;
@@ -1668,7 +1673,8 @@ namespace UnityEngine.Rendering
 
             if (!m_ProbeReferenceVolumeInit)
             {
-                Profiler.BeginSample("Initialize Reference Volume");
+                using var _ = k_InitializeReferenceVolume.Auto();
+
                 m_Pool = new ProbeBrickPool(m_MemoryBudget, m_SHBands, allocateValidityData: true, useRenderingLayers, skyOcclusion, skyOcclusionShadingDirection, probeOcclusion);
                 m_BlendingPool = new ProbeBrickBlendingPool(m_BlendingMemoryBudget, m_SHBands, probeOcclusion);
 
@@ -1690,8 +1696,6 @@ namespace UnityEngine.Rendering
                 for (int i = 1; i < ProbeBrickPool.kBrickProbeCountPerDim - 1; i++)
                     m_PositionOffsets[i] = i * probeDelta;
                 m_PositionOffsets[m_PositionOffsets.Length - 1] = 1.0f;
-
-                Profiler.EndSample();
 
                 m_ProbeReferenceVolumeInit = true;
 

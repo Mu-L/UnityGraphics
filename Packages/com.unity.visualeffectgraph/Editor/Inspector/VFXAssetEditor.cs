@@ -263,7 +263,6 @@ class VisualEffectAssetEditor : UnityEditor.Editor
 
         m_VisualEffectGO = new GameObject("VisualEffect (Preview)");
 
-        m_VisualEffectGO.hideFlags = HideFlags.DontSave;
         m_VisualEffect = m_VisualEffectGO.AddComponent<VisualEffect>();
         m_VisualEffect.pause = true;
         m_RemainingFramesToRender = 1;
@@ -275,6 +274,8 @@ class VisualEffectAssetEditor : UnityEditor.Editor
 
         VisualEffectAsset vfxTarget = target as VisualEffectAsset;
         m_VisualEffect.visualEffectAsset = vfxTarget;
+
+        m_VisualEffectGO.hideFlags = HideFlags.DontSave;
 
         m_CurrentBounds = new Bounds(Vector3.zero, Vector3.one);
         m_Distance = null;

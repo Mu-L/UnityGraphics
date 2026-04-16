@@ -143,6 +143,24 @@ namespace UnityEngine.Rendering.HighDefinition
 
                     colorBuffer = RenderDebugViewMaterial(m_RenderGraph, cullingResults, hdCamera, gpuLightListOutput, prepassOutput.dbuffer, prepassOutput.gbuffer, prepassOutput.depthBuffer, vtFeedbackBuffer);
                     colorBuffer = ResolveMSAAColor(m_RenderGraph, hdCamera, colorBuffer);
+
+                    bool rendersOffscreenUI = !m_OffscreenUIRenderedInCurrentFrame && HDROutputActiveForCameraType(hdCamera) && SupportedRenderingFeatures.active.rendersUIOverlay;
+                    if (rendersOffscreenUI)
+                    {
+                        uiBuffer = RenderHDROffscreenUI(m_RenderGraph, hdCamera, renderContext);
+                        m_OffscreenUIRenderedInCurrentFrame = true;
+                    }
+                    else
+                    {
+                        // We do not render offscreen ui for the rest of cameras.
+                        uiBuffer = m_OffscreenUIRenderedInCurrentFrame ? m_RenderGraph.ImportTexture(m_OffscreenUIColorBuffer.Value) : m_RenderGraph.defaultResources.blackTextureXR;
+                    }
+
+                    bool blitsOffscreenUICover = rendersOffscreenUI && m_RequireOffscreenUICoverPrepass;
+                    if (blitsOffscreenUICover)
+                    {
+                        BlitFullscreenUIToOffscreen(m_RenderGraph, colorBackBuffer, uiBuffer, hdCamera);
+                    }
                 }
                 else if (hdCamera.frameSettings.IsEnabled(FrameSettingsField.RayTracing) && pathTracing.enable.value && hdCamera.camera.cameraType != CameraType.Preview && GetRayTracingState() && GetRayTracingClusterState())
                 {
@@ -258,7 +276,7 @@ namespace UnityEngine.Rendering.HighDefinition
                     colorBuffer = RenderTransparency(m_RenderGraph, hdCamera, renderContext, colorBuffer, prepassOutput.resolvedNormalBuffer, vtFeedbackBuffer, currentColorPyramid, volumetricLighting, rayCountTexture, opticalFogTransmittance,
                         m_SkyManager.GetSkyReflection(hdCamera), gpuLightListOutput, transparentPrepass, ref prepassOutput, shadowResult, cullingResults, customPassCullingResults, aovRequest, aovCustomPassBuffers);
 
-                    bool rendersOffscreenUI = !m_OffscreenUIRenderedInCurrentFrame && HDROutputActiveForCameraType(hdCamera) && SupportedRenderingFeatures.active.rendersUIOverlay && !NeedHDRDebugMode(m_CurrentDebugDisplaySettings);
+                    bool rendersOffscreenUI = !m_OffscreenUIRenderedInCurrentFrame && HDROutputActiveForCameraType(hdCamera) && SupportedRenderingFeatures.active.rendersUIOverlay;
                     if (rendersOffscreenUI)
                     {
                         uiBuffer = RenderHDROffscreenUI(m_RenderGraph, hdCamera, renderContext);
@@ -516,6 +534,7 @@ namespace UnityEngine.Rendering.HighDefinition
             public Vector4 offscreenUIViewportParams;
             public bool applyAfterPP;
             public CubemapFace cubemapFace;
+            public bool postProcessEnabled;
 
             public TextureHandle uiTexture;
             public TextureHandle afterPostProcessTexture;
@@ -557,14 +576,17 @@ namespace UnityEngine.Rendering.HighDefinition
                     // Pick the right material based off XR rendering using texture arrays and if we are dealing with a single slice at the moment or processing all slices automatically.
                     passData.blitMaterial = (TextureXR.useTexArray && passData.srcTexArraySlice >= 0) ? m_FinalBlitWithOETFTexArraySingleSlice : m_FinalBlitWithOETF;
                     GetHDROutputParameters(HDRDisplayInformationForCamera(hdCamera), HDRDisplayColorGamutForCamera(hdCamera), m_Tonemapping, out passData.hdrOutputParmeters, out var unused);
+
                     GetOffscreenUIViewportParams(hdCamera, out passData.offscreenUIViewportParams);
                     passData.uiTexture = uiTexture;
                     builder.UseTexture(passData.uiTexture, AccessFlags.Read);
                     passData.applyAfterPP = hdCamera.frameSettings.IsEnabled(FrameSettingsField.AfterPostprocess) && !NeedHDRDebugMode(m_CurrentDebugDisplaySettings);
+                    passData.postProcessEnabled = m_PostProcessEnabled;
                 }
                 else
                 {
                     passData.hdrOutputParmeters = new Vector4(-1.0f, -1.0f, -1.0f, -1.0f);
+                    passData.postProcessEnabled = false;
                 }
 
                 builder.SetRenderFunc(
@@ -585,7 +607,12 @@ namespace UnityEngine.Rendering.HighDefinition
                             propertyBlock.SetVector(HDShaderIDs._OffscreenUIViewportParams, data.offscreenUIViewportParams);
                             propertyBlock.SetInt(HDShaderIDs._BlitTexArraySlice, data.srcTexArraySlice);
 
-                            HDROutputUtils.ConfigureHDROutput(data.blitMaterial, data.colorGamut, HDROutputUtils.Operation.ColorEncoding);
+                            HDROutputUtils.Operation hdrOperation = HDROutputUtils.Operation.ColorEncoding;
+                            if (!data.postProcessEnabled)
+                            {
+                                hdrOperation |= HDROutputUtils.Operation.ColorConversion;
+                            }
+                            HDROutputUtils.ConfigureHDROutput(data.blitMaterial, data.colorGamut, hdrOperation);
 
                             if (data.applyAfterPP)
                             {
@@ -1282,7 +1309,7 @@ namespace UnityEngine.Rendering.HighDefinition
 
                 // enable d-buffer flag value is being interpreted more like enable decals in general now that we have clustered
                 // decal datas count is 0 if no decals affect transparency
-                passData.decalsEnabled = (hdCamera.frameSettings.IsEnabled(FrameSettingsField.Decals)) && (DecalSystem.m_DecalDatasCount > 0);
+                passData.decalsEnabled = (hdCamera.frameSettings.IsEnabled(FrameSettingsField.Decals)) && (DecalSystem.instance.DecalDatasCount > 0);
                 passData.renderMotionVecForTransparent = NeedMotionVectorForTransparent(hdCamera.frameSettings);
                 passData.colorMaskTransparentVel = colorMaskTransparentVel;
                 passData.volumetricLighting = volumetricLighting;

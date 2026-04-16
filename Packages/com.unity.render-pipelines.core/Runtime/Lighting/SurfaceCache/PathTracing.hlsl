@@ -227,14 +227,13 @@ float3 OutgoingDirectionalBounceAndMultiBounceRadiance(
     float3 dirLightDirection,
     float3 dirLightIntensity,
     bool multiBounce,
-    IrradianceBufferType patchIrradiances,
+    PatchIrradianceBufferType patchIrradiances,
     CellPatchIndexBufferType cellPatchIndices,
     PatchUtil::VolumeParamSet volumeParams,
     float3 albedo,
     float3 emission,
-    out bool multiBounceSurfaceCacheMiss)
+    out uint bouncePatchIndex)
 {
-    multiBounceSurfaceCacheMiss = false;
     float3 radiance = 0.0f;
 
     if (any(dirLightIntensity != 0.0f))
@@ -248,21 +247,20 @@ float3 OutgoingDirectionalBounceAndMultiBounceRadiance(
             shadowRay.tMin = 0;
             shadowRay.tMax = FLT_MAX;
 
-            UnifiedRT::Hit hitResult2 = UnifiedRT::TraceRayClosestHit(dispatchInfo, accelStruct, 0xFFFFFFFF, shadowRay, UnifiedRT::kRayFlagNone);
-            if (!hitResult2.IsValid())
+            UnifiedRT::Hit hitResult = UnifiedRT::TraceRayClosestHit(dispatchInfo, accelStruct, 0xFFFFFFFF, shadowRay, UnifiedRT::kRayFlagNone);
+            if (!hitResult.IsValid())
             {
                 radiance += dirLightIntensity * dot(-dirLightDirection, normal);
             }
         }
     }
 
+    bouncePatchIndex = PatchUtil::invalidPatchIndex;
     if (multiBounce)
     {
-        float3 cacheRead = PatchUtil::ReadPlanarIrradiance(patchIrradiances, cellPatchIndices, volumeParams, position, normal);
-        if (all(cacheRead != PatchUtil::invalidIrradiance))
-            radiance += cacheRead;
-        else
-            multiBounceSurfaceCacheMiss = true;
+        bouncePatchIndex = PatchUtil::FindPatchIndex(volumeParams, cellPatchIndices, position, normal);
+        if (bouncePatchIndex != PatchUtil::invalidPatchIndex)
+            radiance += PatchUtil::EvalIrradiance(patchIrradiances[bouncePatchIndex], normal);
     }
 
     radiance *= albedo * INV_PI;
@@ -280,7 +278,7 @@ float3 IncomingEnviromentAndDirectionalBounceAndMultiBounceRadiance(
     bool multiBounce,
     TextureCube<float3> envTex,
     SamplerState envSampler,
-    IrradianceBufferType patchIrradiances,
+    PatchIrradianceBufferType patchIrradiances,
     PatchGeometryBufferType patchGeometries,
     RWStructuredBuffer<PatchUtil::PatchStatisticsSet> patchStatistics,
     PatchUtil::PatchAllocationParamSet allocParams,
@@ -304,7 +302,7 @@ float3 IncomingEnviromentAndDirectionalBounceAndMultiBounceRadiance(
             const float3 hitAlbedo = MaterialPool::LoadAlbedoWithBoost(matEntry, matPoolParams.albedoTextures, matPoolParams.albedoSampler, matPoolParams.atlasTexelSize, matPoolParams.albedoBoost, hitGeo.uv0, hitGeo.uv1);
             const float3 hitEmission = MaterialPool::LoadEmission(matEntry, matPoolParams.emissionTextures, matPoolParams.emissionSampler, matPoolParams.atlasTexelSize, hitGeo.uv0, hitGeo.uv1);
 
-            bool multiBounceSurfaceCacheMiss = false;
+            uint bouncePatchIndex;
             radiance = OutgoingDirectionalBounceAndMultiBounceRadiance(
                 hitGeo.position,
                 hitGeo.normal,
@@ -318,20 +316,32 @@ float3 IncomingEnviromentAndDirectionalBounceAndMultiBounceRadiance(
                 volumeParams,
                 hitAlbedo,
                 hitEmission,
-                multiBounceSurfaceCacheMiss);
+                bouncePatchIndex);
 
             #if BOUNCE_PATCH_ALLOCATION
-            if (multiBounceSurfaceCacheMiss && enablePatchAllocation)
+            if (enablePatchAllocation)
             {
-                PatchUtil::AllocatePatch(
-                    hitGeo.position,
-                    hitGeo.normal,
-                    patchIrradiances,
-                    patchGeometries,
-                    patchStatistics,
-                    allocParams,
-                    volumeParams,
-                    frameIndex);
+                if (bouncePatchIndex == PatchUtil::invalidPatchIndex)
+                {
+                    PatchUtil::AllocatePatch(
+                           hitGeo.position,
+                           hitGeo.normal,
+                           patchIrradiances,
+                           patchGeometries,
+                           patchStatistics,
+                           allocParams,
+                           volumeParams,
+                           frameIndex);
+                }
+                else
+                {
+                    PatchUtil::PatchCounterSet counters = patchStatistics[bouncePatchIndex].counters;
+                    if (PatchUtil::GetRank(counters) == 1)
+                    {
+                        PatchUtil::SetLastAccessFrame(counters, frameIndex);
+                        patchStatistics[bouncePatchIndex].counters = counters;
+                    }
+                }
             }
             #endif
         }

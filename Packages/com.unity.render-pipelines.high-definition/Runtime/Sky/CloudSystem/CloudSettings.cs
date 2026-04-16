@@ -28,14 +28,14 @@ namespace UnityEngine.Rendering.HighDefinition
     /// </summary>
     public abstract class CloudSettings : VolumeComponent
     {
-        static Dictionary<Type, int> cloudUniqueIDs = new Dictionary<Type, int>();
+        static Dictionary<Type, int> s_CloudUniqueIDs = null;
 
         /// <summary>
         /// Returns the hash code of the cloud parameters.
         /// </summary>
         /// <param name="camera">The camera we want to use to compute the hash of the cloud.</param>
         /// <returns>The hash code of the cloud parameters.</returns>
-        virtual public int GetHashCode(Camera camera)
+        public virtual int GetHashCode(Camera camera)
         {
             // By default we don't need to consider the camera position.
             return GetHashCode();
@@ -60,13 +60,14 @@ namespace UnityEngine.Rendering.HighDefinition
         /// <returns>The unique ID for the requested cloud type.</returns>
         public static int GetUniqueID(Type type)
         {
-            int uniqueID;
+            s_CloudUniqueIDs ??= new Dictionary<Type, int>();
 
-            if (!cloudUniqueIDs.TryGetValue(type, out uniqueID))
+            int uniqueID;
+            if (!s_CloudUniqueIDs.TryGetValue(type, out uniqueID))
             {
                 var uniqueIDs = type.GetCustomAttributes(typeof(CloudUniqueID), false);
                 uniqueID = (uniqueIDs.Length == 0) ? -1 : ((CloudUniqueID)uniqueIDs[0]).uniqueID;
-                cloudUniqueIDs[type] = uniqueID;
+                s_CloudUniqueIDs[type] = uniqueID;
             }
 
             return uniqueID;
@@ -77,5 +78,14 @@ namespace UnityEngine.Rendering.HighDefinition
         /// </summary>
         /// <returns>The class type of the CloudRenderer associated with this Cloud Settings.</returns>
         public abstract Type GetCloudRendererType();
+
+#if UNITY_EDITOR
+        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+        static void ResetStaticsOnLoad()
+        {
+            s_CloudUniqueIDs?.Clear();
+            s_CloudUniqueIDs = null;
+        }
+#endif
     }
 }

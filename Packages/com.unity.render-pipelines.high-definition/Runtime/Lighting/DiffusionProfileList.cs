@@ -1,4 +1,5 @@
 using System;
+using System.Buffers;
 
 namespace UnityEngine.Rendering.HighDefinition
 {
@@ -41,9 +42,6 @@ namespace UnityEngine.Rendering.HighDefinition
     [Serializable]
     public sealed class DiffusionProfileSettingsParameter : VolumeParameter<DiffusionProfileSettings[]>
     {
-        static System.Buffers.ArrayPool<DiffusionProfileSettings> s_ArrayPool =
-            System.Buffers.ArrayPool<DiffusionProfileSettings>.Create(DiffusionProfileConstants.DIFFUSION_PROFILE_COUNT, 5);
-
         // To accumulate diffusion profiles when resolving stack and not make a new allocation everytime,
         // We allocate once an array with max size, and store the ammount of slots used here.
         internal DiffusionProfileSettings[] accumulatedArray = null;
@@ -99,7 +97,7 @@ namespace UnityEngine.Rendering.HighDefinition
         /// <param name="t">The interpolation factor in range [0,1].</param>
         public override void Interp(DiffusionProfileSettings[] from, DiffusionProfileSettings[] to, float t)
         {
-            m_Value = s_ArrayPool.Rent(DiffusionProfileConstants.DIFFUSION_PROFILE_COUNT);
+            m_Value = ArrayPool<DiffusionProfileSettings>.Shared.Rent(DiffusionProfileConstants.DIFFUSION_PROFILE_COUNT);
 
             accumulatedCount = 0;
 
@@ -134,7 +132,7 @@ namespace UnityEngine.Rendering.HighDefinition
                 m_Value[i] = null;
 
             if (accumulatedArray != null)
-                s_ArrayPool.Return(accumulatedArray);
+                ArrayPool<DiffusionProfileSettings>.Shared.Return(accumulatedArray);
             accumulatedArray = m_Value;
         }
 
@@ -144,7 +142,7 @@ namespace UnityEngine.Rendering.HighDefinition
         public override void Release()
         {
             if (accumulatedArray != null)
-                s_ArrayPool.Return(accumulatedArray);
+                ArrayPool<DiffusionProfileSettings>.Shared.Return(accumulatedArray);
             accumulatedArray = null;
         }
     }

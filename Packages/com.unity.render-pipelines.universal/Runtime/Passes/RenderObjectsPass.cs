@@ -39,6 +39,13 @@ namespace UnityEngine.Rendering.Universal
         private PassData m_PassData;
 
         /// <summary>
+        /// Indicates whether this pass should use depth as input attachment.
+        /// When enabled, depth is read from tile memory instead of texture sampling (DX12, Vulkan only).
+        /// Requires depth to be read-only (no depth writes).
+        /// </summary>
+        private bool m_DepthInputAttachment;
+
+        /// <summary>
         /// Sets the write and comparison function for depth.
         /// </summary>
         /// <param name="writeEnabled">Sets whether it should write to depth or not.</param>
@@ -58,6 +65,18 @@ namespace UnityEngine.Rendering.Universal
         {
             m_RenderStateBlock.mask |= RenderStateMask.Depth;
             m_RenderStateBlock.depthState = new DepthState(writeEnabled, function);
+        }
+
+        /// <summary>
+        /// Sets whether this pass should use depth as input attachment.
+        /// This enables subpass depth reading on supported platforms (DX12, Vulkan).
+        /// When enabled, depth will be set as read-only in the RenderGraph.
+        /// </summary>
+        /// <param name="enable">True to enable depth input attachment</param>
+        internal void SetDepthInputAttachment(bool enable)
+        {
+            // The shader stripping relies on knowing about the feature, not the pass. So this can't correctly work if the pass is not added by the RenderObject feature.
+            m_DepthInputAttachment = enable;
         }
 
         /// <summary>
@@ -187,6 +206,8 @@ namespace UnityEngine.Rendering.Universal
 
             // Required for code sharing purpose between RG and non-RG.
             internal RendererList rendererList;
+
+            internal bool depthInputAttachment;
         }
 
         private void InitPassData(UniversalCameraData cameraData, ref PassData passData)
@@ -237,9 +258,20 @@ namespace UnityEngine.Rendering.Universal
 
                 passData.color = resourceData.activeColorTexture;
                 builder.SetRenderAttachment(resourceData.activeColorTexture, 0, AccessFlags.Write);
-                // TODO: Take into account user-specific settings to decide depth flag
-                if (cameraData.imageScalingMode != ImageScalingMode.Upscaling || passData.renderPassEvent != RenderPassEvent.AfterRenderingPostProcessing)
+
+                // Configure depth attachment based on input attachment setting
+                if (m_DepthInputAttachment && SystemInfo.supportsDepthAttachmentAsInputAttachment)
+                {
+                    // Input attachment mode: depth is read-only, accessed from tile memory
+                    builder.SetExtendedFeatureFlags(ExtendedFeatureFlags.DepthAttachmentAsInputAttachment);
+                    builder.SetInputAttachment(resourceData.activeDepthTexture, 0, AccessFlags.Read);
+                    passData.depthInputAttachment = true;
+                }
+                else if (cameraData.imageScalingMode != ImageScalingMode.Upscaling || passData.renderPassEvent != RenderPassEvent.AfterRenderingPostProcessing)
+                {
                     builder.SetRenderAttachmentDepth(resourceData.activeDepthTexture, AccessFlags.ReadWrite);
+                    passData.depthInputAttachment = false;
+                }
 
                 TextureHandle mainShadowsTexture = resourceData.mainShadowsTexture;
                 TextureHandle additionalShadowsTexture = resourceData.additionalShadowsTexture;
@@ -287,6 +319,32 @@ namespace UnityEngine.Rendering.Universal
                 builder.SetRenderFunc(static (PassData data, RasterGraphContext rgContext) =>
                 {
                     var isYFlipped = RenderingUtils.IsHandleYFlipped(rgContext, in data.color);
+
+                    // Set shader keywords for depth input attachment
+                    if (data.depthInputAttachment)
+                    {
+                        switch (data.cameraData.cameraTargetDescriptor.msaaSamples)
+                        {
+                            case 8:
+                            case 4:
+                            case 2:
+                                rgContext.cmd.SetKeyword(ShaderGlobalKeywords.DEPTH_AS_INPUT_ATTACHMENT, false);
+                                rgContext.cmd.SetKeyword(ShaderGlobalKeywords.DEPTH_AS_INPUT_ATTACHMENT_MSAA, true);
+                                break;
+                            // MSAA disabled
+                            default:
+                                rgContext.cmd.SetKeyword(ShaderGlobalKeywords.DEPTH_AS_INPUT_ATTACHMENT, true);
+                                rgContext.cmd.SetKeyword(ShaderGlobalKeywords.DEPTH_AS_INPUT_ATTACHMENT_MSAA, false);
+                                break;
+                        }
+                    }
+                    else
+                    {
+                        // Ensure keywords are disabled
+                        rgContext.cmd.SetKeyword(ShaderGlobalKeywords.DEPTH_AS_INPUT_ATTACHMENT, false);
+                        rgContext.cmd.SetKeyword(ShaderGlobalKeywords.DEPTH_AS_INPUT_ATTACHMENT_MSAA, false);
+                    }
+
                     ExecutePass(data, rgContext.cmd, data.rendererListHdl, isYFlipped);
                 });
             }

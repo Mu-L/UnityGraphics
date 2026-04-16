@@ -1,4 +1,6 @@
 using Unity.Mathematics;
+using Unity.Profiling;
+using Unity.Profiling.LowLevel;
 using UnityEngine.PathTracing.Core;
 using UnityEngine.PathTracing.Integration;
 using UnityEngine.Rendering;
@@ -39,6 +41,47 @@ namespace UnityEngine.PathTracing.Lightmapping
 
     internal static class ExpansionHelpers
     {
+        /// <summary>
+        /// Clears the expanded output buffer to zero before the accumulation loop begins.
+        /// </summary>
+        static readonly ProfilerMarker k_ClearExpanded =
+            new ProfilerMarker(ProfilerCategory.Render, "Clear (Expanded)",
+                MarkerFlags.Default | MarkerFlags.SampleGPU);
+
+        /// <summary>
+        /// Traces rays from each lightmap texel into the scene to populate the GBuffer with
+        /// world-space hit data. This ray-tracing dispatch is a prerequisite for all
+        /// subsequent accumulation passes.
+        /// </summary>
+        static readonly ProfilerMarker k_UVSampling =
+            new ProfilerMarker(ProfilerCategory.Render, "UV Sampling",
+                MarkerFlags.Default | MarkerFlags.SampleGPU);
+
+        /// <summary>
+        /// Compacts the GBuffer by stream-compacting out invalid (missed-ray) texels so the
+        /// accumulation dispatch only processes valid hits.
+        /// </summary>
+        static readonly ProfilerMarker k_CompactGBuffer =
+            new ProfilerMarker(ProfilerCategory.Render, "Compact GBuffer",
+                MarkerFlags.Default | MarkerFlags.SampleGPU);
+
+        /// <summary>
+        /// Performs one stage of the parallel-reduction sum over expanded sample groups.
+        /// Called repeatedly in a loop where each invocation halves the remaining group count
+        /// until all samples within each texel are summed.
+        /// </summary>
+        static readonly ProfilerMarker k_BinarySum =
+            new ProfilerMarker(ProfilerCategory.Render, "Binary Sum",
+                MarkerFlags.Default | MarkerFlags.SampleGPU);
+
+        /// <summary>
+        /// Copies the accumulated, reduced texel values from the expanded buffer into the
+        /// final lightmap texture at the correct instance offset and chunk bounds.
+        /// </summary>
+        static readonly ProfilerMarker k_CopyToLightmap =
+            new ProfilerMarker(ProfilerCategory.Render, "Copy to Lightmap",
+                MarkerFlags.Default | MarkerFlags.SampleGPU);
+
         static internal int PopulateAccumulationIndirectDispatch(CommandBuffer cmd, ComputeShader populateShader, int populateKernel, uint expandedSampleWidth, GraphicsBuffer compactedGbufferLength, GraphicsBuffer accumulationDispatchBuffer)
         {
             cmd.SetComputeIntParam(populateShader, ExpansionShaderIDs.ExpandedTexelSampleWidth, (int)expandedSampleWidth);
@@ -67,9 +110,9 @@ namespace UnityEngine.PathTracing.Lightmapping
             // Clear the output buffers.
             cmd.SetComputeIntParam(clearExpandedOutput, ExpansionShaderIDs.Float4BufferLength, expandedOutput.count);
             cmd.SetComputeBufferParam(clearExpandedOutput, clearExpandedOutputKernel, ExpansionShaderIDs.Float4Buffer, expandedOutput);
-            cmd.BeginSample("Clear (Expanded)");
+            cmd.BeginSample(k_ClearExpanded);
             cmd.DispatchCompute(clearExpandedOutput, clearExpandedOutputKernel, clearDispatchBuffer, 0);
-            cmd.EndSample("Clear (Expanded)");
+            cmd.EndSample(k_ClearExpanded);
             //LightmapIntegrationHelpers.LogGraphicsBuffer(cmd, expandedOutput, "expandedOutput", LogBufferType.Float4);
             return 1;
         }
@@ -113,9 +156,9 @@ namespace UnityEngine.PathTracing.Lightmapping
 
             // dispatch the shader
             Debug.Assert(gBufferShader is HardwareRayTracingShader || GraphicsHelpers.DivUp((int)chunkSize, gBufferShader.GetThreadGroupSizes().x) < 65536, "Chunk size is too large for the shader to handle.");
-            cmd.BeginSample("UV Sampling");
+            cmd.BeginSample(k_UVSampling);
             gBufferShader.Dispatch(cmd, traceScratchBuffer, chunkSize * expandedSampleWidth, 1, 1);
-            cmd.EndSample("UV Sampling");
+            cmd.EndSample(k_UVSampling);
             //LightmapIntegrationHelpers.LogGraphicsBuffer(cmd, gBuffer, "gBuffer", LogBufferType.HitEntry);
         }
 
@@ -178,9 +221,9 @@ namespace UnityEngine.PathTracing.Lightmapping
             cmd.SetComputeTextureParam(compactGBuffer, compactGBufferKernel, UVFallbackBufferBuilderShaderIDs.UvFallback, uvFallbackBuffer.UVFallbackRT);
             cmd.SetComputeBufferParam(compactGBuffer, compactGBufferKernel, ExpansionShaderIDs.CompactedGBuffer, compactedTexelIndices);
             cmd.SetComputeBufferParam(compactGBuffer, compactGBufferKernel, ExpansionShaderIDs.CompactedGBufferLength, compactedGBufferLength);
-            cmd.BeginSample("Compact GBuffer");
+            cmd.BeginSample(k_CompactGBuffer);
             cmd.DispatchCompute(compactGBuffer, compactGBufferKernel, GraphicsHelpers.DivUp((int)chunkSize, gbuf_x), 1, 1);
-            cmd.EndSample("Compact GBuffer");
+            cmd.EndSample(k_CompactGBuffer);
 
             //System.Console.WriteLine($"compactGBufferThreadGroupSizeX: {gbuf_x}");
             //LightmapIntegrationHelpers.LogGraphicsBuffer(cmd, compactedGBufferLength, "compactedGBufferLength", LogBufferType.UInt);
@@ -213,9 +256,9 @@ namespace UnityEngine.PathTracing.Lightmapping
             while (groupSize < expandedSampleWidth)
             {
                 cmd.SetComputeIntParam(binaryGroupSumLeftShader, ExpansionShaderIDs.BinaryGroupSize, groupSize);
-                cmd.BeginSample("Binary Sum");
+                cmd.BeginSample(k_BinarySum);
                 cmd.DispatchCompute(binaryGroupSumLeftShader, binaryGroupSumLeftKernel, reduceDispatch, 0);
-                cmd.EndSample("Binary Sum");
+                cmd.EndSample(k_BinarySum);
                 groupSize *= 2;
                 dispatches++;
             }
@@ -248,9 +291,9 @@ namespace UnityEngine.PathTracing.Lightmapping
             cmd.SetComputeIntParam(copyToLightmap, ExpansionShaderIDs.ChunkOffsetY, (int)chunkOffset.y);
 
             copyToLightmap.GetKernelThreadGroupSizes(copyToLightmapKernel, out uint copyx, out uint _, out _);
-            cmd.BeginSample("Copy to Lightmap");
+            cmd.BeginSample(k_CopyToLightmap);
             cmd.DispatchCompute(copyToLightmap, copyToLightmapKernel, copyDispatch, 0);
-            cmd.EndSample("Copy to Lightmap");
+            cmd.EndSample(k_CopyToLightmap);
             return 1;
         }
     }

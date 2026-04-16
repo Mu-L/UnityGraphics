@@ -10,7 +10,7 @@ namespace UnityEngine.Rendering.RenderGraphModule
 
         internal NativePassCompiler CompileNativeRenderGraph(int graphHash)
         {
-            using (new ProfilingScope(m_RenderGraphContext.cmd, RenderGraphProfilerMarkers.CompileRenderGraph))
+            using (RenderGraphProfilerMarkers.CompileRenderGraph.Auto())
             {
                 if (nativeCompiler == null)
                     nativeCompiler = new NativePassCompiler(m_CompilationCache);

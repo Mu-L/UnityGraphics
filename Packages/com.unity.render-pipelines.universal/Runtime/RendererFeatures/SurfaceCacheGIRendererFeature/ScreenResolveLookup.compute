@@ -93,7 +93,7 @@ void Lookup(uint2 lowResPixelPos : SV_DispatchThreadID)
         const float3 jitteredWorldDir = mul(orthoBasis, localJitteredDirection);
 
         uint patchIdx = PatchUtil::FindPatchIndex(volumeParams, _CellPatchIndices, jitteredWorldPos, jitteredWorldDir);
-        if (patchIdx != PatchUtil::invalidPatchIndex && _PatchStatistics[patchIdx].rank == 0) // rank used to exclude patches that are not visible from the camera
+        if (patchIdx != PatchUtil::invalidPatchIndex && PatchUtil::GetRank(_PatchStatistics[patchIdx].counters) == 0) // rank used to exclude patches that are not visible from the camera
         {
             PatchUtil::WriteLastFrameAccess(_PatchStatistics, patchIdx, _FrameIdx);
             SphericalHarmonics::AddMut(irradianceSum, _PatchIrradiances[patchIdx]);

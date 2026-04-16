@@ -18,7 +18,7 @@ public class GraphicsTests
 
     [UnityTest, Category("GraphicsTest")]
     [SceneGraphicsTest("Assets/SampleScenes")]
-    [IgnoreGraphicsTest("ErrorMaterial", "Ignoring this specially designed test that fails to build the build", isInclusive: true, runtimePlatforms: new[] { RuntimePlatform.WindowsEditor, RuntimePlatform.OSXEditor, RuntimePlatform.LinuxEditor })]
+    [IgnoreGraphicsTest("ErrorMaterial", "Ignoring this specially designed test that fails to build the build", true, RuntimePlatform.WindowsEditor, RuntimePlatform.OSXEditor, RuntimePlatform.LinuxEditor)]
     public IEnumerator Run(SceneGraphicsTestCase testCase)
     {
         if (testCase.ScenePath.Contains("ErrorMaterial"))

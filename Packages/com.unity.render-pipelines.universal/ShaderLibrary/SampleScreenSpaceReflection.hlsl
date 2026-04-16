@@ -1,17 +1,17 @@
 #ifndef SAMPLE_SCREEN_SPACE_REFLECTION_INCLUDED
 #define SAMPLE_SCREEN_SPACE_REFLECTION_INCLUDED
 
-#include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Core.hlsl"
+#include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/ScreenSpaceReflectionCommon.hlsl"
 
 // SSR reflection color
 TEXTURE2D_X(_ScreenSpaceReflectionTexture);
 
-half4 SampleScreenSpaceReflection(float2 normalizedScreenSpaceUV, float perceptualRoughness)
+half4 SampleScreenSpaceReflection(float2 normalizedScreenSpaceUV, float3 positionWS, float perceptualRoughness)
 {
     float2 uv = UnityStereoTransformScreenSpaceTex(normalizedScreenSpaceUV);
 
     // Map roughness to mip level to get blur.
-    float mipLevel = PerceptualRoughnessToMipmapLevel(perceptualRoughness);
+    float mipLevel = GetSSRMipLevelFromPerceptualRoughness(positionWS, perceptualRoughness);
     float4 reflColor = SAMPLE_TEXTURE2D_X_LOD(_ScreenSpaceReflectionTexture, sampler_TrilinearClamp, uv, mipLevel);
 
     // Fade out reflections for pixels that have smoothness below our minimum.
@@ -24,11 +24,11 @@ half4 SampleScreenSpaceReflection(float2 normalizedScreenSpaceUV, float perceptu
     return reflColor;
 }
 
-half4 GetScreenSpaceReflection(float2 normalizedScreenSpaceUV, float perceptualRoughness)
+half4 GetScreenSpaceReflection(float2 normalizedScreenSpaceUV, float3 positionWS, float perceptualRoughness)
 {
 #if _SCREEN_SPACE_REFLECTION_KEYWORD_DECLARED
     if (_SCREEN_SPACE_REFLECTION)
-        return SampleScreenSpaceReflection(normalizedScreenSpaceUV, perceptualRoughness) * _ScreenSpaceReflectionParam.x;
+        return SampleScreenSpaceReflection(normalizedScreenSpaceUV, positionWS, perceptualRoughness) * _ScreenSpaceReflectionParam.x;
     else
 #endif
     return 0;

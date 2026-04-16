@@ -141,6 +141,16 @@ namespace UnityEngine.Rendering.RenderGraphModule
 
         static RenderGraphDebugSession s_CurrentDebugSession;
 
+#if UNITY_EDITOR
+        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterAssembliesLoaded)]
+        static void ResetStaticsOnLoad()
+        {
+            onRegisteredGraphsChanged = null;
+            onDebugDataUpdated = null;
+            s_CurrentDebugSession = null;
+        }
+#endif
+
         public static bool hasActiveDebugSession => s_CurrentDebugSession?.isActive ?? false;
 
         public static RenderGraphDebugSession currentDebugSession => s_CurrentDebugSession;
@@ -171,7 +181,7 @@ namespace UnityEngine.Rendering.RenderGraphModule
             }
         }
 
-        public static List<string> s_EmptyRegisteredGraphs = new();
+        public static readonly List<string> s_EmptyRegisteredGraphs = new();
         public static List<string> GetRegisteredGraphs()
         {
             if (s_CurrentDebugSession == null || s_CurrentDebugSession.debugDataContainer == null)
@@ -182,7 +192,7 @@ namespace UnityEngine.Rendering.RenderGraphModule
             return s_CurrentDebugSession.debugDataContainer.GetRenderGraphs();
         }
 
-        public static List<DebugExecutionItem> s_EmptyExecutions = new();
+        public static readonly List<DebugExecutionItem> s_EmptyExecutions = new();
         public static List<DebugExecutionItem> GetExecutions(string graphName)
         {
             if (s_CurrentDebugSession == null || s_CurrentDebugSession.debugDataContainer == null)

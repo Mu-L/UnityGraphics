@@ -791,5 +791,17 @@ namespace UnityEngine.PathTracing.Core
 
             return mesh;
         }
+
+#if UNITY_EDITOR
+        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+        static void ResetStaticsOnLoad()
+        {
+            if (_planeMesh)
+            {
+                Object.Destroy(_planeMesh);
+                _planeMesh = null;
+            }
+        }
+#endif
     }
 }

@@ -356,7 +356,6 @@ namespace UnityEngine.Rendering.Universal
 
             // Stored for runtime cache recreation when resolution or cascade count changes
             private readonly Rendering.SurfaceCacheResourceSet _coreResources;
-            private uint _defragCount;
 
             public SurfaceCachePass(
                 RayTracingContext rtContext,
@@ -371,7 +370,6 @@ namespace UnityEngine.Rendering.Universal
                 bool debugEnabled,
                 DebugViewMode_ debugViewMode,
                 bool debugShowSamplePosition,
-                uint defragCount,
                 SurfaceCacheVolumeParameterSet volParams)
             {
                 Debug.Assert(volParams.CascadeCount != 0);
@@ -403,9 +401,8 @@ namespace UnityEngine.Rendering.Universal
                 _debugShowSamplePosition = debugShowSamplePosition;
 
                 _coreResources = resourceSet;
-                _defragCount = defragCount;
 
-                _cache = new SurfaceCache(resourceSet, defragCount, volParams);
+                _cache = new SurfaceCache(resourceSet, volParams);
                 _sceneTracker = new SceneUpdatesTracker();
 
                 _world = new SurfaceCacheWorld();
@@ -521,7 +518,6 @@ namespace UnityEngine.Rendering.Universal
                 var stack = VolumeManager.instance.stack;
                 var volume = stack.GetComponent<SurfaceCacheGIVolumeOverride>();
                 var volumeParams = GetVolumeParametersOrDefaults(volume);
-                _defragCount = volumeParams.DefragCount;
 
                 // Detect structural changes that require buffer reallocation.
                 if (volumeParams.VolumeResolution != _cache.Volume.SpatialResolution || volumeParams.VolumeCascadeCount != _cache.Volume.CascadeCount)
@@ -537,13 +533,14 @@ namespace UnityEngine.Rendering.Universal
                         Size = volumeParams.VolumeSize,
                         CascadeCount = newCascadeCount
                     };
-                    _cache = new SurfaceCache(_coreResources, _defragCount, newVolParams);
+                    _cache = new SurfaceCache(_coreResources, newVolParams);
                     _frameIdx = 0;
                 }
 
                 _cache.SetEstimationParams(volumeParams.EstimationParams);
                 _cache.SetPatchFilteringParams(volumeParams.PatchFilteringParams);
-                _cache.UpdateVolumeSize(volumeParams.VolumeSize);
+                _cache.SetVolumeSize(volumeParams.VolumeSize);
+                _cache.SetDefragCount(volumeParams.DefragCount);
 
                 bool useMotionVectorPatchSeeding = UseMotionVectorPatchSeeding(cameraData.cameraType);
 
@@ -1037,7 +1034,6 @@ namespace UnityEngine.Rendering.Universal
                 _parameterSet.DebugEnabled,
                 _parameterSet.DebugViewMode,
                 _parameterSet.DebugShowSamplePosition,
-                defragCount: DEFAULT_DEFRAG_COUNT,
                 volParams);
 
             _pass.renderPassEvent = RenderPassEvent.AfterRenderingPrePasses + 1;

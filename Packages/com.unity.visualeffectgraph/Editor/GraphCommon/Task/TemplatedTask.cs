@@ -177,8 +177,7 @@ namespace Unity.GraphCommon.LowLevel.Editor
         /// <summary>
         /// List of all the expressions used by the task.
         /// </summary>
-        public List<(IDataKey bindingKey, IExpression expression)> Expressions;
-
+        public List<IDataKey> ExpressionBindingKeys;
     }
 
     /// <summary>
@@ -189,7 +188,7 @@ namespace Unity.GraphCommon.LowLevel.Editor
         readonly Dictionary<IDataKey, BindingUsagePaths> m_BindingToUsage = new();
         readonly Dictionary<IDataKey, BindingRelativePath> m_AttributeKeyMappings;
 
-        readonly Dictionary<IDataKey, IExpression> m_Expressions = new();
+        readonly List<IDataKey> m_ExpressionBindingKeys = new();
 
         /// <summary>
         /// Gets the name of the template associated with the task.
@@ -215,9 +214,6 @@ namespace Unity.GraphCommon.LowLevel.Editor
         /// Gets the mappings from attribute keys to their corresponding binding relative paths.
         /// </summary>
         public IEnumerable<KeyValuePair<IDataKey, BindingRelativePath>> AttributeKeyMappings => m_AttributeKeyMappings;
-
-        /// <inheritdoc />
-        public IEnumerable<KeyValuePair<IDataKey, IExpression>> Expressions => m_Expressions;
 
         //TODO: These two keys are legacy and should be moved somewhere else.
         /// <summary>
@@ -251,9 +247,9 @@ namespace Unity.GraphCommon.LowLevel.Editor
 
             m_AttributeKeyMappings = args.AttributeKeyMappings != null ? new(args.AttributeKeyMappings) : new();
 
-            if (args.Expressions != null)
+            if (args.ExpressionBindingKeys != null)
             {
-                AddExpressions(args.Expressions);
+                AddExpressionsBindingKeys(args.ExpressionBindingKeys);
             }
 
             if (args.Bindings != null)
@@ -316,10 +312,9 @@ namespace Unity.GraphCommon.LowLevel.Editor
                         }
                     }
                 }
-                AddExpressions(block.Expressions);
+                AddExpressionsBindingKeys(block.ExpressionBindingKeys);
             }
-
-            foreach (var (bindingKey, _) in Expressions)
+            foreach (var bindingKey in m_ExpressionBindingKeys)
             {
                 var bindingUsagePath = new BindingUsagePaths();
                 bindingUsagePath.Read.Add(DataPath.Empty);
@@ -362,11 +357,11 @@ namespace Unity.GraphCommon.LowLevel.Editor
             return true;
         }
 
-        void AddExpressions(List<(IDataKey, IExpression)> expressions)
+        void AddExpressionsBindingKeys(List<IDataKey> expressionBindingKeys)
         {
-            foreach (var (bindingKey, expression) in expressions)
+            foreach (var bindingKey in expressionBindingKeys)
             {
-                m_Expressions.TryAdd(bindingKey, expression); // TODO: What to do on name collision
+                m_ExpressionBindingKeys.Add(bindingKey);
             }
         }
     }

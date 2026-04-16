@@ -128,7 +128,7 @@ namespace UnityEngine.Rendering.Universal
 
         public void Dispose()
         {
-            m_DecalEntityManager.Dispose();
+            m_DecalEntityManager?.Dispose();
             m_DecalEntityManager = null;
             m_ReferenceCounter = 0;
 
@@ -182,7 +182,7 @@ namespace UnityEngine.Rendering.Universal
     [Icon("Packages/com.unity.render-pipelines.core/Editor/Icons/Processed/DecalProjector Icon.asset")]
     public partial class DecalRendererFeature : ScriptableRendererFeature
     {
-        private static SharedDecalEntityManager sharedDecalEntityManager { get; } = new SharedDecalEntityManager();
+        private static SharedDecalEntityManager sharedDecalEntityManager = new SharedDecalEntityManager();
 
         [SerializeField]
         private DecalSettings m_Settings = new DecalSettings();
@@ -557,5 +557,14 @@ namespace UnityEngine.Rendering.Universal
             }
 #endif
         }
+
+#if UNITY_EDITOR
+        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+        static void ResetStaticsOnLoad()
+        {
+            sharedDecalEntityManager?.Dispose();
+            sharedDecalEntityManager = new SharedDecalEntityManager();
+        }
+#endif
     }
 }

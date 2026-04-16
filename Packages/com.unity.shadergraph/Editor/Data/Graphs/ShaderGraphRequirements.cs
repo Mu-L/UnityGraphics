@@ -18,6 +18,7 @@ namespace UnityEditor.ShaderGraph.Internal
         [SerializeField] bool m_RequiresScreenPosition;
         [SerializeField] bool m_RequiresNDCPosition;
         [SerializeField] bool m_RequiresPixelPosition;
+        [SerializeField] bool m_RequiresClipPosition;
         [SerializeField] bool m_RequiresVertexColor;
         [SerializeField] bool m_RequiresFaceSign;
         [SerializeField] List<UVChannel> m_RequiresMeshUVs;
@@ -101,6 +102,15 @@ namespace UnityEditor.ShaderGraph.Internal
         {
             get { return m_RequiresPixelPosition; }
             internal set { m_RequiresPixelPosition = value; }
+        }
+
+        /// <summary>
+        /// Indicates this shader graph requires clip space position.
+        /// </summary>
+        public bool requiresClipPosition
+        {
+            get { return m_RequiresClipPosition; }
+            internal set { m_RequiresClipPosition = value; }
         }
 
         public bool requiresVertexColor
@@ -190,6 +200,7 @@ namespace UnityEditor.ShaderGraph.Internal
             newReqs.m_RequiresScreenPosition = other.m_RequiresScreenPosition | m_RequiresScreenPosition;
             newReqs.m_RequiresNDCPosition = other.m_RequiresNDCPosition | m_RequiresNDCPosition;
             newReqs.m_RequiresPixelPosition = other.m_RequiresPixelPosition | m_RequiresPixelPosition;
+            newReqs.m_RequiresClipPosition = other.m_RequiresClipPosition | m_RequiresClipPosition;
             newReqs.m_RequiresVertexColor = other.m_RequiresVertexColor | m_RequiresVertexColor;
             newReqs.m_RequiresFaceSign = other.m_RequiresFaceSign | m_RequiresFaceSign;
             newReqs.m_RequiresDepthTexture = other.m_RequiresDepthTexture | m_RequiresDepthTexture;
@@ -286,6 +297,9 @@ namespace UnityEditor.ShaderGraph.Internal
             if (!reqs.m_RequiresInstanceID && node is IMayRequireInstanceID r)
                 reqs.m_RequiresInstanceID = r.RequiresInstanceID(stageCapability);
 
+            if (!reqs.m_RequiresClipPosition && node is IMayRequireClipPosition s)
+                reqs.m_RequiresClipPosition = s.RequiresClipPosition(stageCapability);
+
             if (!reqs.m_RequiresUITK && node is IMayRequireUITK w)
                 reqs.m_RequiresUITK = w.RequiresUITK(stageCapability);
         }
@@ -379,6 +393,9 @@ namespace UnityEditor.ShaderGraph.Internal
 
                 if (!reqs.m_RequiresInstanceID && node is IMayRequireInstanceID r)
                     reqs.m_RequiresInstanceID = r.RequiresInstanceID(stageCapability);
+
+                if (!reqs.m_RequiresClipPosition && node is IMayRequireClipPosition s)
+                    reqs.m_RequiresClipPosition = s.RequiresClipPosition(stageCapability);
 
                 if (!reqs.m_RequiresUITK && node is IMayRequireUITK w)
                     reqs.m_RequiresUITK = w.RequiresUITK(stageCapability);

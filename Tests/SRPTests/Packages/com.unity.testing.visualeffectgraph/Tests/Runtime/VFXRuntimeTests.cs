@@ -24,7 +24,7 @@ namespace UnityEngine.VFX.Test
         AssetBundle m_AssetBundle;
 
         [OneTimeSetUp]
-        public void SetUp()
+        public void OneTimeSetUp()
         {
             m_AssetBundle = AssetBundleHelper.Load("scene_in_assetbundle");
         }
@@ -779,8 +779,131 @@ namespace UnityEngine.VFX.Test
                 yield return null;
         }
 
-        [OneTimeTearDown]
+        int m_PreviousCaptureFrameRate;
+        float m_PreviousFixedTimeStep;
+        float m_PreviousMaxDeltaTime;
+        [SetUp]
+        public void Init()
+        {
+            m_PreviousCaptureFrameRate = Time.captureFramerate;
+            m_PreviousFixedTimeStep = VFXManager.fixedTimeStep;
+            m_PreviousMaxDeltaTime = VFXManager.maxDeltaTime;
+        }
+
+        static string[] kVerify_AliveParticleCount_ReadbackCase = new []{"01_Simple", "02_GPUEvent"};
+
+        enum TrendState
+        {
+            Rising,
+            Plateau,
+            Falling
+        }
+        static bool IsUpPlateauDown(List<(int frame, int count)> curve, int eps = 8)
+        {
+            var state = TrendState.Rising;
+            for (var i = 1; i < curve.Count; i++)
+            {
+                var diff = curve[i].count - curve[i - 1].count;
+                if (diff > eps)
+                {
+                    if (state != TrendState.Rising)
+                        return false;
+                }
+                else if (diff < -eps)
+                {
+                    state = TrendState.Falling;
+                }
+                else
+                {
+                    if (state == TrendState.Rising)
+                        state = TrendState.Plateau;
+                }
+            }
+            return state == TrendState.Falling;
+        }
+
+        [UnityTest, Description("Cover internal behavior linked to readback of alive particle count")]
+        public IEnumerator Verify_AliveParticleCount_Readback([ValueSource(nameof(kVerify_AliveParticleCount_ReadbackCase))] string currentName)
+        {
+            //Prepare
+            SceneManagement.SceneManager.LoadScene("Packages/com.unity.testing.visualeffectgraph/Scenes/Readback_ParticleCount.unity");
+            yield return null;
+
+            var baseName = "Cover_Readback_ParticleCount_";
+            var gameObject = GameObject.Find(baseName + currentName);
+            Assert.IsNotNull(gameObject);
+            for (int i = 0; i < SceneManagement.SceneManager.sceneCount; i++)
+            {
+                var scene = SceneManagement.SceneManager.GetSceneAt(i);
+                var roots = scene.GetRootGameObjects();
+                foreach (var rootGameObject in roots)
+                {
+                    var currentVfx = rootGameObject.GetComponent<VisualEffect>();
+                    if (currentVfx != null)
+                        rootGameObject.SetActive(false);
+                } 
+            }
+
+            int captureFrameRate = 120;
+            float period = 1.0f / captureFrameRate;
+            Time.captureFramerate = captureFrameRate;
+            VFXManager.fixedTimeStep = period;
+            VFXManager.maxDeltaTime = period;
+            yield return null;
+
+            var vfx = gameObject.GetComponent<VisualEffect>();
+            Assert.IsNotNull(vfx);
+            Assert.IsFalse(vfx.aliveParticleCount > 0);
+            Assert.IsFalse(vfx.HasAnySystemAwake());
+            gameObject.SetActive(true);
+
+            //Wait for the first particle spawned before starting the recording
+            int maxFrame = 64;
+            while (maxFrame-- > 0 && vfx.aliveParticleCount <= 0)
+            {
+                yield return null;
+            }
+            Assert.IsTrue(maxFrame > 0);
+            Assert.IsTrue(vfx.aliveParticleCount > 0);
+            Assert.IsTrue(vfx.HasAnySystemAwake());
+
+            maxFrame = captureFrameRate * 6;
+            int currentFrame = 0;
+            var readbackCount = new List<(int frame,int count)>(maxFrame);
+            readbackCount.Add((0, vfx.aliveParticleCount));
+            do
+            {
+                yield return null;
+                if (readbackCount[^1].count != vfx.aliveParticleCount)
+                    readbackCount.Add((currentFrame, vfx.aliveParticleCount));
+            } while (++currentFrame < maxFrame && vfx.aliveParticleCount != 0);
+
+            //Every test should produce an Uluru shaped signal
+            bool valid = IsUpPlateauDown(readbackCount);
+            Assert.IsTrue(valid, $"Unexpected particle count signal: {string.Join(", ", readbackCount)}");
+
+            Assert.IsTrue(currentFrame < maxFrame);
+            Assert.IsTrue(vfx.aliveParticleCount == 0);
+
+            //Wait for all system sleeping
+            maxFrame = 128;
+            while (maxFrame-- > 0 && vfx.HasAnySystemAwake())
+                yield return null;
+            Assert.IsTrue(maxFrame > 0);
+            Assert.IsFalse(vfx.aliveParticleCount > 0);
+            Assert.IsFalse(vfx.HasAnySystemAwake());
+        }
+
+        [TearDown]
         public void TearDown()
+        {
+            Time.captureFramerate = m_PreviousCaptureFrameRate;
+            VFXManager.fixedTimeStep = m_PreviousFixedTimeStep;
+            VFXManager.maxDeltaTime = m_PreviousMaxDeltaTime;
+        }
+
+        [OneTimeTearDown]
+        public void OneTimeTearDown()
         {
             AssetBundleHelper.Unload(m_AssetBundle);
         }

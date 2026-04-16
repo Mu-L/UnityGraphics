@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using System.Text;
+using UnityEditor.VFX;
 using UnityEngine;
 
 namespace Unity.GraphCommon.LowLevel.Editor
@@ -270,12 +271,11 @@ namespace Unity.GraphCommon.LowLevel.Editor
                 foreach (var taskNode in context.graph.TaskNodes)
                 {
                     var taskLabel = GraphVisualizerPassesHelpers.TaskLabel(taskNode);
-
                     using (new GraphVisualizer.ClusterScope(taskNode.Id.Index, taskLabel, sb))
                     {
                         foreach (var dataNode in taskNode.DataNodes)
                         {
-                            var dataLabel = $"{dataNode.Id} (R:";
+                            var dataLabel = $"{dataNode.Id}\n (R:";
                             foreach (var dataView in dataNode.ReadDataViews)
                             {
                                 dataLabel += $"{dataView.Id} ";
@@ -286,6 +286,14 @@ namespace Unity.GraphCommon.LowLevel.Editor
                                 dataLabel += $"{dataView.Id} ";
                             }
                             dataLabel += ")";
+                            string bindingInfo = "";
+                            foreach (var binding in dataNode.DataBindings)
+                            {
+                                bindingInfo += $"{binding.BindingDataKey}, ";
+                            }
+
+
+                            dataLabel += $"\n[{bindingInfo[..^2]}]";
                             GraphVisualizer.AddNode(sb, dataNode.Id.Index, dataLabel);
                         }
                     }
@@ -310,15 +318,17 @@ namespace Unity.GraphCommon.LowLevel.Editor
     {
         public static string TaskLabel(TaskNode taskNode)
         {
-            string taskName;
-            if(taskNode.Task is Task task)
-                taskName = task.DebugName;
-            else if (taskNode.Task is ExpressionTask expressionTask)
-                taskName = $"{expressionTask.GetType().Name}-{expressionTask.Expression.ResultType.Name}";
-            else if (taskNode.Task is TemplatedTask templatedTask)
-                taskName = $"TemplatedTask-{templatedTask.TemplateName}";
-            else
-                taskName = taskNode.Task.GetType().Name;
+            string taskName = taskNode.Task switch
+            {
+                LegacyExpressionTask legacyExpressionTask =>
+                    $"{legacyExpressionTask.Expression.GetType().Name}",
+                Task task => task.DebugName,
+                ExpressionTask expressionTask =>
+                    $"{expressionTask.GetType().Name}-{expressionTask.Expression.ResultType.Name}",
+                TemplatedTask templatedTask => $"TemplatedTask-{templatedTask.TemplateName}",
+                _ => taskNode.Task.GetType().Name,
+
+            };
             var taskLabel =
                 $"{taskName}({taskNode.Id})";
             return taskLabel;

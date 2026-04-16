@@ -16,10 +16,10 @@ namespace UnityEditor.VFX
             }
 
             m_Operation = VFXExpressionOperation.ExtractComponent;
-            m_additionnalOperands = new int[] { iChannel, TypeToSize(parent.valueType) };
+            m_additionalOperands = new int[] { iChannel, TypeToSize(parent.valueType) };
         }
 
-        private int channel { get { return m_additionnalOperands[0]; } }
+        private int channel { get { return m_additionalOperands[0]; } }
 
         static private float GetChannel(Vector2 input, int iChannel)
         {

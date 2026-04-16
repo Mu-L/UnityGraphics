@@ -1,4 +1,6 @@
+using System.Collections.Generic;
 using Unity.GraphCommon.LowLevel.Editor;
+using UnityEngine;
 using UnityEngine.VFX;
 
 namespace UnityEditor.VFX
@@ -6,6 +8,7 @@ namespace UnityEditor.VFX
     class VfxGraphCompiler
     {
         private Compiler<VfxGraphLegacyCompilationOutput> m_GraphCompiler;
+        private VfxIntermediateGraphBuilder m_GraphBuilder = new();
 
         private DataDescriptionWriterRegistry m_DataWriter;
 
@@ -20,7 +23,6 @@ namespace UnityEditor.VFX
             m_DataWriter.Register(new SpawnerDataDescriptionWriter());
 
             m_GraphCompiler = new(new VfxGraphLegacyOutputPass(),
-                new VfxGraphLegacyTemplatedTaskPass(),
                 new AttributeLayoutPass(),
                 new VfxGraphLegacyParticleSystemPass(),
                 new StructuredDataLayoutPass(),
@@ -29,7 +31,13 @@ namespace UnityEditor.VFX
 
         public VFXGraphCompiledData.VFXCompileOutput Compile(VFXGraph graph, VFXCompilationMode compilationMode, bool generateShadersDebugSymbols)
         {
-            var intermediateGraph = BuildGraph(graph);
+            // One of supported SRPs is not current SRP
+            if (VFXLibrary.currentSRPBinder == null)
+            {
+                return new() { success = false };
+            }
+
+            var intermediateGraph = m_GraphBuilder.BuildGraph(graph);
 
             // TODO: setup compilation mode and shader debug symbols
             var compilationResult = m_GraphCompiler.Compile(intermediateGraph);
@@ -42,11 +50,6 @@ namespace UnityEditor.VFX
             };
 
             return output;
-        }
-
-        IReadOnlyGraph BuildGraph(VFXGraph graph)
-        {
-            return new TaskGraph();
         }
     }
 }

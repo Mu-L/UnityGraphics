@@ -155,6 +155,8 @@ namespace UnityEngine.Rendering
 
         public static readonly string k_EnableCheckerboard = "ENABLE_CHECKERBOARD";
 
+        public const int k_MinimumResolutionGaussian = 8;
+
         public MipGenerator(bool preferCompute = true)
         {
             if (!GraphicsSettings.TryGetRenderPipelineSettings<MipGenRenderPipelineRuntimeResources>(out var runtimeShaders))
@@ -347,7 +349,7 @@ namespace UnityEngine.Rendering
 
             // Note: smaller mips are excluded as we don't need them and the gaussian compute works
             // on 8x8 blocks
-            while (srcMipWidth >= 8 || srcMipHeight >= 8)
+            while (srcMipWidth >= k_MinimumResolutionGaussian || srcMipHeight >= k_MinimumResolutionGaussian)
             {
                 int dstMipWidth = Mathf.Max(1, srcMipWidth >> 1);
                 int dstMipHeight = Mathf.Max(1, srcMipHeight >> 1);

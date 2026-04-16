@@ -734,11 +734,11 @@ namespace UnityEditor.PathTracing.LightBakerBridge
             // TODO: We need to change the naming of the entries in the enum see: https://jira.unity3d.com/browse/GFXFEAT-728
             switch (tilingMode)
             {
-                case TilingMode.None: bufferSize = 1048576; break;                     // UI: Highest Performance
-                case TilingMode.Quarter: bufferSize = 524288; break;                   // UI: High Performance
-                case TilingMode.Sixteenth: bufferSize = 262144; break;                 // UI: Automatic     (but it is not automatic)
-                case TilingMode.Sixtyfourth: bufferSize = 131072; break;               // UI: Low Memory Usage
-                case TilingMode.TwoHundredFiftySixth: bufferSize = 65536; break;       // UI: Lowest Memory Usage
+                case TilingMode.None: bufferSize = 2097152; break;                     // UI: Highest Performance
+                case TilingMode.Quarter: bufferSize = 1048576; break;                  // UI: High Performance
+                case TilingMode.Sixteenth: bufferSize = 524288; break;                 // UI: Automatic
+                case TilingMode.Sixtyfourth: bufferSize = 262144; break;               // UI: Low Memory Usage
+                case TilingMode.TwoHundredFiftySixth: bufferSize = 131072; break;      // UI: Lowest Memory Usage
                 default: Debug.Assert(false, "Unknown tiling mode."); break;
             }
             return math.max(bufferSize, kMinBufferSize);

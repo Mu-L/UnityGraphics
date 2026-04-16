@@ -15,17 +15,17 @@ namespace UnityEngine.PathTracing.Lightmapping
     {
         private static class ShaderProperties
         {
-            public static int TextureSize = Shader.PropertyToID("_TextureSize");
-            public static int PerPixelChart = Shader.PropertyToID("_PerPixelChart");
-            public static int InstanceIndex = Shader.PropertyToID("_InstanceIndex");
-            public static int EdgeCount = Shader.PropertyToID("_EdgeCount");
-            public static int TriangleEdges = Shader.PropertyToID("_TriangleEdges");
-            public static int ChartIndices = Shader.PropertyToID("_ChartIndices");
-            public static int OverlapPixels = Shader.PropertyToID("_OverlapPixels");
-            public static int OverlapInstances = Shader.PropertyToID("_OverlapInstances");
-            public static int TileX = Shader.PropertyToID("_TileX");
-            public static int TileY = Shader.PropertyToID("_TileY");
-            public static int TileSize = Shader.PropertyToID("_TileSize");
+            public static readonly int TextureSize = Shader.PropertyToID("_TextureSize");
+            public static readonly int PerPixelChart = Shader.PropertyToID("_PerPixelChart");
+            public static readonly int InstanceIndex = Shader.PropertyToID("_InstanceIndex");
+            public static readonly int EdgeCount = Shader.PropertyToID("_EdgeCount");
+            public static readonly int TriangleEdges = Shader.PropertyToID("_TriangleEdges");
+            public static readonly int ChartIndices = Shader.PropertyToID("_ChartIndices");
+            public static readonly int OverlapPixels = Shader.PropertyToID("_OverlapPixels");
+            public static readonly int OverlapInstances = Shader.PropertyToID("_OverlapInstances");
+            public static readonly int TileX = Shader.PropertyToID("_TileX");
+            public static readonly int TileY = Shader.PropertyToID("_TileY");
+            public static readonly int TileSize = Shader.PropertyToID("_TileSize");
         }
 
         private int _lightmapResolution;

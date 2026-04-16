@@ -1,5 +1,7 @@
 using System;
 using Unity.Mathematics;
+using Unity.Profiling;
+using Unity.Profiling.LowLevel;
 using UnityEngine.PathTracing.Core;
 using UnityEngine.PathTracing.Integration;
 using UnityEngine.Rendering;
@@ -9,6 +11,14 @@ namespace UnityEngine.PathTracing.Lightmapping
 {
     internal static class BakeLightmapDriver
     {
+        /// <summary>
+        /// Profiles a single per-instance lightmap accumulation step, spanning GBuffer sampling,
+        /// path-tracing dispatch, and all output integrators (direct, indirect, AO, validity, shadow mask).
+        /// </summary>
+        static readonly ProfilerMarker k_AccumulateLightmapInstance =
+            new ProfilerMarker(ProfilerCategory.Render, "AccumulateLightmapInstance",
+                MarkerFlags.Default | MarkerFlags.SampleGPU);
+
         public class LightmapBakeState
         {
             public uint SampleIndex;
@@ -73,7 +83,7 @@ namespace UnityEngine.PathTracing.Lightmapping
             public uint BounceCount = 4;
             public float AOMaxDistance = 1.0f;
             public float PushOff = 0.00001f;
-            public UInt64 ExpandedBufferSize = 262144;
+            public UInt64 ExpandedBufferSize = 524288;
 
             public LightSamplingMode DirectLightSamplingMode;
             public uint DirectRISCandidateCount;
@@ -270,7 +280,7 @@ namespace UnityEngine.PathTracing.Lightmapping
                 }
 
                 // accumulate the lightmap texel
-                cmd.BeginSample("AccumulateLightmapInstance");
+                cmd.BeginSample(k_AccumulateLightmapInstance);
 
                 switch (integratedOutputType)
                 {
@@ -430,7 +440,7 @@ namespace UnityEngine.PathTracing.Lightmapping
                         break;
                     }
                 }
-                cmd.EndSample("AccumulateLightmapInstance");
+                cmd.EndSample(k_AccumulateLightmapInstance);
 
                 //LightmapIntegrationHelpers.LogGraphicsBuffer(cmd, lightmappingContext.ExpandedOutput, "expandedOutput", LightmapIntegrationHelpers.LogBufferType.Float4);
 

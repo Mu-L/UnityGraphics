@@ -5,7 +5,7 @@ namespace UnityEngine.Rendering.HighDefinition
     /// </summary>
     struct ReflectionSystemParameters
     {
-        public static ReflectionSystemParameters Default = new ReflectionSystemParameters
+        public static readonly ReflectionSystemParameters Default = new ReflectionSystemParameters
         {
             maxPlanarReflectionProbePerCamera = 128,
             maxActivePlanarReflectionProbe = 512,

@@ -8,7 +8,15 @@ namespace UnityEngine.Rendering
     /// </summary>
     public class ConstantBuffer
     {
-        static List<ConstantBufferBase> m_RegisteredConstantBuffers = new List<ConstantBufferBase>();
+        static readonly List<ConstantBufferBase> m_RegisteredConstantBuffers = new List<ConstantBufferBase>();
+
+#if UNITY_EDITOR
+        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterAssembliesLoaded)]
+        static void ResetStaticsOnLoad()
+        {
+            ReleaseAll();
+        }
+#endif
 
         /// <summary>
         /// Update the GPU data of the constant buffer and bind it globally via a command buffer.

@@ -8,6 +8,8 @@ namespace Unity.GraphCommon.LowLevel.Editor
 
         public void WriteDescription(ShaderWriter shaderWriter, DataView dataView, StructuredData structuredData, string name, CompilationContext context)
         {
+            shaderWriter.IncludeFile("Packages/com.unity.visualeffectgraph/Shaders/Temp/Data/ByteAddressBuffer.hlsl");
+
             shaderWriter.WriteLine($"struct {name}");
             shaderWriter.OpenBlock();
             shaderWriter.WriteLine("VFXByteAddressBuffer buffer;");

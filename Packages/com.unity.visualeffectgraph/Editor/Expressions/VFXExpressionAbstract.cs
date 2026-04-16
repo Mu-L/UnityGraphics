@@ -411,7 +411,7 @@ namespace UnityEditor.VFX
         // Get the operands for the runtime evaluation
         public Operands GetOperands(VFXExpressionGraph graph)
         {
-            var addOperands = additionnalOperands;
+            var addOperands = additionalOperands;
             if (parents.Length + addOperands.Length > 4)
                 throw new Exception("Too many parameters for expression : " + this);
 
@@ -470,8 +470,8 @@ namespace UnityEditor.VFX
             if (GetHashCode() != other.GetHashCode())
                 return false;
 
-            var operands = additionnalOperands;
-            var otherOperands = other.additionnalOperands;
+            var operands = additionalOperands;
+            var otherOperands = other.additionalOperands;
 
             if (operands.Length != otherOperands.Length)
                 return false;
@@ -516,7 +516,7 @@ namespace UnityEditor.VFX
             for (int i = 0; i < parents.Length; ++i)
                 hash = (hash * 397) ^ parents[i].GetHashCode(); // 397 taken from resharper
 
-            var operands = additionnalOperands;
+            var operands = additionalOperands;
             for (int i = 0; i < operands.Length; ++i)
                 hash = (hash * 397) ^ operands[i].GetHashCode();
 
@@ -529,7 +529,8 @@ namespace UnityEditor.VFX
 
         private static readonly int[] k_EmptyOperands = Enumerable.Empty<int>().ToArray();
 
-        protected virtual int[] additionnalOperands { get { return k_EmptyOperands; } }
+        internal virtual int[] additionalOperands { get { return k_EmptyOperands; } }
+
         public virtual T Get<T>()
         {
             var value = (this as VFXValue<T>);

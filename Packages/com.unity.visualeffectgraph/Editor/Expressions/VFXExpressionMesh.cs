@@ -43,7 +43,7 @@ namespace UnityEditor.VFX
         private VFXSkinnedMeshFrame m_Frame;
         public VFXSkinnedMeshFrame frame => m_Frame;
 
-        protected sealed override int[] additionnalOperands { get { return new[] { (int)m_Frame }; } }
+        internal sealed override int[] additionalOperands { get { return new[] { (int)m_Frame }; } }
 
         protected override VFXExpression Reduce(VFXExpression[] reducedParents)
         {
@@ -299,7 +299,7 @@ namespace UnityEditor.VFX
         private VFXSkinnedMeshFrame m_Frame;
         VFXSkinnedMeshFrame IVFXExpressionSampleSkinnedMesh.frame => m_Frame;
 
-        protected override int[] additionnalOperands => new[] { (int)m_Frame }; //Not used but needed for default comparison of VFXExpressionSampleSkinnedMeshRendererFloat3
+        internal override int[] additionalOperands => new[] { (int)m_Frame }; //Not used but needed for default comparison of VFXExpressionSampleSkinnedMeshRendererFloat3
 
         public sealed override VFXExpressionOperation operation => VFXExpressionOperation.None;
 
@@ -365,7 +365,7 @@ namespace UnityEditor.VFX
         private VFXSkinnedMeshFrame m_Frame;
         VFXSkinnedMeshFrame IVFXExpressionSampleSkinnedMesh.frame => m_Frame;
 
-        protected override int[] additionnalOperands => new[] { (int)m_Frame }; //Not used but needed for default comparison of VFXExpressionSampleSkinnedMeshRendererFloat4
+        internal override int[] additionalOperands => new[] { (int)m_Frame }; //Not used but needed for default comparison of VFXExpressionSampleSkinnedMeshRendererFloat4
 
         sealed public override VFXExpressionOperation operation { get { return VFXExpressionOperation.None; } }
 
@@ -556,7 +556,7 @@ namespace UnityEditor.VFX
         private VFXSkinnedTransform m_Transform;
         private VFXSkinnedMeshFrame m_Frame;
 
-        protected sealed override int[] additionnalOperands { get { return new[] { (int)m_Frame, (int)m_Transform }; } }
+        internal sealed override int[] additionalOperands { get { return new[] { (int)m_Frame, (int)m_Transform }; } }
 
         public sealed override VFXExpressionOperation operation { get { return VFXExpressionOperation.RootBoneTransformFromSkinnedMeshRenderer; } }
 

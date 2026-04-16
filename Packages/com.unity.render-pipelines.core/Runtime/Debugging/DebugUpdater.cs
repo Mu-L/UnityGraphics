@@ -71,6 +71,14 @@ namespace UnityEngine.Rendering
 #if !USE_INPUT_SYSTEM
         static DebugUpdater s_Instance = null;
 
+#if UNITY_EDITOR
+        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterAssembliesLoaded)]
+        static void ResetStaticsOnLoad()
+        {
+            s_Instance = null;
+        }
+#endif
+
         void Update()
         {
             DebugManager debugManager = DebugManager.instance;

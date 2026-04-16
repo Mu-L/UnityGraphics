@@ -20,14 +20,14 @@ namespace UnityEditor.VFX
         {
             var layoutCompilationData = context.data.Get<AttributeSetLayoutCompilationData>();
 
-            shaderWriter.IncludeFile("Packages/com.unity.vfxgraph/Shaders/Data/ParticleSystemData.hlsl");
+            shaderWriter.IncludeFile("Packages/com.unity.visualeffectgraph/Shaders/Temp/Data/ParticleSystemData.hlsl");
 
             var attributeData = dataView.FindSubData(ParticleData.AttributeDataKey, out var attributeDataView) ? attributeDataView.DataDescription as AttributeData : null;
             var deadlist = dataView.FindSubData(ParticleData.DeadlistKey, out var deadlistDataView) ? deadlistDataView.DataDescription : null;
 
             if (deadlist != null)
             {
-                shaderWriter.IncludeFile("Packages/com.unity.vfxgraph/Shaders/Data/DeadListData.hlsl");
+                shaderWriter.IncludeFile("Packages/com.unity.visualeffectgraph/Shaders/Temp/Data/DeadListData.hlsl");
             }
 
             if (attributeData != null)

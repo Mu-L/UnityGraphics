@@ -6,7 +6,8 @@ namespace UnityEditor.ShaderGraph
         Raw,            // screenpos.xyzw ==> scales on distance, requires divide by w
         Center,         // Default, but remapped to [-1, 1]
         Tiled,          // frac(Center)
-        Pixel           // Default * _ScreenParams.xy;   [0 .. width-1, 0.. height-1]
+        Pixel,          // Default * _ScreenParams.xy;   [0 .. width-1, 0.. height-1]
+        Clip            // positionCS.xy
     };
 
     static class ScreenSpaceTypeExtensions
@@ -23,6 +24,8 @@ namespace UnityEditor.ShaderGraph
                     return string.Format("frac($precision4((IN.{0}.x * 2 - 1) * _ScreenParams.x / _ScreenParams.y, IN.{0}.y * 2 - 1, 0, 0))", ShaderGeneratorNames.NDCPosition);
                 case ScreenSpaceType.Pixel:
                     return string.Format("$precision4(IN.{0}.xy, 0, 0)", ShaderGeneratorNames.PixelPosition);
+                case ScreenSpaceType.Clip:
+                    return string.Format("$precision4(IN.{0}.xy, 0, 0)", ShaderGeneratorNames.ClipPosition);
                 default: // ScreenSpaceType.Default (i.e. Normalized Device Coordinates)
                     return string.Format("$precision4(IN.{0}.xy, 0, 0)", ShaderGeneratorNames.NDCPosition);
             }
@@ -41,6 +44,11 @@ namespace UnityEditor.ShaderGraph
         public static bool RequiresPixelPosition(this ScreenSpaceType screenSpaceType)
         {
             return (screenSpaceType == ScreenSpaceType.Pixel);
+        }
+
+        public static bool RequiresClipPosition(this ScreenSpaceType screenSpaceType)
+        {
+            return (screenSpaceType == ScreenSpaceType.Clip);
         }
     }
 }

@@ -316,7 +316,7 @@ namespace UnityEngine.Rendering.HighDefinition
 
         // list of methods for resetting keywords
         internal delegate void MaterialResetter(Material material);
-        internal static Dictionary<ShaderID, MaterialResetter> k_PlainShadersMaterialResetters = new Dictionary<ShaderID, MaterialResetter>()
+        internal static readonly Dictionary<ShaderID, MaterialResetter> k_PlainShadersMaterialResetters = new Dictionary<ShaderID, MaterialResetter>()
         {
             { ShaderID.Lit, LitAPI.ValidateMaterial },
             { ShaderID.LitTesselation, LitAPI.ValidateMaterial },

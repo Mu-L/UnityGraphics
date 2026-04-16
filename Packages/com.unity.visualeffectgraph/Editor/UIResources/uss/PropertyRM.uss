@@ -394,3 +394,8 @@ VFXColorField .colorcontainer
 .fieldContainer .unity-base-text-field__input {
     width: 36px;
 }
+
+#NewButton {
+    padding-top: 0;
+    margin-right: 0;
+}

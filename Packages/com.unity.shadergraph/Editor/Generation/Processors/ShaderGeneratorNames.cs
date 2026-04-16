@@ -11,6 +11,7 @@ namespace UnityEditor.ShaderGraph
         public const string ScreenPosition = "ScreenPosition";
         public const string NDCPosition = "NDCPosition";        // normalized device coordinates, [0,1] across view, origin in lower left
         public const string PixelPosition = "PixelPosition";    // pixel coordinates
+        public const string ClipPosition = "ClipPosition";
         public const string VertexColor = "VertexColor";
         public const string FaceSign = "FaceSign";
         public const string TimeParameters = "TimeParameters";

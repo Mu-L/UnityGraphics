@@ -848,7 +848,7 @@ namespace UnityEngine.Rendering.HighDefinition
             PrepareWaterRenderingData(passData, hdCamera);
 
             // Buffers
-            passData.decalsEnabled = (hdCamera.frameSettings.IsEnabled(FrameSettingsField.Decals)) && (DecalSystem.m_DecalDatasCount > 0);
+            passData.decalsEnabled = (hdCamera.frameSettings.IsEnabled(FrameSettingsField.Decals)) && (DecalSystem.instance.DecalDatasCount > 0);
             passData.layeredOffsetsBuffer = lightLists.perVoxelOffset;
             builder.UseBuffer(passData.layeredOffsetsBuffer, AccessFlags.Read);
             passData.logBaseBuffer = lightLists.perTileLogBaseTweak;

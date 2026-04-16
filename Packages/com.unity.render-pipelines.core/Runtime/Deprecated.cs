@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
+using Unity.Scripting.LifecycleManagement;
 using UnityEngine.Assertions;
 
 namespace UnityEngine.Rendering
@@ -31,9 +32,11 @@ namespace UnityEngine.Rendering
 
     public abstract partial class VolumeDebugSettings<T>
     {
+        // Obsolete unused API to be removed, does not support Fast Enter Playmode.
+        [NoAutoStaticsCleanup]
         static List<Type> s_ComponentTypes;
         /// <summary>List of Volume component types.</summary>
-        [Obsolete("Please use volumeComponentsPathAndType instead, and get the second element of the tuple #from(2022.2)")]
+        [Obsolete("Please use volumeComponentsPathAndType instead, and get the second element of the tuple. Note: Not compatible with Fast Enter Playmode. #from(2022.2)")]
         public static List<Type> componentTypes
         {
             get
@@ -68,14 +71,15 @@ namespace UnityEngine.Rendering
         /// <summary>
         /// The list of the additional camera datas
         /// </summary>
-        [Obsolete("Cameras are auto registered/unregistered, use property cameras #from(2022.2)")]
+        [Obsolete("Cameras are auto registered/unregistered, use property cameras. Note: Not compatible with Fast Enter Playmode. #from(2022.2)")]
+        [NoAutoStaticsCleanup]
         protected static List<T> additionalCameraDatas { get; private set; } = new List<T>();
 
         /// <summary>
         /// Register the camera for the Volume Debug.
         /// </summary>
         /// <param name="additionalCamera">The AdditionalCameraData of the camera to be registered.</param>
-        [Obsolete("Cameras are auto registered/unregistered #from(2022.2)")]
+        [Obsolete("Cameras are auto registered/unregistered. Note: Not compatible with Fast Enter Playmode.  #from(2022.2)")]
         public static void RegisterCamera(T additionalCamera)
         {
             if (!additionalCameraDatas.Contains(additionalCamera))
@@ -86,7 +90,7 @@ namespace UnityEngine.Rendering
         /// Unregister the camera for the Volume Debug.
         /// </summary>
         /// <param name="additionalCamera">The AdditionalCameraData of the camera to be registered.</param>
-        [Obsolete("Cameras are auto registered/unregistered #from(2022.2)")]
+        [Obsolete("Cameras are auto registered/unregistered. Note: Not compatible with Fast Enter Playmode.  #from(2022.2)")]
         public static void UnRegisterCamera(T additionalCamera)
         {
             if (additionalCameraDatas.Contains(additionalCamera))

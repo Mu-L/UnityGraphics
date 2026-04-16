@@ -151,16 +151,20 @@ VaryingsMeshType VertMesh(AttributesMesh input, float3 worldSpaceOffset
 
 #ifdef HAVE_VFX_MODIFICATION
     ZERO_INITIALIZE(AttributesElement, element);
-
+    bool cull = false; // Flag instead of direct early-return due to some compiler bug (UUM-128594)
     if(!GetMeshAndElementIndex(input, element))
-        return output; // Culled index.
+        cull = true; // Culled index.
 
 #if UNITY_ANY_INSTANCING_ENABLED
     output.instanceID = input.instanceID; //Transfer again because we modify it in GetMeshAndElementIndex
 #endif
 
-    if(!GetInterpolatorAndElementData(input, output, element))
-        return output; // Dead particle.
+    UNITY_BRANCH
+    if (!cull)
+        cull = !GetInterpolatorAndElementData(input, output, element);
+
+    if (cull)
+        return output; // Culled or dead particle.
 
     SetupVFXMatrices(element, output);
 #endif

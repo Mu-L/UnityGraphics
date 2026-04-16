@@ -147,9 +147,11 @@ PixelState SamplePixel(UnifiedRT::DispatchInfo dispatchInfo)
 
 float4 GetHeatmapColor(int rays)
 {
+    UNITY_FLATTEN
     if (rays <= 2)
         return float4(0, 1, 0, 0);
 
+    UNITY_FLATTEN
     if (rays <= 3)
         return float4(0, 0, 1, 0);
 

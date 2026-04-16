@@ -143,7 +143,7 @@ namespace UnityEngine.Rendering.RenderGraphModule
             return totalResources;
         }
 
-        static List<ulong> s_ToRemoveList = new List<ulong>(32);
+        static readonly List<ulong> s_ToRemoveList = new List<ulong>(32);
 
         public override void PurgeUnusedResources(int currentFrameIndex)
         {

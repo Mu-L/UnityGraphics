@@ -30,58 +30,55 @@ namespace UnityEngine.Rendering.HighDefinition.DXR_Tests
             "1000_RaytracingQualityKeyword_PathTracer_Default|2009_Debug_RTAS_ScreenSpaceReflections_InstanceID|2009_Debug_RTAS_ScreenSpaceReflections_PrimitiveID|2009_Debug_RTAS_Shadows_PrimitiveID|2010_Debug_ClusterDebug|308_ScreenSpaceGlobalIllumination",
             "Fails on Yamato"
         )]
-        [IgnoreGraphicsTest(
+        [TestNotSupportedOn(
             "1000_RaytracingQualityKeyword_MaterialQuality_Indirect",
             "Strict Mode not supported"
         )]
         [IgnoreGraphicsTest(
             "10001_TerrainReflectionPerf",
             "Unstable: https://jira.unity3d.com/browse/UUM-132736",
-            runtimePlatforms: new RuntimePlatform[] { RuntimePlatform.GameCoreXboxSeries }
+            RuntimePlatform.GameCoreXboxSeries
         )]
-        [IgnoreGraphicsTest(
+        [TestNotSupportedOn(
             "10004_TerrainPathTracing|10004_TerrainPathTracing_NoDecalSurfaceGradient|5001_PathTracing|5001_PathTracing_Denoised_Intel|5001_PathTracing_Denoised_Optix|5002_PathTracing_GI|5003_PathTracing_transparency|5004_PathTracing_arealight|5005_PathTracing_Fog|5006_PathTracing_DoFVolume|5007_PathTracing_Materials_SG_Lit|5007_PathTracing_Materials_SG_Unlit|5007_PathTracing_Materials_StackLit|5008_PathTracing_NormalMapping|5009_PathTracing_FabricMaterial|501_RecursiveRendering|501_RecursiveRenderingTransparent|5010_PathTracingAlpha|5011_PathTracing_ShadowMatte|5012_PathTracing_Transmission|5013_PathTracing_ShadowFlags|5014_PathTracing_DoubleSidedOverride|5015_PathTracing_DoFCamera|5016_PathTracingTiledRendering|5017_PathTracing_Decals|505_RecursiveRenderingFog|506_RecursiveRenderingTransparentLayer|507_RecursiveRenderingDecal|5019_PathTracing_AmbientOcclusion|5018_PathTracing_MaterialOverrides|5021_PathTracing_Depth_2|5022_PathTracing_Depth_3|5020_PathTracing_Depth_1|5023_PathTracing_MeshInstancing_SG_Lit|5026_PathTracing_BoxLight",
             "Unsupported",
-            runtimePlatforms: new RuntimePlatform[]
-            {
-                RuntimePlatform.GameCoreXboxSeries,
-                RuntimePlatform.PS5
-            }
+            RuntimePlatform.GameCoreXboxSeries,
+            RuntimePlatform.PS5
         )]
         [IgnoreGraphicsTest(
             "2007_Debug_LightCluster",
             "issue on Yamato/HDRP-3081",
-            runtimePlatforms: new RuntimePlatform[] { RuntimePlatform.GameCoreXboxSeries }
+            RuntimePlatform.GameCoreXboxSeries
         )]
         [IgnoreGraphicsTest(
             "2007_Debug_LightCluster",
             "issue on Yamato/HDRP-3081",
-            runtimePlatforms: new RuntimePlatform[] { RuntimePlatform.PS5 }
+            RuntimePlatform.PS5
         )]
         [IgnoreGraphicsTest(
             "5001_PathTracing|5010_PathTracingAlpha",
             "jira: https://jira.unity3d.com/browse/GFXFEAT-1332",
-            graphicsDeviceTypes: new[] { GraphicsDeviceType.Direct3D12 }
+            GraphicsDeviceType.Direct3D12
         )]
         [IgnoreGraphicsTest(
             "5005_PathTracing_Fog",
             "jira: https://jira.unity3d.com/browse/GFXFEAT-1334",
-            graphicsDeviceTypes: new[] { GraphicsDeviceType.Direct3D12 }
+            GraphicsDeviceType.Direct3D12
         )]
         [IgnoreGraphicsTest(
             "5007_PathTracing_Materials_SG_Lit",
             "issue on Yamato only: jira: https://jira.unity3d.com/browse/UUM-26542",
-            runtimePlatforms: new RuntimePlatform[] { RuntimePlatform.WindowsPlayer }
+            RuntimePlatform.WindowsPlayer
         )]
         [IgnoreGraphicsTest(
             "802_SubSurfaceScatteringForward",
             "Inconsistent on Yamato",
-            runtimePlatforms: new RuntimePlatform[] { RuntimePlatform.GameCoreXboxSeries }
+            RuntimePlatform.GameCoreXboxSeries
         )]
         [IgnoreGraphicsTest(
             "802_SubSurfaceScatteringForward",
             "Inconsistent on Yamato",
-            runtimePlatforms: new RuntimePlatform[] { RuntimePlatform.PS5 }
+            RuntimePlatform.PS5
         )]
         [IgnoreGraphicsTest(
             "900_Materials_AlphaTest_SG",
@@ -90,7 +87,7 @@ namespace UnityEngine.Rendering.HighDefinition.DXR_Tests
         [IgnoreGraphicsTest(
             "902_Materials_SG_Variants_Lit",
             "issue on Yamato only: jira: https://jira.unity3d.com/browse/UUM-26542",
-            runtimePlatforms: new RuntimePlatform[] { RuntimePlatform.WindowsPlayer }
+            RuntimePlatform.WindowsPlayer
         )]
         [IgnoreGraphicsTest(
             "10003_TerrainShadow",
@@ -99,15 +96,12 @@ namespace UnityEngine.Rendering.HighDefinition.DXR_Tests
 		[IgnoreGraphicsTest(
 			"107_ReflectionsHybridFullRes_OnTransparent",
 			"Disabled for Instability ",
-			runtimePlatforms: new RuntimePlatform[] { RuntimePlatform.GameCoreXboxSeries }
+			RuntimePlatform.GameCoreXboxSeries
 		)]
         [IgnoreGraphicsTest(
             "10002_TerrainReflectionQuality",
             "Disabled for Instability https://jira.unity3d.com/browse/UUM-134774",
-            runtimePlatforms: new RuntimePlatform[]
-            {
-                RuntimePlatform.GameCoreXboxSeries
-            }
+            RuntimePlatform.GameCoreXboxSeries
         )]
         public IEnumerator Run(SceneGraphicsTestCase testCase)
         {
@@ -170,14 +164,10 @@ namespace UnityEngine.Rendering.HighDefinition.DXR_Tests
         {
             requestedGRDContext = grdContext;
 
-            // Register context
-            gpuResidentDrawerContext =
-                GlobalContextManager.RegisterGlobalContext(typeof(GpuResidentDrawerGlobalContext))
-                    as GpuResidentDrawerGlobalContext;
+            gpuResidentDrawerContext = GlobalContextManager.Get<GpuResidentDrawerGlobalContext>();
 
-            // Cache previous state to avoid state leak
-            previousGRDContext = (GpuResidentDrawerContext)gpuResidentDrawerContext.Context;
-            gpuResidentDrawerContext.ActivateContext(requestedGRDContext);
+            previousGRDContext = (GpuResidentDrawerContext)gpuResidentDrawerContext.Current;
+            gpuResidentDrawerContext.Activate(requestedGRDContext);
         }
 
         [OneTimeSetUp]
@@ -192,15 +182,14 @@ namespace UnityEngine.Rendering.HighDefinition.DXR_Tests
         public void OneTimeTearDown()
         {
             SceneManager.LoadScene("GraphicsTestTransitionScene", LoadSceneMode.Single);
-            gpuResidentDrawerContext.ActivateContext(previousGRDContext);
-            GlobalContextManager.UnregisterGlobalContext(typeof(GpuResidentDrawerGlobalContext));
+            gpuResidentDrawerContext.Activate(previousGRDContext);
         }
 
         [SetUp]
         public void SetUpContext()
         {
-            gpuResidentDrawerContext.ActivateContext(requestedGRDContext);
-            GlobalContextManager.AssertContextIs<GpuResidentDrawerGlobalContext, GpuResidentDrawerContext>(requestedGRDContext);
+            gpuResidentDrawerContext.Activate(requestedGRDContext);
+            GlobalContextManager.AssertContextIs<GpuResidentDrawerGlobalContext>(requestedGRDContext);
         }
 
         [TearDown]

@@ -782,7 +782,7 @@ namespace UnityEngine.Rendering
 
 
             // Space-delimit PascalCase (https://stackoverflow.com/questions/155303/net-how-can-you-split-a-caps-delimited-string-into-an-array)
-            static Regex s_NicifyRegEx = new("([a-z](?=[A-Z])|[A-Z](?=[A-Z][a-z]))", RegexOptions.Compiled);
+            static readonly Regex s_NicifyRegEx = new("([a-z](?=[A-Z])|[A-Z](?=[A-Z][a-z]))", RegexOptions.Compiled);
 
             /// <summary>
             /// Automatically fills the enum names with a given <see cref="Type"/>
@@ -1039,6 +1039,41 @@ namespace UnityEngine.Rendering
 
             private Camera[] m_CamerasArray;
             private List<Camera> m_Cameras = new List<Camera>();
+
+#if ENABLE_RENDERING_DEBUGGER_UI
+            /// <inheritdoc/>
+            protected override VisualElement Create()
+            {
+                var objectPopUpField = base.Create() as UIElements.PopupField<UnityEngine.Object>;
+
+                if (objectPopUpField == null)
+                    return new Label("Error creating CameraSelector field");
+
+                objectPopUpField.choices ??= new List<UnityEngine.Object>() { null };
+
+                // Refresh the dropdown choices to keep it in sync with available cameras in the scene.
+                // NOTE: If the currently selected camera is deleted, PopupField handles it internally,
+                //       so we only need to maintain the available choices list.
+                this.ScheduleTracked(objectPopUpField, () => objectPopUpField.schedule.Execute(() =>
+                {
+                    // Using ListPool and SequenceEqual to avoid unnecessary allocations and UI updates
+                    using (UnityEngine.Pool.ListPool<UnityEngine.Object>.Get(out var tmp))
+                    {
+                        tmp.Add(null);
+                        tmp.AddRange(getObjects());
+
+                        if (!tmp.SequenceEqual(objectPopUpField.choices))
+                        {
+                            objectPopUpField.choices.Clear();
+                            objectPopUpField.choices.AddRange(tmp);
+                        }
+                    }
+
+                }).Every(500));
+
+                return objectPopUpField;
+            }
+#endif
 
             IEnumerable<Camera> cameras
             {

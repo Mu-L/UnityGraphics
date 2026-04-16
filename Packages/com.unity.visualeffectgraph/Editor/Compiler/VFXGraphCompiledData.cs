@@ -648,7 +648,8 @@ namespace UnityEditor.VFX
                     capacity = 1u,
                     stride = graph.GlobalEventAttributes.First().offset.structure,
                     layout = graph.GlobalEventAttributes.ToArray(),
-                    initialData = ComputeArrayOfStructureInitialData(graph.GlobalEventAttributes, vfxGraph)
+                    initialData = ComputeArrayOfStructureInitialData(graph.GlobalEventAttributes, vfxGraph),
+                    debugName = $"VFXSpawnerAttributeBuffer_{it.index}"
                 });
             }
             foreach (var spawnContext in spawners)
@@ -1265,7 +1266,8 @@ namespace UnityEditor.VFX
                     capacity = 1u,
                     layout = m_ExpressionGraph.GlobalEventAttributes.ToArray(),
                     stride = m_ExpressionGraph.GlobalEventAttributes.Any() ? m_ExpressionGraph.GlobalEventAttributes.First().offset.structure : 0u,
-                    initialData = ComputeArrayOfStructureInitialData(m_ExpressionGraph.GlobalEventAttributes, m_Graph)
+                    initialData = ComputeArrayOfStructureInitialData(m_ExpressionGraph.GlobalEventAttributes, m_Graph),
+                    debugName = "VFXGlobalEventAttributeBuffer"
                 });
 
                 var contextSpawnToSpawnInfo = new Dictionary<VFXContext, SpawnInfo>();

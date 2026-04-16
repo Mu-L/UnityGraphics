@@ -141,7 +141,7 @@ namespace UnityEngine.Rendering.HighDefinition
         /// </summary>
         /// <param name="camera">The camera we want to use to compute the hash of the sky.</param>
         /// <returns>The hash code of the sky parameters.</returns>
-        virtual public int GetHashCode(Camera camera)
+        public virtual int GetHashCode(Camera camera)
         {
             // By default we don't need to consider the camera position.
             return GetHashCode();
@@ -256,5 +256,14 @@ namespace UnityEngine.Rendering.HighDefinition
         {
             return Vector3.one;
         }
+
+#if UNITY_EDITOR
+        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+        static void ResetStaticsOnLoad()
+        {
+            skyUniqueIDs?.Clear();
+            skyUniqueIDs = new Dictionary<Type, int>();
+        }
+#endif
     }
 }

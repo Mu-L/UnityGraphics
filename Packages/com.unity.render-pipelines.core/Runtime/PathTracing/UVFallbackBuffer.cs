@@ -1,6 +1,8 @@
 using System;
 using System.IO;
 using Unity.Mathematics;
+using Unity.Profiling;
+using Unity.Profiling.LowLevel;
 using UnityEngine.PathTracing.Core;
 using UnityEngine.PathTracing.Lightmapping;
 using UnityEngine.Rendering;
@@ -31,6 +33,14 @@ namespace UnityEngine.PathTracing.Integration
 
     internal class UVFallbackBufferBuilder : IDisposable
     {
+        /// <summary>
+        /// Profiles the build of the UV fallback buffer used for conservative rasterization
+        /// of UV charts when ray tracing is not available.
+        /// </summary>
+        static readonly ProfilerMarker k_BuildUVFallbackBuffer =
+            new ProfilerMarker(ProfilerCategory.Render, "Build UVFallbackBuffer",
+                MarkerFlags.Default | MarkerFlags.SampleGPU);
+
         private GraphicsBuffer _vertexBuffer;
         private Material _uvFallbackBufferMaterial;
 
@@ -54,7 +64,7 @@ namespace UnityEngine.PathTracing.Integration
             float heightScale,
             Mesh uvMesh)
         {
-            cmd.BeginSample("Build UVFallbackBuffer");
+            cmd.BeginSample(k_BuildUVFallbackBuffer, uvFallbackRT);
 
             Debug.Assert((UInt64)width * (UInt64)height < uint.MaxValue);
             Debug.Assert(uvFallbackRT.format == RenderTextureFormat.RGFloat);
@@ -89,7 +99,7 @@ namespace UnityEngine.PathTracing.Integration
             cmd.SetGlobalFloat(UVFallbackBufferBuilderShaderIDs.HeightScale, heightScale);
             cmd.DrawProcedural(Matrix4x4.identity, _uvFallbackBufferMaterial, 0, MeshTopology.Triangles, (int)uvMesh.GetTotalIndexCount());
 
-            cmd.EndSample("Build UVFallbackBuffer");
+            cmd.EndSample(k_BuildUVFallbackBuffer);
 
             GraphicsHelpers.Flush(cmd);
         }

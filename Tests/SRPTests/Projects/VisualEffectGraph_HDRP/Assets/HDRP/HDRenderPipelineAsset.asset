@@ -12,7 +12,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 0cf1dab834d4ec34195b920ea7bbf9ec, type: 3}
   m_Name: HDRenderPipelineAsset
   m_EditorClassIdentifier: 
-  m_Version: 25
+  m_Version: 26
   m_ObsoleteFrameSettings:
     overrides: 0
     enableShadow: 0
@@ -148,8 +148,7 @@ MonoBehaviour:
       enableFptlForForwardOpaque: 0
       enableBigTilePrepass: 0
       isFptlEnabled: 0
-  m_ObsoleteDefaultVolumeProfile: {fileID: 11400000, guid: 6da6f79984c6a5e40ae22ead3a2ecfec,
-    type: 2}
+  m_ObsoleteDefaultVolumeProfile: {fileID: 11400000, guid: 6da6f79984c6a5e40ae22ead3a2ecfec, type: 2}
   m_ObsoleteDefaultLookDevProfile: {fileID: 0}
   m_ObsoleteFrameSettingsMovedToDefaultSettings:
     bitDatas:
@@ -210,6 +209,7 @@ MonoBehaviour:
   - {fileID: 11400000, guid: 38c0905fbe269274782e939ce4393d85, type: 2}
   m_PrefilterUseLegacyLightmaps: 0
   m_PrefilterUseLightmapBicubicSampling: 0
+  m_ShouldUseConservativeEnclosingSphere: 0
   m_RenderPipelineSettings:
     supportShadowMask: 1
     supportSSR: 1
@@ -239,6 +239,7 @@ MonoBehaviour:
     maximumWaterDecalCount: 48
     waterScriptInteractionsMode: 0
     waterFullCPUSimulation: 0
+    waterCausticsMeshResolution: 256
     supportComputeThickness: 0
     computeThicknessResolution: 1
     computeThicknessLayerMask:
@@ -249,6 +250,7 @@ MonoBehaviour:
     supportTransparentDepthPrepass: 1
     supportTransparentDepthPostpass: 1
     colorBufferFormat: 48
+    depthBufferFormat: 0
     supportCustomPass: 1
     supportVariableRateShading: 1
     customBufferFormat: 12
@@ -348,6 +350,7 @@ MonoBehaviour:
       maxPunctualShadowMapResolution: 2048
       maxAreaShadowMapResolution: 2048
       supportScreenSpaceShadows: 0
+      supportContactShadows: 1
       maxScreenSpaceShadowSlots: 4
       screenSpaceShadowBufferFormat: 48
     decalSettings:
@@ -367,6 +370,7 @@ MonoBehaviour:
       enabled: 0
       useMipBias: 0
       advancedUpscalersByPriority: 
+      advancedUpscalerNames: []
       DLSSPerfQualitySetting: 0
       DLSSInjectionPoint: 0
       TAAUInjectionPoint: 0
@@ -374,6 +378,11 @@ MonoBehaviour:
       defaultInjectionPoint: 2
       DLSSUseOptimalSettings: 0
       DLSSSharpness: 0
+      DLSSRenderPresetForQuality: 0
+      DLSSRenderPresetForBalanced: 0
+      DLSSRenderPresetForPerformance: 0
+      DLSSRenderPresetForUltraPerformance: 0
+      DLSSRenderPresetForDLAA: 0
       FSR2EnableSharpness: 0
       FSR2Sharpness: 0
       FSR2UseOptimalSettings: 0
@@ -538,8 +547,7 @@ MonoBehaviour:
   enableSRPBatcher: 1
   availableMaterialQualityLevels: -1
   m_DefaultMaterialQualityLevel: 4
-  diffusionProfileSettings: {fileID: 11400000, guid: cbe1ee9036c47b84ba1b8b3dbcde2aff,
-    type: 2}
+  diffusionProfileSettings: {fileID: 11400000, guid: cbe1ee9036c47b84ba1b8b3dbcde2aff, type: 2}
   m_VolumeProfile: {fileID: 0}
   virtualTexturingSettings:
     streamingCpuCacheSizeInMegaBytes: 256
@@ -548,7 +556,6 @@ MonoBehaviour:
     streamingGpuCacheSettings:
     - format: 0
       sizeInMegaBytes: 128
-  m_UseRenderGraph: 1
   m_CompositorCustomVolumeComponentsList:
     m_InjectionPoint: 1
     m_CustomPostProcessTypesAsString: []

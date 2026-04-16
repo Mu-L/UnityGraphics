@@ -10,7 +10,15 @@ namespace UnityEngine.Rendering.RenderGraphModule.Util
     /// </summary>
     public static partial class RenderGraphUtils
     {
-        static MaterialPropertyBlock s_PropertyBlock = new MaterialPropertyBlock();
+        static readonly MaterialPropertyBlock s_PropertyBlock = new MaterialPropertyBlock();
+
+#if UNITY_EDITOR
+        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterAssembliesLoaded)]
+        static void ResetStaticsOnLoad()
+        {
+            s_PropertyBlock.Clear();
+        }
+#endif
 
         /// <summary>
         /// Checks if the shader features required by the MSAA version of the copy pass is supported on current platform.
@@ -134,7 +142,7 @@ namespace UnityEngine.Rendering.RenderGraphModule.Util
         /// function please use the AddBlitPass function. To verify whether the copy pass is supported for the intended operation, use the CanAddCopyPass function.
         ///
         /// When XR is active, array textures containing both eyes will be automatically copied.
-        /// 
+        ///
         /// </summary>
         /// <param name="graph">The RenderGraph adding this pass to.</param>
         /// <param name="source">The texture the data is copied from.</param>

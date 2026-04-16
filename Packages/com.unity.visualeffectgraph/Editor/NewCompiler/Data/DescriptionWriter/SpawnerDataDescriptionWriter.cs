@@ -5,9 +5,9 @@ namespace UnityEditor.VFX
 {
     class SpawnerDataDescriptionWriter : IDataDescriptionWriter<SpawnData>
     {
-        public void WriteDescription(ShaderWriter shaderWriter, DataView dataView, SpawnData structuredData, string name, CompilationContext context)
+        public void WriteDescription(ShaderWriter shaderWriter, DataView dataView, SpawnData spawnData, string name, CompilationContext context)
         {
-            shaderWriter.IncludeFile("Packages/com.unity.vfxgraph/Shaders/Data/SpawnerData.hlsl");
+            shaderWriter.IncludeFile("Packages/com.unity.visualeffectgraph/Shaders/Temp/Data/SpawnerData.hlsl");
             shaderWriter.NewLine();
 
             shaderWriter.WriteLine($"struct {name}");

@@ -42,7 +42,7 @@ namespace UnityEngine.Rendering.HighDefinition
 
         public class CullResult : IDisposable
         {
-           int m_NumResults;
+            int m_NumResults;
 
             public int numResults
             {
@@ -190,7 +190,6 @@ namespace UnityEngine.Rendering.HighDefinition
         }
 
         public const int kInvalidIndex = -1;
-        public static readonly EntityId kNullMaterialIndex = EntityId.None;
         public class DecalHandle
         {
             public DecalHandle(int index, EntityId materialID)
@@ -212,16 +211,8 @@ namespace UnityEngine.Rendering.HighDefinition
             public int m_Index;         // identifies decal within the set
         }
 
-        static DecalSystem m_Instance;
-        static public DecalSystem instance
-        {
-            get
-            {
-                if (m_Instance == null)
-                    m_Instance = new DecalSystem();
-                return m_Instance;
-            }
-        }
+        static DecalSystem s_Instance;
+        public static DecalSystem instance => s_Instance ??= new DecalSystem();
 
         private const int kDefaultDrawDistance = 1000;
         public int DrawDistance
@@ -289,10 +280,10 @@ namespace UnityEngine.Rendering.HighDefinition
         private const int kDrawIndexedBatchSize = 250;
 
         // cube mesh bounds for decal
-        static Vector4 kMin = new Vector4(-0.5f, -0.5f, -0.5f, 1.0f);
-        static Vector4 kMax = new Vector4(0.5f, 0.5f, 0.5f, 1.0f);
+        static readonly Vector4 kMin = new Vector4(-0.5f, -0.5f, -0.5f, 1.0f);
+        static readonly Vector4 kMax = new Vector4(0.5f, 0.5f, 0.5f, 1.0f);
 
-        static public Mesh m_DecalMesh = null;
+        Mesh m_DecalMesh = null;
 
         // These bit flags allow one to have cluster(s) of decals with different culling algorithm.
         // Both types of clusters are created if raytracing is enabled for SSR/SSGI.
@@ -306,25 +297,36 @@ namespace UnityEngine.Rendering.HighDefinition
             WorldspaceBasedCulling = 1 << 1
         }
 
-        static public DecalCullingMode m_CullingMode = DecalCullingMode.ViewspaceBasedCulling;
+        DecalCullingMode m_CullingMode = DecalCullingMode.ViewspaceBasedCulling;
+
+        public DecalCullingMode CullingMode
+        {
+            get => m_CullingMode;
+            set => m_CullingMode = value;
+        }
 
         // clustered draw data
-        static public DecalData[] m_DecalDatas = new DecalData[kDecalBlockSize];
-        static public SFiniteLightBound[] m_Bounds = new SFiniteLightBound[kDecalBlockSize];
-        static public LightVolumeData[] m_LightVolumes = new LightVolumeData[kDecalBlockSize];
-        static public TextureScaleBias[] m_DiffuseTextureScaleBias = new TextureScaleBias[kDecalBlockSize];
-        static public TextureScaleBias[] m_NormalTextureScaleBias = new TextureScaleBias[kDecalBlockSize];
-        static public TextureScaleBias[] m_MaskTextureScaleBias = new TextureScaleBias[kDecalBlockSize];
-        static public Vector4[] m_BaseColor = new Vector4[kDecalBlockSize];
+        DecalData[] m_DecalDatas = new DecalData[kDecalBlockSize];
+        SFiniteLightBound[] m_Bounds = new SFiniteLightBound[kDecalBlockSize];
+        LightVolumeData[] m_LightVolumes = new LightVolumeData[kDecalBlockSize];
+        TextureScaleBias[] m_DiffuseTextureScaleBias = new TextureScaleBias[kDecalBlockSize];
+        TextureScaleBias[] m_NormalTextureScaleBias = new TextureScaleBias[kDecalBlockSize];
+        TextureScaleBias[] m_MaskTextureScaleBias = new TextureScaleBias[kDecalBlockSize];
+        Vector4[] m_BaseColor = new Vector4[kDecalBlockSize];
+
+        public DecalData[] DecalDatas => m_DecalDatas;
+        public SFiniteLightBound[] Bounds => m_Bounds;
+        public LightVolumeData[] LightVolumes => m_LightVolumes;
 
         // Clustered decal world space info -- useful when m_CullingMode is set to WorldspaceBasedCulling
         // This data is cached and can be queried for algorithms doing their own clustering (e.g. path tracing).
-        static public Vector3[] m_DecalDatasWSPositions = new Vector3[kDecalBlockSize];
-        static public Vector3[] m_DecalDatasWSRanges = new Vector3[kDecalBlockSize];
+        Vector3[] m_DecalDatasWSPositions = new Vector3[kDecalBlockSize];
+        Vector3[] m_DecalDatasWSRanges = new Vector3[kDecalBlockSize];
 
-        static public int m_DecalDatasCount = 0;
+        int m_DecalDatasCount = 0;
+        public int DecalDatasCount => m_DecalDatasCount;
 
-        static public float[] m_BoundingDistances = new float[1];
+        float[] m_BoundingDistances = new float[1];
 
         private Dictionary<EntityId, DecalSet> m_DecalSets = new Dictionary<EntityId, DecalSet>();
         private List<DecalSet> m_DecalSetsRenderList = new List<DecalSet>(); // list of visible decalsets sorted by material draw order
@@ -332,11 +334,11 @@ namespace UnityEngine.Rendering.HighDefinition
         // current camera
         private Camera m_Camera;
 
-        static public int m_DecalsVisibleThisFrame = 0;
+        int m_DecalsVisibleThisFrame = 0;
 
         private Texture2DAtlas m_Atlas = null;
-        public bool m_AllocationSuccess = true;
-        public bool m_PrevAllocationSuccess = true;
+        bool m_AllocationSuccess = true;
+        bool m_PrevAllocationSuccess = true;
 
         private int m_GlobalDrawDistance = kDefaultDrawDistance;
 
@@ -345,10 +347,10 @@ namespace UnityEngine.Rendering.HighDefinition
         private bool m_ShaderGraphSaveRequested = false;
 #endif
 
-        static public int GetDecalCount(HDCamera hdCamera)
+        public static int GetDecalCount(HDCamera hdCamera)
         {
             if ((hdCamera.IsPathTracingEnabled() || hdCamera.IsRayTracingEnabled()) && hdCamera.frameSettings.IsEnabled(FrameSettingsField.Decals))
-                return m_DecalDatasCount;
+                return instance.m_DecalDatasCount;
             return 0;
         }
 
@@ -358,7 +360,8 @@ namespace UnityEngine.Rendering.HighDefinition
             {
                 if (m_Atlas == null)
                 {
-                    m_Atlas = new Texture2DAtlas(HDUtils.hdrpSettings.decalSettings.atlasWidth, HDUtils.hdrpSettings.decalSettings.atlasHeight, GraphicsFormat.R8G8B8A8_UNorm, name: "DecalSystemAtlas");
+                    var decalSettings = HDUtils.hdrpSettings.decalSettings;
+                    m_Atlas = new Texture2DAtlas(decalSettings.atlasWidth, decalSettings.atlasHeight, GraphicsFormat.R8G8B8A8_UNorm, name: "DecalSystemAtlas");
                 }
                 return m_Atlas;
             }
@@ -477,7 +480,7 @@ namespace UnityEngine.Rendering.HighDefinition
         private List<ShaderGraphData> m_ShaderGraphList = new List<ShaderGraphData>();
         private List<int> m_ShaderGraphVertexCount = new List<int>();
 
-        static public bool IsHDRenderPipelineDecal(Shader shader)
+        public static bool IsHDRenderPipelineDecal(Shader shader)
         {
             // Warning: accessing Shader.name generate 48B of garbage at each frame, we want to avoid that in the future
             return shader.name == "HDRP/Decal";
@@ -486,13 +489,13 @@ namespace UnityEngine.Rendering.HighDefinition
         const string kIdentifyHDRPDecal = "_Unity_Identify_HDRP_Decal";
 
         // Non alloc version of IsHDRenderPipelineDecal (Slower but does not generate garbage)
-        static public bool IsHDRenderPipelineDecal(Material material)
+        public static bool IsHDRenderPipelineDecal(Material material)
         {
             // Check if the material has a marker _Unity_Identify_HDRP_Decal
             return material.HasProperty(kIdentifyHDRPDecal);
         }
 
-        static public bool IsDecalMaterial(Material material)
+        public static bool IsDecalMaterial(Material material)
         {
             // Check if the material has at least one pass from the decal.shader / Shader Graph (shader stripping can remove one or more passes)
             foreach (var passName in s_MaterialDecalPassNames)
@@ -833,12 +836,12 @@ namespace UnityEngine.Rendering.HighDefinition
                 ResolveUpdateJob();
 
                 // let the culling group code do some of the heavy lifting for global draw distance
-                m_BoundingDistances[0] = DecalSystem.instance.DrawDistance;
+                instance.m_BoundingDistances[0] = instance.DrawDistance;
                 m_NumResults = 0;
                 var cullingGroup = CullingGroupManager.instance.Alloc();
                 cullingGroup.targetCamera = instance.CurrentCamera;
                 cullingGroup.SetDistanceReferencePoint(cullingGroup.targetCamera.transform.position);
-                cullingGroup.SetBoundingDistances(m_BoundingDistances);
+                cullingGroup.SetBoundingDistances(instance.m_BoundingDistances);
                 cullingGroup.SetBoundingSpheres(m_CachedBoundingSpheres);
                 cullingGroup.SetBoundingSphereCount(m_DecalsCount);
 
@@ -870,6 +873,9 @@ namespace UnityEngine.Rendering.HighDefinition
                 var influenceForwardVS = worldToView.MultiplyVector(influenceZ / influenceExtents.z);
                 var influencePositionVS = worldToView.MultiplyPoint(pos); // place the mesh pivot in the center
 
+                var m_DecalDatasCount = instance.m_DecalDatasCount;
+
+                var m_Bounds = instance.m_Bounds;
                 m_Bounds[m_DecalDatasCount].center = influencePositionVS;
                 m_Bounds[m_DecalDatasCount].boxAxisX = influenceRightVS * influenceExtents.x;
                 m_Bounds[m_DecalDatasCount].boxAxisY = influenceUpVS * influenceExtents.y;
@@ -880,6 +886,7 @@ namespace UnityEngine.Rendering.HighDefinition
                 // The culling system culls pixels that are further
                 //   than a threshold to the box influence extents.
                 // So we use an arbitrary threshold here (k_BoxCullingExtentOffset)
+                var m_LightVolumes = instance.m_LightVolumes;
                 m_LightVolumes[m_DecalDatasCount].lightCategory = (uint)LightCategory.Decal;
                 m_LightVolumes[m_DecalDatasCount].lightVolume = (uint)LightVolumeType.Box;
                 m_LightVolumes[m_DecalDatasCount].featureFlags = (uint)LightFeatureFlags.Env;
@@ -927,19 +934,19 @@ namespace UnityEngine.Rendering.HighDefinition
                 return result;
             }
 
-            public void CreateDrawData(IntScalableSetting transparentTextureResolution)
+            public void CreateDrawData(IntScalableSetting transparentTextureResolution, DecalSystem decalSystem)
             {
                 int maxTextureSize = 0;
 
                 NativeArray<Matrix4x4> cachedDecalToWorld = m_DecalToWorlds.Reinterpret<Matrix4x4>();
                 NativeArray<Matrix4x4> cachedNormalToWorld = m_NormalToWorlds.Reinterpret<Matrix4x4>();
 
-                Vector3 cameraPos = instance.CurrentCamera.transform.position;
-                var camera = instance.CurrentCamera;
+                var camera = decalSystem.CurrentCamera;
+                Vector3 cameraPos = camera.transform.position;
                 Matrix4x4 worldToView = HDRenderPipeline.WorldToCamera(camera);
 
                 /* Prepare data for the DBuffer drawing */
-                if ((DecalSystem.m_CullingMode & DecalCullingMode.ViewspaceBasedCulling) != 0)
+                if ((decalSystem.m_CullingMode & DecalCullingMode.ViewspaceBasedCulling) != 0)
                 {
                     int cullingMask = camera.cullingMask;
                     ulong sceneCullingMask = HDUtils.GetSceneCullingMaskFromCamera(camera);
@@ -991,8 +998,16 @@ namespace UnityEngine.Rendering.HighDefinition
 
                 /* Prepare data for clustered decals */
                 // Depending on the culling mode, we consider the decals that survived culling or all of them.
-                bool useWorldspaceCluster = (DecalSystem.m_CullingMode & DecalCullingMode.WorldspaceBasedCulling) != 0;
+                bool useWorldspaceCluster = (decalSystem.m_CullingMode & DecalCullingMode.WorldspaceBasedCulling) != 0;
                 int decalsToConsider = useWorldspaceCluster ? m_DecalsCount : m_NumResults;
+
+                var m_DecalDatas = decalSystem.m_DecalDatas;
+                var m_DiffuseTextureScaleBias = decalSystem.m_DiffuseTextureScaleBias;
+                var m_NormalTextureScaleBias = decalSystem.m_NormalTextureScaleBias;
+                var m_MaskTextureScaleBias = decalSystem.m_MaskTextureScaleBias;
+                var m_DecalDatasWSPositions = decalSystem.m_DecalDatasWSPositions;
+                var m_DecalDatasWSRanges = decalSystem.m_DecalDatasWSRanges;
+                ref var m_DecalDatasCount = ref decalSystem.m_DecalDatasCount;
 
                 bool anyClusteredDecalsPresent = false;
                 for (int resultIndex = 0; resultIndex < decalsToConsider; resultIndex++)
@@ -1041,7 +1056,7 @@ namespace UnityEngine.Rendering.HighDefinition
                 // only add if any projectors in this decal set will be clustered, doesn't actually allocate textures in the atlas yet, this is because we want all the textures in the list so we can optimize the packing
                 if (anyClusteredDecalsPresent)
                 {
-                    AddToTextureList(ref instance.m_TextureList);
+                    AddToTextureList(ref decalSystem.m_TextureList);
                     if (!m_IsHDRenderPipelineDecal)
                     {
                         ShaderGraphData data;
@@ -1052,7 +1067,7 @@ namespace UnityEngine.Rendering.HighDefinition
                         data.passIndex = m_cachedAtlasProjectorPassValue;
                         data.updateTexture = m_UpdateShaderGraphTexture;
                         data.propertyBlock = m_PropertyBlock;
-                        instance.m_ShaderGraphList.Add(data);
+                        decalSystem.m_ShaderGraphList.Add(data);
 
                         if (m_MaxShaderGraphTextureSize != maxTextureSize)
                         {
@@ -1093,7 +1108,7 @@ namespace UnityEngine.Rendering.HighDefinition
                 }
             }
 
-            public void RenderIntoDBuffer(CommandBuffer cmd)
+            public void RenderIntoDBuffer(Mesh decalMesh, CommandBuffer cmd)
             {
                 if (m_Material == null || m_cachedProjectorPassValue == -1 || (m_NumResults == 0))
                     return;
@@ -1105,7 +1120,7 @@ namespace UnityEngine.Rendering.HighDefinition
                 {
                     m_PropertyBlock.SetMatrixArray(HDShaderIDs._NormalToWorldID, m_NormalToWorld[batchIndex]);
                     m_PropertyBlock.SetFloatArray(HDMaterialProperties.kDecalLayerMaskFromDecal, m_DecalLayerMasks[batchIndex]);
-                    cmd.DrawMeshInstanced(m_DecalMesh, 0, m_Material, m_cachedProjectorPassValue, m_DecalToWorld[batchIndex], kDrawIndexedBatchSize, m_PropertyBlock);
+                    cmd.DrawMeshInstanced(decalMesh, 0, m_Material, m_cachedProjectorPassValue, m_DecalToWorld[batchIndex], kDrawIndexedBatchSize, m_PropertyBlock);
                     totalToDraw -= kDrawIndexedBatchSize;
                 }
 
@@ -1113,11 +1128,11 @@ namespace UnityEngine.Rendering.HighDefinition
                 {
                     m_PropertyBlock.SetMatrixArray(HDShaderIDs._NormalToWorldID, m_NormalToWorld[batchIndex]);
                     m_PropertyBlock.SetFloatArray(HDMaterialProperties.kDecalLayerMaskFromDecal, m_DecalLayerMasks[batchIndex]);
-                    cmd.DrawMeshInstanced(m_DecalMesh, 0, m_Material, m_cachedProjectorPassValue, m_DecalToWorld[batchIndex], totalToDraw, m_PropertyBlock);
+                    cmd.DrawMeshInstanced(decalMesh, 0, m_Material, m_cachedProjectorPassValue, m_DecalToWorld[batchIndex], totalToDraw, m_PropertyBlock);
                 }
             }
 
-            public void RenderForwardEmissive(CommandBuffer cmd)
+            public void RenderForwardEmissive(Mesh decalMesh, CommandBuffer cmd)
             {
                 if (m_Material == null || m_cachedProjectorEmissivePassValue == -1 || m_NumResults == 0)
                     return;
@@ -1129,7 +1144,7 @@ namespace UnityEngine.Rendering.HighDefinition
                 {
                     m_PropertyBlock.SetMatrixArray(HDShaderIDs._NormalToWorldID, m_NormalToWorld[batchIndex]);
                     m_PropertyBlock.SetFloatArray(HDMaterialProperties.kDecalLayerMaskFromDecal, m_DecalLayerMasks[batchIndex]);
-                    cmd.DrawMeshInstanced(m_DecalMesh, 0, m_Material, m_cachedProjectorEmissivePassValue, m_DecalToWorld[batchIndex], kDrawIndexedBatchSize, m_PropertyBlock);
+                    cmd.DrawMeshInstanced(decalMesh, 0, m_Material, m_cachedProjectorEmissivePassValue, m_DecalToWorld[batchIndex], kDrawIndexedBatchSize, m_PropertyBlock);
                     totalToDraw -= kDrawIndexedBatchSize;
                 }
 
@@ -1137,7 +1152,7 @@ namespace UnityEngine.Rendering.HighDefinition
                 {
                     m_PropertyBlock.SetMatrixArray(HDShaderIDs._NormalToWorldID, m_NormalToWorld[batchIndex]);
                     m_PropertyBlock.SetFloatArray(HDMaterialProperties.kDecalLayerMaskFromDecal, m_DecalLayerMasks[batchIndex]);
-                    cmd.DrawMeshInstanced(m_DecalMesh, 0, m_Material, m_cachedProjectorEmissivePassValue, m_DecalToWorld[batchIndex], totalToDraw, m_PropertyBlock);
+                    cmd.DrawMeshInstanced(decalMesh, 0, m_Material, m_cachedProjectorEmissivePassValue, m_DecalToWorld[batchIndex], totalToDraw, m_PropertyBlock);
                 }
             }
 
@@ -1278,10 +1293,10 @@ namespace UnityEngine.Rendering.HighDefinition
             var material = decalProjector.material;
 
             DecalSet decalSet = null;
-            EntityId key = material != null ? material.GetEntityId() : kNullMaterialIndex;
+            EntityId key = material != null ? material.GetEntityId() : EntityId.None;
             if (!m_DecalSets.TryGetValue(key, out decalSet))
             {
-				SetupMipStreamingSettings(material, true);
+                SetupMipStreamingSettings(material, true);
                 decalSet = new DecalSet(material);
                 m_DecalSets.Add(key, decalSet);
             }
@@ -1384,7 +1399,7 @@ namespace UnityEngine.Rendering.HighDefinition
 
             foreach (var decalSet in m_DecalSetsRenderList)
             {
-                decalSet.RenderIntoDBuffer(cmd);
+                decalSet.RenderIntoDBuffer(m_DecalMesh, cmd);
             }
         }
 
@@ -1395,7 +1410,7 @@ namespace UnityEngine.Rendering.HighDefinition
 
             foreach (var decalSet in m_DecalSetsRenderList)
             {
-                decalSet.RenderForwardEmissive(cmd);
+                decalSet.RenderForwardEmissive(m_DecalMesh, cmd);
             }
         }
 
@@ -1661,7 +1676,7 @@ namespace UnityEngine.Rendering.HighDefinition
             IntScalableSetting textureResolutionSetting = transparentTextureResolution;
 
             foreach (var decalSet in m_DecalSetsRenderList)
-                decalSet.CreateDrawData(textureResolutionSetting);
+                decalSet.CreateDrawData(textureResolutionSetting, this);
         }
 
         public void Cleanup()
@@ -1705,6 +1720,13 @@ namespace UnityEngine.Rendering.HighDefinition
         public void UpdateTransparentShaderGraphs()
         {
             m_ShaderGraphSaveRequested = true;
+        }
+
+        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+        static void ResetStaticsOnLoad()
+        {
+            s_Instance?.Cleanup();
+            s_Instance = null;
         }
 #endif
     }

@@ -41,18 +41,12 @@ namespace UnityEngine.Rendering.HighDefinition
         //-----------------------------------------------------------------------------
 
         // should this be combined into common class shared with Lit.cs???
-        static public int GetMaterialDBufferCount() { return (int)DBufferMaterial.Count; }
+        public static int GetMaterialDBufferCount() => (int)DBufferMaterial.Count;
 
-        static GraphicsFormat[] m_RTFormat = { GraphicsFormat.R8G8B8A8_SRGB, GraphicsFormat.R8G8B8A8_UNorm, GraphicsFormat.R8G8B8A8_UNorm, GraphicsFormat.R8G8_UNorm };
-        static GraphicsFormat[] m_RTFormatHP = { GraphicsFormat.R8G8B8A8_SRGB, GraphicsFormat.R16G16B16A16_SFloat, GraphicsFormat.R8G8B8A8_UNorm, GraphicsFormat.R8G8_UNorm };
+        const int k_RTFormatMask = (int)GraphicsFormat.R8G8B8A8_SRGB << 0 | (int)GraphicsFormat.R8G8B8A8_UNorm << 8 | (int)GraphicsFormat.R8G8B8A8_UNorm << 16 | (int)GraphicsFormat.R8G8_UNorm << 24;
+        const int k_RTFormatMaskHP = (int)GraphicsFormat.R8G8B8A8_SRGB << 0 | (int)GraphicsFormat.R16G16B16A16_SFloat << 8 | (int)GraphicsFormat.R8G8B8A8_UNorm << 16 | (int)GraphicsFormat.R8G8_UNorm << 24;
 
-        static public void GetMaterialDBufferDescription(out GraphicsFormat[] RTFormat)
-        {
-            HDRenderPipeline hdPipeline = RenderPipelineManager.currentPipeline as HDRenderPipeline;
-            bool hp = hdPipeline.currentPlatformRenderPipelineSettings.supportSurfaceGradient &&
-                hdPipeline.currentPlatformRenderPipelineSettings.decalNormalBufferHP;
-            RTFormat = hp ? m_RTFormatHP : m_RTFormat;
-        }
+        public static GraphicsFormat GetMaterialDBufferDescription(int index, bool useHighPrecision) => (GraphicsFormat)(0xFF & (useHighPrecision ? k_RTFormatMaskHP : k_RTFormatMask ) >> (index << 3));
     }
 
     // normal to world only uses 3x3 for actual matrix so some data is packed in the unused space

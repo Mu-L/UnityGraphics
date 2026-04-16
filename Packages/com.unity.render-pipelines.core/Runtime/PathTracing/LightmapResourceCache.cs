@@ -1,5 +1,7 @@
 using System;
 using System.Collections.Generic;
+using Unity.Profiling;
+using Unity.Profiling.LowLevel;
 using UnityEngine.PathTracing.Core;
 using UnityEngine.PathTracing.Integration;
 using UnityEngine.Rendering;
@@ -9,6 +11,14 @@ namespace UnityEngine.PathTracing.Lightmapping
 {
     internal class LightmapIntegrationResourceCache : IDisposable
     {
+        /// <summary>
+        /// Profiles the build of the UV acceleration structure (BVH) over UV-space triangles,
+        /// used to resolve lightmap texels to world-space positions in ray tracing.
+        /// </summary>
+        static readonly ProfilerMarker k_BuildUVAccelerationStructure =
+            new ProfilerMarker(ProfilerCategory.Render, "Build UVAccelerationStructure",
+                MarkerFlags.Default | MarkerFlags.SampleGPU);
+
         private Dictionary<ulong, UVMesh> _meshToUVMesh = new();
         private Dictionary<ulong, UVAccelerationStructure> _meshToUVAccelerationStructure = new();
         private Dictionary<UVFallbackBufferKey, UVFallbackBuffer> _meshToUVFallbackBuffer = new();
@@ -96,12 +106,12 @@ namespace UnityEngine.PathTracing.Lightmapping
                 ulong uvASHash = Util.EntityIDToUlong(uvMesh.Mesh.GetEntityId());
                 if (!_meshToUVAccelerationStructure.TryGetValue(uvASHash, out UVAccelerationStructure uvAS))
                 {
-                    cmd.BeginSample("Build UVAccelerationStructure");
+                    cmd.BeginSample(k_BuildUVAccelerationStructure);
                     UVAccelerationStructure newUVAS = new();
                     newUVAS.Build(cmd, context, uvMesh, BuildFlags.None);
                     _meshToUVAccelerationStructure.Add(uvASHash, newUVAS);
                     uvAS = newUVAS;
-                    cmd.EndSample("Build UVAccelerationStructure");
+                    cmd.EndSample(k_BuildUVAccelerationStructure);
                 }
                 // UVFallbackBuffer
                 var uvFBKey = new UVFallbackBufferKey(instance.TexelSize.x, instance.TexelSize.y, uvMesh.Mesh.GetEntityId());

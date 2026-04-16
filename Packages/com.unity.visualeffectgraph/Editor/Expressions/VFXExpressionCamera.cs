@@ -185,7 +185,7 @@ namespace UnityEditor.VFX
             return newExpression;
         }
 
-        protected override int[] additionnalOperands { get { return new int[] { (int)m_BufferType }; } }
+        internal override int[] additionalOperands { get { return new int[] { (int)m_BufferType }; } }
         private VFXCameraBufferTypes m_BufferType;
     }
 

@@ -81,6 +81,16 @@ namespace Unity.GraphCommon.LowLevel.Editor
         DataBindingEnumerable<SubEnumerable<DataBindingId>> GetDataBindings(TaskNodeId taskNodeId);
 
         /// <summary>
+        /// Retrieves an enumerable collection of data bindings associated with a specified data node.
+        /// </summary>
+        /// <param name="dataNodeId">The identifier of the data node for which data bindings are to be retrieved.</param>
+        /// <returns>
+        /// A <see cref="DataNodeEnumerable{SubEnumerable{DataBindingId}}"/> containing the data bindings
+        /// related to the specified <paramref name="dataNodeId"/>.
+        /// </returns>
+        DataBindingEnumerable<SubEnumerable<DataBindingId>> GetDataBindings(DataNodeId dataNodeId);
+
+        /// <summary>
         /// Retrieves an enumerable collection of data views used in the specified data node.
         /// </summary>
         /// <param name="dataNodeId">The identifier of the data node.</param>

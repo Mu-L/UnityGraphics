@@ -44,6 +44,7 @@ namespace UnityEngine.Rendering
                     case GraphicsDeviceType.Vulkan:
                     case GraphicsDeviceType.Metal:
                     case GraphicsDeviceType.OpenGLES3:
+                    case GraphicsDeviceType.OpenGLCore:
                         return true;
 
                     default:

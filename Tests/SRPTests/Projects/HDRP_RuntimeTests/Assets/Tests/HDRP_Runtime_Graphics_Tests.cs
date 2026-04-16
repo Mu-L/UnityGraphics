@@ -42,56 +42,56 @@ public class HDRP_Runtime_Graphics_Tests
     [IgnoreGraphicsTest(
         "001-HDTemplate$",
         "https://jira.unity3d.com/browse/UUM-48116",
-        graphicsDeviceTypes: new GraphicsDeviceType[] { GraphicsDeviceType.Metal }
+        GraphicsDeviceType.Metal
     )]
     [IgnoreGraphicsTest(
         "001-HDTemplate$",
         "Small issue with incorrect rendering on bubble. Some half overflow issue and flickering artifacts. Will need image update when fixed",
-        runtimePlatforms: new RuntimePlatform[] { RuntimePlatform.Switch }
+        RuntimePlatform.Switch
     )]
     [IgnoreGraphicsTest(
         "001-HDTemplate$",
         "Linux/VK: The test is a bit flaky, failing around 1/6 runs. Needs further investigation.",
-        runtimePlatforms: new RuntimePlatform[] { RuntimePlatform.LinuxPlayer },
-        graphicsDeviceTypes: new GraphicsDeviceType[] { GraphicsDeviceType.Vulkan }
+        RuntimePlatform.LinuxPlayer,
+        GraphicsDeviceType.Vulkan
     )]
     [IgnoreGraphicsTest(
         "001-HDTemplate$",
         "https://jira.unity3d.com/browse/UUM-105789",
-        runtimePlatforms: new RuntimePlatform[] { RuntimePlatform.PS5, RuntimePlatform.WindowsPlayer }
+        RuntimePlatform.PS5, RuntimePlatform.WindowsPlayer
     )]
     [IgnoreGraphicsTest(
         "002-HDMaterials$",
         "",
-        graphicsDeviceTypes: new GraphicsDeviceType[] { GraphicsDeviceType.Metal }
+        GraphicsDeviceType.Metal
     )]
     [IgnoreGraphicsTest(
         "003-VirtualTexturing$",
-        "https://jira.unity3d.com/browse/UUM-131182 Both Switches fail on MultiThreaded (pass on Native Jobs)",
-        runtimePlatforms: new RuntimePlatform[] { RuntimePlatform.PS4 }, // Also unstable on PS4: https://jira.unity3d.com/browse/UUM-135501
-        renderingThreadingModes: new RenderingThreadingMode[] { RenderingThreadingMode.MultiThreaded }
+        "https://jira.unity3d.com/browse/UUM-135501 Unstable on PS4",
+        RuntimePlatform.PS4,
+        RenderingThreadingMode.MultiThreaded
     )]
     [IgnoreGraphicsTest(
         "004-CloudsFlaresDecals$",
         "Area with cloud-coverage is blue on Intel-based MacOS (CI).",
-        graphicsDeviceTypes: new[] { GraphicsDeviceType.Metal },
-        architectures: new [] { Architecture.X64 }
+        GraphicsDeviceType.Metal,
+        Architecture.X64
     )]
     [IgnoreGraphicsTest(
         "007-BasicAPV$",
         "https://jira.unity3d.com/browse/UUM-54029",
-        graphicsDeviceTypes: new GraphicsDeviceType[] { GraphicsDeviceType.Metal },
-        architectures: new Architecture[] { Architecture.X64 }
+        GraphicsDeviceType.Metal,
+        Architecture.X64
     )]
     [IgnoreGraphicsTest(
         "010-BRG-Simple",
         "Unstable: https://jira.unity3d.com/browse/UUM-134572",
-        runtimePlatforms: new RuntimePlatform[] { RuntimePlatform.PS5 }
+        RuntimePlatform.PS5
     )]
     [IgnoreGraphicsTest(
         "012-SVL_Check$",
         "https://jira.unity3d.com/browse/UUM-70791",
-        runtimePlatforms: new RuntimePlatform[] { RuntimePlatform.PS4, RuntimePlatform.PS5, RuntimePlatform.Switch, RuntimePlatform.Switch2 }
+        RuntimePlatform.PS4, RuntimePlatform.PS5, RuntimePlatform.Switch, RuntimePlatform.Switch2
     )]
     public IEnumerator Run(SceneGraphicsTestCase testCase)
     {

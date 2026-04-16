@@ -263,6 +263,14 @@ namespace UnityEngine.Rendering.HighDefinition
 
                 return hash;
             }
+
+#if UNITY_EDITOR
+            [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+            static void ResetStaticsOnLoad()
+            {
+                s_DefaultTexture = null;
+            }
+#endif
         }
 
         /// <summary>Layer A.</summary>
@@ -337,6 +345,8 @@ namespace UnityEngine.Rendering.HighDefinition
         /// </summary>
         static void Init()
         {
+            CloudMap.s_DefaultTexture = null;
+
             if (GraphicsSettings.TryGetRenderPipelineSettings<HDRenderPipelineRuntimeTextures>(out var runtimeTextures))
             {
                 CloudMap.s_DefaultTexture = runtimeTextures.defaultCloudMap;

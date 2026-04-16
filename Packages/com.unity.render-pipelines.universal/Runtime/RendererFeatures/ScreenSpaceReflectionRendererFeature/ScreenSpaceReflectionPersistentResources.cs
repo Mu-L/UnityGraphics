@@ -12,10 +12,19 @@ namespace UnityEngine.Rendering.Universal
         [SerializeField] [ResourcePath("Shaders/Utils/ComputeScreenSpaceReflection.shader")]
         Shader m_Shader;
 
+        [SerializeField] [ResourcePath("Shaders/Utils/BlitFullPrecision.shader")]
+        Shader m_BlitShader;
+
         public Shader Shader
         {
             get => m_Shader;
             set => this.SetValueAndNotify(ref m_Shader, value);
+        }
+
+        public Shader BlitShader
+        {
+            get => m_BlitShader;
+            set => this.SetValueAndNotify(ref m_BlitShader, value);
         }
 
         public bool isAvailableInPlayerBuild => true;

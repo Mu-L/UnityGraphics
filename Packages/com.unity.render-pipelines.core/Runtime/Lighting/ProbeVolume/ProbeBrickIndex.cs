@@ -2,10 +2,11 @@
 using System;
 using System.Diagnostics;
 using System.Collections.Generic;
-using UnityEngine.Profiling;
-using System.Collections;
 using Unity.Collections;
 using Unity.Collections.LowLevel.Unsafe;
+using Unity.Profiling;
+using Unity.Profiling.LowLevel;
+using System.Collections;
 using Chunk = UnityEngine.Rendering.ProbeBrickPool.BrickChunkAlloc;
 using CellIndexInfo = UnityEngine.Rendering.ProbeReferenceVolume.CellIndexInfo;
 
@@ -13,6 +14,23 @@ namespace UnityEngine.Rendering
 {
     internal class ProbeBrickIndex
     {
+        /// <summary>
+        /// Allocates the physical index <c>ComputeBuffer</c>, the backing CPU
+        /// <c>NativeArray</c>, and the chunk free-list, then runs <c>Clear</c> to
+        /// zero-initialize the buffer. Cost scales with the memory budget.
+        /// </summary>
+        static readonly ProfilerMarker k_CreateProbeBrickIndex =
+            new ProfilerMarker(ProfilerCategory.Render, "Create ProbeBrickIndex",
+                MarkerFlags.VerbosityAdvanced);
+
+        /// <summary>
+        /// Zeroes the physical index CPU array, marks all index chunks as free, and resets the
+        /// dirty range so the full buffer is re-uploaded on the next GPU sync.
+        /// </summary>
+        static readonly ProfilerMarker k_ClearIndex =
+            new ProfilerMarker(ProfilerCategory.Render, "Clear Index",
+                MarkerFlags.VerbosityAdvanced);
+
         // a few constants
         internal const int kMaxSubdivisionLevels = 7; // 3 bits
         internal const int kIndexChunkSize = 243;
@@ -94,7 +112,7 @@ namespace UnityEngine.Rendering
 
         internal ProbeBrickIndex(ProbeVolumeTextureMemoryBudget memoryBudget)
         {
-            Profiler.BeginSample("Create ProbeBrickIndex");
+            using var _ = k_CreateProbeBrickIndex.Auto();
             m_CenterRS = new Vector3Int(0, 0, 0);
 
             m_NeedUpdateIndexComputeBuffer = false;
@@ -111,7 +129,6 @@ namespace UnityEngine.Rendering
             estimatedVMemCost = physicalBufferSize * sizeof(int);
 
             Clear();
-            Profiler.EndSample();
         }
 
         public int GetRemainingChunkCount()
@@ -150,7 +167,7 @@ namespace UnityEngine.Rendering
 
         internal void Clear()
         {
-            Profiler.BeginSample("Clear Index");
+            using var _ = k_ClearIndex.Auto();
 
             m_IndexChunks.SetAll(false);
             m_AvailableChunkCount = m_ChunksCount;
@@ -166,8 +183,6 @@ namespace UnityEngine.Rendering
                 m_UpdateMinIndex = 0;
                 m_UpdateMaxIndex = m_PhysicalIndexBufferData.Length - 1;
             }
-
-            Profiler.EndSample();
         }
 
         internal void GetRuntimeResources(ref ProbeReferenceVolume.RuntimeResources rr)

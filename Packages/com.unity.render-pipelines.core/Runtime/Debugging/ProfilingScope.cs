@@ -14,7 +14,7 @@ namespace UnityEngine.Rendering
 {
     class TProfilingSampler<TEnum> : ProfilingSampler where TEnum : Enum
     {
-        internal static Dictionary<TEnum, TProfilingSampler<TEnum>> samples = new Dictionary<TEnum, TProfilingSampler<TEnum>>();
+        internal static readonly Dictionary<TEnum, TProfilingSampler<TEnum>> samples = new Dictionary<TEnum, TProfilingSampler<TEnum>>();
 
         static TProfilingSampler()
         {

@@ -38,6 +38,14 @@ namespace UnityEngine.Rendering.RenderGraphModule
 
         static uint s_CurrentValidBit = 1;
 
+#if UNITY_EDITOR
+        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterAssembliesLoaded)]
+        static void ResetStaticsOnLoad()
+        {
+            s_CurrentValidBit = 1;
+        }
+#endif
+
         public int index
         {
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -98,7 +106,7 @@ namespace UnityEngine.Rendering.RenderGraphModule
             return false;
         }
 
-        static public void NewFrame(int executionIndex)
+        public static void NewFrame(int executionIndex)
         {
             uint previousValidBit = s_CurrentValidBit;
 

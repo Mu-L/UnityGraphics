@@ -652,9 +652,9 @@ namespace UnityEngine.Rendering.Universal
 
             bool requirePrepass = requirePrepassForTextures || useDepthPriming;
 
-            // Only use a depth format when we do a prepass directly the cameraDepthTexture. If we do depth priming (ie, prepass to the activeCameraDepth), we don't do a prepass to the texture. Instead, we do a copy from the primed attachment.
+            // Only use a depth format when we do a prepass directly to the cameraDepthTexture, or if R32F color format is not supported. If we do depth priming (ie, prepass to the activeCameraDepth), we don't do a prepass to the texture. Instead, we do a copy from the primed attachment.
             bool prepassToCameraDepthTexture = requirePrepassForTextures && !usesDeferredLighting && !useDepthPriming;
-            bool depthTextureIsDepthFormat = prepassToCameraDepthTexture;
+            bool depthTextureIsDepthFormat = prepassToCameraDepthTexture || !PlatformAutoDetect.hasRenderToR32F;
             bool requireCopyFromDepth = renderPassInputs.requiresDepthTexture && !prepassToCameraDepthTexture;
 
             // We configure this for the first camera of the stack and overlay camera will reuse create color/depth var
@@ -1945,7 +1945,12 @@ namespace UnityEngine.Rendering.Universal
             UniversalResourceData resourceData = frameData.Get<UniversalResourceData>();
             DrawScreenSpaceUIPass.ConfigureOffscreenUITextureDesc(ref descriptor);
             RenderingUtils.ReAllocateHandleIfNeeded(ref s_OffscreenUIColorHandle, descriptor, name: "_OverlayUITexture");
-            resourceData.overlayUITexture = renderGraph.ImportTexture(s_OffscreenUIColorHandle);
+            // Clear the texture to avoid stale data from previous frames
+            ImportResourceParams importParams = new ImportResourceParams();
+            importParams.clearOnFirstUse = true;
+            importParams.clearColor = Color.clear;
+            importParams.discardOnLastUse = true;
+            resourceData.overlayUITexture = renderGraph.ImportTexture(s_OffscreenUIColorHandle, importParams);
         }
 
         void DepthNormalPrepassRender(RenderGraph renderGraph, RenderPassInputSummary renderPassInputs, in TextureHandle depthTarget, uint batchLayerMask, bool setGlobalDepth, bool setGlobalTextures, bool partialPass)

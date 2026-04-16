@@ -31,14 +31,11 @@ namespace Unity.Rendering.Universal.Tests
         {
             requestedGRDContext = grdContext;
 
-            gpuResidentDrawerContext =
-                GlobalContextManager.RegisterGlobalContext(typeof(GpuResidentDrawerGlobalContext))
-                as GpuResidentDrawerGlobalContext;
+            gpuResidentDrawerContext = GlobalContextManager.Get<GpuResidentDrawerGlobalContext>();
 
-            previousGRDContext = (GpuResidentDrawerContext)gpuResidentDrawerContext.Context;
+            previousGRDContext = (GpuResidentDrawerContext)gpuResidentDrawerContext.Current;
 
-            // Activate new context
-            gpuResidentDrawerContext.ActivateContext(requestedGRDContext);
+            gpuResidentDrawerContext.Activate(requestedGRDContext);
         }
 
         [OneTimeSetUp]
@@ -66,9 +63,9 @@ namespace Unity.Rendering.Universal.Tests
         [SetUp]
         public void SetUpContext()
         {
-            gpuResidentDrawerContext.ActivateContext(requestedGRDContext);
+            gpuResidentDrawerContext.Activate(requestedGRDContext);
 
-            GlobalContextManager.AssertContextIs<GpuResidentDrawerGlobalContext, GpuResidentDrawerContext>(requestedGRDContext);
+            GlobalContextManager.AssertContextIs<GpuResidentDrawerGlobalContext>(requestedGRDContext);
         }
 
         [TearDown]
@@ -85,9 +82,7 @@ namespace Unity.Rendering.Universal.Tests
         {
             SceneManager.LoadScene("GraphicsTestTransitionScene", LoadSceneMode.Single);
 
-            gpuResidentDrawerContext.ActivateContext(previousGRDContext);
-
-            GlobalContextManager.UnregisterGlobalContext(typeof(GpuResidentDrawerGlobalContext));
+            gpuResidentDrawerContext.Activate(previousGRDContext);
         }
     }
 

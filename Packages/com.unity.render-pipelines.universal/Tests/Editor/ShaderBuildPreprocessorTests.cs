@@ -1257,5 +1257,26 @@ namespace ShaderStrippingAndPrefiltering
             expected = ShaderFeatures.DecalGBuffer | ShaderFeatures.DecalNormalBlendHigh;
             m_TestHelper.AssertShaderFeaturesAndReset(expected, actual);
         }
+
+
+        [Test]
+        public void TestGetSupportedShaderFeaturesFromRendererFeatures_RenderObject()
+        {
+            RenderObjects renderObjectFeature = ScriptableObject.CreateInstance<RenderObjects>();
+            renderObjectFeature.settings.depthInputAttachment = true;
+            m_TestHelper.rendererFeatures.Add(renderObjectFeature);
+
+            // Initial
+            RendererRequirements rendererRequirements = m_TestHelper.defaultRendererRequirements;
+            ShaderFeatures actual = m_TestHelper.GetSupportedShaderFeaturesFromRendererFeatures(rendererRequirements);
+            ShaderFeatures expected = ShaderFeatures.RenderObjectDepthInputAttachment;
+            m_TestHelper.AssertShaderFeaturesAndReset(expected, actual);
+
+            m_TestHelper.rendererFeatures[0].SetActive(false);
+            rendererRequirements = m_TestHelper.defaultRendererRequirements;
+            actual = m_TestHelper.GetSupportedShaderFeaturesFromRendererFeatures(rendererRequirements);
+            expected = ShaderFeatures.None;
+            m_TestHelper.AssertShaderFeaturesAndReset(expected, actual);
+        }
     }
 }

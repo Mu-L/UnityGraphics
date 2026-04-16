@@ -145,7 +145,7 @@ namespace Unity.GraphCommon.LowLevel.Editor
                 {
                     m_ValueDataOffsets[offsetValueData.ValueData] = currentBucketOffset + offsetValueData.OffsetInBucket;
                 }
-                currentBucketOffset += kAlignement;
+                currentBucketOffset += (bucket.CurrentSize + kAlignement - 1) / kAlignement * kAlignement;
             }
             m_TotalSize = currentBucketOffset;
         }

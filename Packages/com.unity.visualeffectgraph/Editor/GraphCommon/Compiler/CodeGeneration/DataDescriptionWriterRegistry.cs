@@ -37,7 +37,7 @@ namespace Unity.GraphCommon.LowLevel.Editor
             }
             else
             {
-                return dataView.DataContainer.Name;
+                return dataView.DataContainer.IdentifierName;
             }
         }
 
@@ -49,10 +49,7 @@ namespace Unity.GraphCommon.LowLevel.Editor
             }
             else if (dataView.DataDescription is ValueData valueData)
             {
-                if (typeof(Texture).IsAssignableFrom(valueData.Type)) // TODO: Binding resources directly, instead of declaring and initializing
-                    return $"{HlslCodeHelper.GetTypeName(valueData.Type)}";
-                else
-                    return $"static {HlslCodeHelper.GetTypeName(valueData.Type)}";
+                return HlslCodeHelper.GetTypeName(valueData.Type);
             }
             else
             {

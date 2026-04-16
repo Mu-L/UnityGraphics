@@ -76,27 +76,41 @@ namespace UnityEngine.Rendering.RenderGraphModule
         }
 
         [Conditional("DEVELOPMENT_BUILD"), Conditional("UNITY_EDITOR")]
-        private void CheckDepthInputAttachmentFlagEnabled()
+        private void CheckInputAttachment(int index, bool isDepth)
         {
             if (RenderGraph.enableValidityChecks)
             {
-                if (!m_RenderPass.extendedFeatureFlags.HasFlag(ExtendedFeatureFlags.DepthAttachmentAsInputAttachment))
+                if (isDepth)
                 {
-                    throw new InvalidOperationException(
-                        RenderGraphExceptionMessages.DepthInputAttachmentNotEnabled(m_RenderPass.name));
-                }
-            }
-        }
+                    // Check ExtendedFeatureFlags
+                    if (!m_RenderPass.extendedFeatureFlags.HasFlag(ExtendedFeatureFlags.DepthAttachmentAsInputAttachment))
+                    {
+                        throw new InvalidOperationException(
+                            RenderGraphExceptionMessages.DepthInputAttachmentNotEnabled(m_RenderPass.name));
+                    }
 
-        [Conditional("DEVELOPMENT_BUILD"), Conditional("UNITY_EDITOR")]
-        private void CheckDepthInputAttachmentSupported()
-        {
-            if (RenderGraph.enableValidityChecks)
-            {
-                if (!SystemInfo.supportsDepthAttachmentAsInputAttachment)
+                    // Check Systeminfo
+                    if (!SystemInfo.supportsDepthAttachmentAsInputAttachment)
+                    {
+                        throw new InvalidOperationException(
+                            RenderGraphExceptionMessages.DepthInputAttachmentNotSupported(m_RenderPass.name));
+                    }
+
+                    // Check Index.
+                    if (index != 0)
+                    {
+                        throw new InvalidOperationException(
+                            RenderGraphExceptionMessages.DepthInputAttachmentWithInvalidIndex(m_RenderPass.name));
+                    }
+                }
+                else
                 {
-                    throw new InvalidOperationException(
-                        RenderGraphExceptionMessages.DepthInputAttachmentNotSupported(m_RenderPass.name));
+                    // Check invalid input attachment use case for color
+                    if (m_RenderPass.extendedFeatureFlags.HasFlag(ExtendedFeatureFlags.DepthAttachmentAsInputAttachment) && index == 0)
+                    {
+                        throw new InvalidOperationException(
+                            RenderGraphExceptionMessages.DepthInputAttachmentWithColorFormat(m_RenderPass.name));
+                    }
                 }
             }
         }
@@ -556,17 +570,15 @@ namespace UnityEngine.Rendering.RenderGraphModule
 
             CheckFrameBufferFetchEmulationIsSupported(tex);
 
-            // Check if this is a depth texture - requires DepthAttachmentAsInputAttachment feature flag
             m_Resources.GetRenderTargetInfo(tex.handle, out var info);
             if (GraphicsFormatUtility.IsDepthFormat(info.format))
             {
-                CheckDepthInputAttachmentFlagEnabled();
-                CheckDepthInputAttachmentSupported();
+                CheckInputAttachment(index, true);
                 CheckUseFragment(tex, true);
             }
             else
             {
-                // Note: Regular color input attachments don't require extended feature flags - supported everywhere
+                CheckInputAttachment(index, false);
                 CheckUseFragment(tex, false);
             }
 

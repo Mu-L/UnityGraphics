@@ -627,5 +627,26 @@ namespace UnityEngine.Rendering
 
             return Mathf.Clamp(thresholdPercentage / m_CurrentFraction, 0.0f, 1.0f);
         }
+
+#if UNITY_EDITOR
+        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterAssembliesLoaded)]
+        static void ResetStaticsOnLoad()
+        {
+            s_ActiveScalerSlot = DynamicResScalerSlot.User;
+            s_ScalerContainers = new ScalerContainer[(int)DynamicResScalerSlot.Count]
+            {
+                new ScalerContainer() { type = DynamicResScalePolicyType.ReturnsMinMaxLerpFactor, method = DefaultDynamicResMethod },
+                new ScalerContainer() { type = DynamicResScalePolicyType.ReturnsMinMaxLerpFactor, method = DefaultDynamicResMethod }
+            };
+            s_CameraUpscaleFilters = new Dictionary<EntityId, DynamicResUpscaleFilter>();
+            s_CameraInstances = new Dictionary<EntityId, DynamicResolutionHandler>(CameraDictionaryMaxcCapacity);
+            s_DefaultInstance = new DynamicResolutionHandler();
+            s_ActiveCameraId = EntityId.None;
+            s_ActiveInstance = s_DefaultInstance;
+            s_ActiveInstanceDirty = true;
+            s_GlobalHwFraction = 1.0f;
+            s_GlobalHwUpresActive = false;
+        }
+#endif
     }
 }

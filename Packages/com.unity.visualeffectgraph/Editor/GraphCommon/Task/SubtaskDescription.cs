@@ -15,7 +15,7 @@ namespace Unity.GraphCommon.LowLevel.Editor
         /// <summary>
         /// The list of expressions associated with the subtask, each paired with a data binding key.
         /// </summary>
-        public List<(IDataKey, IExpression)> Expressions { get; set; }
+        public List<IDataKey> ExpressionBindingKeys { get; set; }
 
         /// <summary>
         /// The actual task description.

@@ -1,4 +1,5 @@
 using System;
+using UnityEngine.Experimental.Rendering;
 using UnityEngine.Rendering.RenderGraphModule;
 using System.Runtime.CompilerServices; // AggressiveInlining
 
@@ -86,7 +87,7 @@ namespace UnityEngine.Rendering.Universal
             internal FilmGrainParams filmGrain;
             internal DitheringParams dither;
 
-            internal bool isFinalPass;
+            internal bool isActiveTargetBackBuffer;
             internal bool useFastSRGBLinearConversion;
             internal bool requireSRGBConversionBlit;
         }
@@ -193,7 +194,7 @@ namespace UnityEngine.Rendering.Universal
                     passData.filmGrain.Setup(filmGrain, m_FilmGrainTextures, cameraData.pixelWidth, cameraData.pixelHeight);
                     passData.dither.Setup(m_DitherTexture, cameraData.pixelWidth, cameraData.pixelHeight);
                 }
-                passData.isFinalPass = m_IsFinalPass;
+                passData.isActiveTargetBackBuffer = resourceData.isActiveTargetBackBuffer;
 
                 builder.SetRenderFunc(static (UberPostPassData data, RasterGraphContext context) =>
                 {
@@ -225,7 +226,7 @@ namespace UnityEngine.Rendering.Universal
                     if(data.chromaticAberration.IsActive())
                         data.chromaticAberration.Apply(material);
 
-                    data.vignette.Apply(material, cameraData.xr);
+                    data.vignette.Apply(material);
 
                     if(data.filmGrain.IsActive())
                         data.filmGrain.Apply(material);
@@ -259,16 +260,22 @@ namespace UnityEngine.Rendering.Universal
                     if(PostProcessUtils.RequireHDROutput(cameraData))
                     {
                         PostProcessUtils.SetupHDROutput(material, cameraData.hdrDisplayInformation, cameraData.hdrDisplayColorGamut, data.tonemapping, data.hdrOperations, cameraData.rendersOverlayUI);
-                        RenderingUtils.SetupOffscreenUIViewportParams(material, ref cameraData.pixelRect, data.isFinalPass && cameraData.resolveFinalTarget);
+                        RenderingUtils.SetupOffscreenUIViewportParams(material, ref cameraData.pixelRect, data.isActiveTargetBackBuffer);
+                    }
+
+#if ENABLE_VR && ENABLE_XR_MODULE
+                    // Setup XR UV remapping for Quad View (used by all screen-space effects)
+                    if (cameraData.xr != null && cameraData.xr.enabled && cameraData.xr.singlePassEnabled)
+                    {
+                        PostProcessUtils.SetupXRUVRemapping(material, cameraData.xr);
                     }
 
                     // Done with Uber, blit it
-#if ENABLE_VR && ENABLE_XR_MODULE
                     if (cameraData.xr.enabled && cameraData.xr.hasValidVisibleMesh)
-                        PostProcessUtils.ScaleViewportAndDrawVisibilityMesh(context, data.sourceTexture, data.destinationTexture, data.cameraData, material, data.isFinalPass);
+                        PostProcessUtils.ScaleViewportAndDrawVisibilityMesh(context, data.sourceTexture, data.destinationTexture, data.cameraData, material, data.isActiveTargetBackBuffer);
                     else
 #endif
-                        PostProcessUtils.ScaleViewportAndBlit(context, data.sourceTexture, data.destinationTexture, data.cameraData, material, data.isFinalPass);
+                        PostProcessUtils.ScaleViewportAndBlit(context, data.sourceTexture, data.destinationTexture, data.cameraData, material, data.isActiveTargetBackBuffer);
                 });
             }
 
@@ -510,24 +517,51 @@ namespace UnityEngine.Rendering.Universal
         {
             public Vector4 vignetteParams1;
             public Vector4 vignetteParams2;
+#if ENABLE_VR && ENABLE_XR_MODULE
+            public Vector4 vignetteXRCenter; 
+            public bool hasXRCenter;
+#endif
+
 
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
             public void Setup(Vignette vignette, int width, int height, Experimental.Rendering.XRPass xrPass)
             {
                 CalcVignetteParams(vignette, width, height, xrPass, out vignetteParams1, out vignetteParams2);
+#if ENABLE_VR && ENABLE_XR_MODULE
+                hasXRCenter = false;
+                if (xrPass != null && xrPass.enabled && xrPass.singlePassEnabled)
+                {
+                    hasXRCenter = true;
+                    Vector2 center = vignetteParams2;
+                    var xrLayout = XRSystem.currentLayout;
+
+                    if (xrLayout != null && xrPass.viewCount > 1 && xrPass.multipassId == 1 && xrPass.isLastCameraPass)
+                    {
+                        // Second pass (inner views): Reuse the cached peripheral vignette center
+                        // This ensures vignette is calculated in the outer UV space after remapping
+                        vignetteXRCenter = xrLayout.quadView.cachedPeripheralVignetteCenter;
+                    }
+                    else
+                    {
+                        // First pass (peripheral/outer views): Calculate and cache the vignette center
+                        vignetteXRCenter = xrPass.ApplyXRViewCenterOffset(center);
+                        if (xrLayout != null)
+                            xrLayout.quadView.cachedPeripheralVignetteCenter = vignetteXRCenter;
+                    }
+                }
+#endif
             }
 
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            public void Apply(Material material, Experimental.Rendering.XRPass xrPass)
+            public void Apply(Material material)
             {
                 material.SetVector(ShaderConstants._Vignette_Params1, vignetteParams1);
                 material.SetVector(ShaderConstants._Vignette_Params2, vignetteParams2);
 
 #if ENABLE_VR && ENABLE_XR_MODULE
-                if (xrPass != null && xrPass.enabled && xrPass.singlePassEnabled)
+                if (hasXRCenter)
                 {
-                    Vector2 center = vignetteParams2;
-                    material.SetVector(ShaderConstants._Vignette_ParamsXR, xrPass.ApplyXRViewCenterOffset(center));
+                    material.SetVector(ShaderConstants._Vignette_ParamsXR, vignetteXRCenter);
                 }
 #endif
             }
@@ -545,6 +579,11 @@ namespace UnityEngine.Rendering.Universal
                     // In multi-pass mode we need to modify the eye center with the values from .xy of the corrected
                     // center since the version of the shader that is not single-pass will use the value in _Vignette_Params2
                     center = xrPass.ApplyXRViewCenterOffset(center);
+                }
+                if (xrPass != null && xrPass.singlePassEnabled && xrPass.viewCount > 1 && xrPass.multipassId == 1 && xrPass.isLastCameraPass)
+                {
+                    // In quad view we need to also apply the aspect ratio correction to the vignette as the UV remapping will cause it to be stretched/squashed if not corrected
+                    aspectRatio *= xrPass.uvScales.y / xrPass.uvScales.x;
                 }
 #endif
 

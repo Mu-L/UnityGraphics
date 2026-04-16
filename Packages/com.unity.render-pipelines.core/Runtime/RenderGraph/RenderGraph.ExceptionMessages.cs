@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using System.Diagnostics;
+using Unity.Scripting.LifecycleManagement;
 using UnityEngine.Experimental.Rendering;
 using UnityEngine.Rendering.RenderGraphModule.NativeRenderPassCompiler;
 
@@ -9,7 +10,8 @@ namespace UnityEngine.Rendering.RenderGraphModule
     {
         internal static class RenderGraphExceptionMessages
         {
-            internal static bool enableCaller = true;
+            [NoAutoStaticsCleanup]
+            internal static bool enableCaller = true; // Only used from tests
 
             internal const string k_RenderGraphExecutionError = "Render Graph Execution error";
 
@@ -134,8 +136,18 @@ namespace UnityEngine.Rendering.RenderGraphModule
 
             internal static string DepthInputAttachmentWithWriteAccess(string passName) =>
                 $"In pass '{passName}' - " +
-                $"Depth attachment has Write access but ExtendedFeatureFlags.DepthAttachmentAsInputAttachment is set. " +
-                $"Depth input attachments must be read-only. Remove write access from the depth attachment.";
+                $"Depth attachment has Write access but ExtendedFeatureFlags.DepthAttachmentAsInputAttachment is set." +
+                $"Depth input attachment must be read-only. Remove write access from the depth attachment.";
+
+            internal static string DepthInputAttachmentWithInvalidIndex(string passName) =>
+                $"In pass '{passName}' - " +
+                $"Depth attachment must be set to index 0 when ExtendedFeatureFlags.DepthAttachmentAsInputAttachment is set.";
+
+            internal static string DepthInputAttachmentWithColorFormat(string passName) =>
+                $"In pass '{passName}' - " +
+                $"Color attachment is set to index 0 but ExtendedFeatureFlags.DepthAttachmentAsInputAttachment is set. " +
+                $"Index 0 is reserved for the depth when the flag is set. Remove the extended feature flag or set a depth attachment";
+
 
             // RenderGraphPass
             internal const string k_MoreThanOneResourceForMRTIndex =

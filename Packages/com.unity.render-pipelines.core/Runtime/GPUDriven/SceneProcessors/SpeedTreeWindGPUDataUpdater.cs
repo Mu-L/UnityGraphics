@@ -2,15 +2,33 @@
 #if ENABLE_TERRAIN_MODULE
 using System;
 using Unity.Collections;
-using UnityEngine.Profiling;
-using UnityEngine.Assertions;
 using Unity.Collections.LowLevel.Unsafe;
 using Unity.Mathematics;
+using Unity.Profiling;
+using Unity.Profiling.LowLevel;
+using UnityEngine.Assertions;
 
 namespace UnityEngine.Rendering
 {
     internal class SpeedTreeWindGPUDataUpdater : IDisposable
     {
+        /// <summary>
+        /// Queries compacted visibility masks to collect visible SpeedTree instances, then
+        /// triggers wind simulation updates and GPU uploads for them. In edit mode, processes
+        /// only newly-visible trees. In play mode, processes all visible trees every frame.
+        /// </summary>
+        static readonly ProfilerMarker k_UpdateGPUData =
+            new ProfilerMarker(ProfilerCategory.Render, "SpeedTreeGPUWindDataUpdater.UpdateGPUData", MarkerFlags.VerbosityAdvanced);
+
+        /// <summary>
+        /// Advances SpeedTree wind simulation state for each visible tree, writes all wind
+        /// parameter vectors into a CPU staging buffer, uploads the buffer to the GPU, and
+        /// scatter-writes wind params into the instance data buffer. Called twice when
+        /// newly-visible trees need history initialization.
+        /// </summary>
+        static readonly ProfilerMarker k_UpdateSpeedTreeWindAndUploadWindParamsToGPU =
+            new ProfilerMarker(ProfilerCategory.Render, "SpeedTreeGPUWindDataUpdater.UpdateSpeedTreeWindAndUploadWindParamsToGPU", MarkerFlags.VerbosityAdvanced);
+
         private InstanceDataSystem m_InstanceDataSystem;
         private InstanceCuller m_Culler;
         private ParallelBitArray m_ProcessedThisFrameTreeBits;
@@ -48,7 +66,7 @@ namespace UnityEngine.Rendering
             if (!compactedVisibilityMasks.IsCreated)
                 return;
 
-            Profiler.BeginSample("SpeedTreeGPUWindDataUpdater.UpdateGPUData");
+            using var _ = k_UpdateGPUData.Auto();
 
             int maxInstancesCount = m_InstanceDataSystem.indexToHandle.Length;
 
@@ -66,7 +84,7 @@ namespace UnityEngine.Rendering
 
             if (visibleTreeRenderers.Length > 0)
             {
-                Profiler.BeginSample("SpeedTreeGPUWindDataUpdater.UpdateSpeedTreeWindAndUploadWindParamsToGPU");
+                k_UpdateSpeedTreeWindAndUploadWindParamsToGPU.Begin();
 
                 // Become visible trees is a subset of visible trees.
                 var becomeVisibleTreeRendererIDs = visibleTreeRenderers.AsArray().GetSubArray(0, becomeVisibleTreeInstancesCount);
@@ -77,13 +95,11 @@ namespace UnityEngine.Rendering
 
                 UpdateSpeedTreeWindAndUploadWindParamsToGPU(visibleTreeRenderers.AsArray(), visibleTreeInstances.AsArray(), history: false);
 
-                Profiler.EndSample();
+                k_UpdateSpeedTreeWindAndUploadWindParamsToGPU.End();
             }
 
             visibleTreeRenderers.Dispose();
             visibleTreeInstances.Dispose();
-
-            Profiler.EndSample();
         }
 
         private unsafe void UpdateSpeedTreeWindAndUploadWindParamsToGPU(NativeArray<EntityId> treeRenderers, NativeArray<InstanceHandle> treeInstances, bool history)

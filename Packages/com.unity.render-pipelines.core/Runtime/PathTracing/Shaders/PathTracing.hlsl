@@ -33,6 +33,7 @@ int ScatterDiffusely(PTHitGeom hitGeom, float3 V, inout PathTracingSampler rngSt
     bounceRay = (UnifiedRT::Ray)0;
 
     float3 rayDirection;
+    UNITY_FLATTEN
     if (!SampleDiffuseBrdf(u, hitGeom.worldFaceNormal, hitGeom.worldNormal, V, rayDirection, brdfPdf))
         return RAY_TERMINATION;
 
@@ -275,6 +276,7 @@ bool Scatter(inout PathIterator iterator, inout PathTracingSampler rngState)
 {
     float brdfPdf;
     int event = ScatterDiffusely(iterator.hitGeo, -iterator.ray.direction, rngState, iterator.ray, brdfPdf);
+    UNITY_FLATTEN
     if (event == RAY_TERMINATION)
         return false;
 

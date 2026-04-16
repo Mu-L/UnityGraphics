@@ -6,22 +6,10 @@
 #include "Common.hlsl"
 #include "RingBuffer.hlsl"
 
-#if defined(PATCH_UTIL_USE_RW_IRRADIANCE_BUFFER)
-#define IrradianceBufferType RWStructuredBuffer<SphericalHarmonics::RGBL1>
+#if defined(PATCH_UTIL_USE_RW_PATCH_IRRADIANCE_BUFFER)
+#define PatchIrradianceBufferType RWStructuredBuffer<SphericalHarmonics::RGBL1>
 #else
-#define IrradianceBufferType StructuredBuffer<SphericalHarmonics::RGBL1>
-#endif
-
-#if defined(PATCH_UTIL_USE_RW_CELL_INDEX_BUFFER)
-#define CellPatchIndexBufferType RWStructuredBuffer<uint>
-#else
-#define CellPatchIndexBufferType StructuredBuffer<uint>
-#endif
-
-#if defined(PATCH_UTIL_USE_RW_CELL_ALLOCATION_MARK_BUFFER)
-#define CellAllocationMarkBufferType RWStructuredBuffer<uint>
-#else
-#define CellAllocationMarkBufferType StructuredBuffer<uint>
+#define PatchIrradianceBufferType StructuredBuffer<SphericalHarmonics::RGBL1>
 #endif
 
 #if defined(PATCH_UTIL_USE_RW_PATCH_GEOMETRY_BUFFER)
@@ -37,9 +25,15 @@
 #endif
 
 #if defined(PATCH_UTIL_USE_RW_CELL_PATCH_INDEX_BUFFER)
-#define CellPatchndexBufferType RWStructuredBuffer<uint>
+#define CellPatchIndexBufferType RWStructuredBuffer<uint>
 #else
 #define CellPatchIndexBufferType StructuredBuffer<uint>
+#endif
+
+#if defined(PATCH_UTIL_USE_RW_CELL_ALLOCATION_MARK_BUFFER)
+#define CellAllocationMarkBufferType RWStructuredBuffer<uint>
+#else
+#define CellAllocationMarkBufferType StructuredBuffer<uint>
 #endif
 
 namespace PatchUtil
@@ -49,6 +43,7 @@ namespace PatchUtil
     static const uint volumeAngularResolution = 4; // Must match C# side.
     static const float3 invalidIrradiance = float3(-1, -1, -1);
     static const uint updateMax = 32;
+    static const uint evictionThreshold = 60 * 4;
 
     struct PatchGeometry
     {
@@ -58,6 +53,10 @@ namespace PatchUtil
 
     struct PatchCounterSet
     {
+        // Layout
+        // 0x000000FF: Update count.
+        // 0x0000FF00: Rank.
+        // 0xFFFF0000: Last access frame.
         uint data;
     };
 
@@ -65,8 +64,7 @@ namespace PatchUtil
     {
         float3 mean;
         float3 variance;
-        PatchCounterSet patchCounters;
-        uint rank;
+        PatchCounterSet counters;
     };
 
     struct VolumeParamSet
@@ -87,14 +85,41 @@ namespace PatchUtil
         uint ringConfigOffset;
     };
 
-    void Reset(inout PatchCounterSet set)
+    uint ModuloDistance(uint a, uint b, uint modulo)
+    {
+            int dif = abs(int(a) - int(b));
+            return min(dif, modulo - dif);
+    }
+
+    uint GetFramesSinceLastAccess(uint currentFrameIdx, uint patchLastAccessFrame)
+    {
+        // Here we take into account that last access frame index is in [0, 2^16-1].
+        // We use that the last frame index can never be later than current frame index.
+        const uint modulo = 65536; // 2^16
+        return ModuloDistance(
+            currentFrameIdx % modulo,
+            patchLastAccessFrame,
+            modulo);
+    }
+
+    void Reset(out PatchCounterSet set)
     {
         set.data = 0;
     }
 
     uint GetUpdateCount(PatchCounterSet set)
     {
-        return set.data & 0xFFFF;
+        return set.data & 0xFF;
+    }
+
+    uint GetRank(PatchCounterSet set)
+    {
+        return (set.data & 0xFF00) >> 8;
+    }
+
+    void SetRank(inout PatchCounterSet set, uint rank)
+    {
+        set.data = (rank << 8) | (set.data & 0xFFFF00FF);
     }
 
     uint GetLastAccessFrame(PatchCounterSet set)
@@ -104,7 +129,7 @@ namespace PatchUtil
 
     void SetUpdateCount(inout PatchCounterSet set, uint updateCount)
     {
-        set.data = updateCount | (set.data & 0xFFFF0000);
+        set.data = updateCount | (set.data & 0xFFFFFF00);
     }
 
     void SetLastAccessFrame(inout PatchCounterSet set, uint lastAccessFrame)
@@ -119,9 +144,9 @@ namespace PatchUtil
 
     void WriteLastFrameAccess(RWStructuredBuffer<PatchUtil::PatchStatisticsSet> statisticsSets, uint patchIdx, uint frameIdx)
     {
-        PatchCounterSet counterSet = statisticsSets[patchIdx].patchCounters;
+        PatchCounterSet counterSet = statisticsSets[patchIdx].counters;
         SetLastAccessFrame(counterSet, frameIdx);
-        statisticsSets[patchIdx].patchCounters = counterSet;
+        statisticsSets[patchIdx].counters = counterSet;
     }
 
     float GetVoxelSize(float voxelMinSize, uint cascadeIdx)
@@ -172,14 +197,14 @@ namespace PatchUtil
     {
         // To avoid discontinuities near the cardinal axis directions, we apply an arbitrary rotation.
         // This is based on the assumption that surfaces oriented along the cardinal axis directions
-        // are most likely in a scene compared to other directions.
+        // are more likely in a scene compared to other directions.
         const float3x3 arbitraryRotation = float3x3(
             float3(0.34034f, -0.30925f, 0.888f),
             float3(-0.30925f, 0.85502f, 0.41629f),
             float3(-0.888f, -0.41629f, 0.19536f));
         const float3 rotatedDirection = mul(arbitraryRotation, direction);
 
-        const uint2 angularSquarePos = min(uint2(3, 3), SphereToSquare(rotatedDirection) * angularResolution);
+        const uint2 angularSquarePos = min(uint2(angularResolution - 1, angularResolution - 1), SphereToSquare(rotatedDirection) * angularResolution);
         return angularSquarePos.y * angularResolution + angularSquarePos.x;
     }
 
@@ -311,7 +336,7 @@ namespace PatchUtil
         return result;
     }
 
-    bool ReadHemisphericalIrradiance(IrradianceBufferType patchIrradiances, CellPatchIndexBufferType cellPatchIndices, uint spatialResolution, uint cascadeIdx, uint3 volumeSpacePosition, float3 worldNormal, out SphericalHarmonics::RGBL1 resultIrradiance)
+    bool ReadHemisphericalIrradiance(PatchIrradianceBufferType patchIrradiances, CellPatchIndexBufferType cellPatchIndices, uint spatialResolution, uint cascadeIdx, uint3 volumeSpacePosition, float3 worldNormal, out SphericalHarmonics::RGBL1 resultIrradiance)
     {
         const uint directionIdx = GetDirectionIndex(worldNormal, volumeAngularResolution);
         const uint cellIdx = GetCellIndex(cascadeIdx, volumeSpacePosition, directionIdx, spatialResolution, volumeAngularResolution);
@@ -327,7 +352,7 @@ namespace PatchUtil
         return resultBool;
     }
 
-    uint FindPatchIndex(VolumeParamSet volumeParams, StructuredBuffer<uint> cellPatchIndices, float3 worldPosition, float3 worldNormal)
+    uint FindPatchIndex(VolumeParamSet volumeParams, CellPatchIndexBufferType cellPatchIndices, float3 worldPosition, float3 worldNormal)
     {
         VolumePositionResolution posResolution = ResolveVolumePosition(worldPosition, volumeParams);
         if (posResolution.isValid())
@@ -351,7 +376,7 @@ namespace PatchUtil
         }
     }
 
-    uint FindPatchIndexAndUpdateLastAccess(VolumeParamSet volumeParams, StructuredBuffer<uint> cellPatchIndices, RWStructuredBuffer<PatchUtil::PatchStatisticsSet> patchStatisticSets, float3 worldPosition, float3 worldNormal, uint frameIdx)
+    uint FindPatchIndexAndUpdateLastAccess(VolumeParamSet volumeParams, CellPatchIndexBufferType cellPatchIndices, RWStructuredBuffer<PatchUtil::PatchStatisticsSet> patchStatisticSets, float3 worldPosition, float3 worldNormal, uint frameIdx)
     {
         const uint patchIdx = FindPatchIndex(volumeParams, cellPatchIndices, worldPosition, worldNormal);
         if (patchIdx != invalidPatchIndex)
@@ -361,7 +386,7 @@ namespace PatchUtil
         return patchIdx;
     }
 
-    bool ReadHemisphericalIrradiance(IrradianceBufferType patchIrradiances, CellPatchIndexBufferType cellPatchIndices, VolumeParamSet volumeParams, float3 worldPosition, float3 worldNormal, uint startCascadeIdx, out SphericalHarmonics::RGBL1 resultIrradiance)
+    bool ReadHemisphericalIrradiance(PatchIrradianceBufferType patchIrradiances, CellPatchIndexBufferType cellPatchIndices, VolumeParamSet volumeParams, float3 worldPosition, float3 worldNormal, uint startCascadeIdx, out SphericalHarmonics::RGBL1 resultIrradiance)
     {
         VolumePositionResolution posResolution = ResolveVolumePosition(worldPosition, volumeParams, startCascadeIdx);
         bool resultBool = false;
@@ -377,7 +402,7 @@ namespace PatchUtil
         return resultBool;
     }
 
-    bool ReadHemisphericalIrradiance(IrradianceBufferType patchIrradiances, CellPatchIndexBufferType cellPatchIndices, VolumeParamSet volumeParams, float3 worldPosition, float3 worldNormal, out SphericalHarmonics::RGBL1 resultIrradiance)
+    bool ReadHemisphericalIrradiance(PatchIrradianceBufferType patchIrradiances, CellPatchIndexBufferType cellPatchIndices, VolumeParamSet volumeParams, float3 worldPosition, float3 worldNormal, out SphericalHarmonics::RGBL1 resultIrradiance)
     {
         const uint conservativeStartCascadeIdx = 0;
         return ReadHemisphericalIrradiance(
@@ -390,17 +415,22 @@ namespace PatchUtil
             resultIrradiance);
     }
 
-    float3 ReadPlanarIrradiance(IrradianceBufferType patchIrradiances, CellPatchIndexBufferType cellPatchIndices, uint spatialResolution, uint cascadeIdx, uint3 volumeSpacePosition, float3 worldNormal)
+    float3 EvalIrradiance(SphericalHarmonics::RGBL1 irradiance, float3 normal)
+    {
+        return max(0, SphericalHarmonics::Eval(irradiance, normal));
+    }
+
+    float3 ReadPlanarIrradiance(PatchIrradianceBufferType patchIrradiances, CellPatchIndexBufferType cellPatchIndices, uint spatialResolution, uint cascadeIdx, uint3 volumeSpacePosition, float3 worldNormal)
     {
         SphericalHarmonics::RGBL1 resultIrradiance;
         bool resultBool = ReadHemisphericalIrradiance(patchIrradiances, cellPatchIndices, spatialResolution, cascadeIdx, volumeSpacePosition, worldNormal, resultIrradiance);
         if (resultBool)
-            return max(0, SphericalHarmonics::Eval(resultIrradiance, worldNormal));
+            return EvalIrradiance(resultIrradiance, worldNormal);
         else
             return invalidIrradiance;
     }
 
-    float3 ReadPlanarIrradiance(IrradianceBufferType patchIrradiances, CellPatchIndexBufferType cellPatchIndices, VolumeParamSet volumeParams, float3 worldPosition, float3 worldNormal)
+    float3 ReadPlanarIrradiance(PatchIrradianceBufferType patchIrradiances, CellPatchIndexBufferType cellPatchIndices, VolumeParamSet volumeParams, float3 worldPosition, float3 worldNormal)
     {
         VolumePositionResolution posResolution = ResolveVolumePosition(worldPosition, volumeParams);
         if (posResolution.isValid())
@@ -426,19 +456,15 @@ namespace PatchUtil
 
     PatchStatisticsSet InitPatchStatistics(float3 irradianceSeed, uint frameIndex, uint rank)
     {
-        PatchCounterSet counterSet;
-        Reset(counterSet);
-        PatchUtil::SetLastAccessFrame(counterSet, frameIndex);
-
         PatchStatisticsSet stats;
         stats.mean = irradianceSeed;
         stats.variance = 0;
-        stats.patchCounters = counterSet;
-        stats.rank = rank;
+        Reset(stats.counters);
+        SetLastAccessFrame(stats.counters, frameIndex);
+        SetRank(stats.counters, rank);
 
         return stats;
     }
-
 
 #if BOUNCE_PATCH_ALLOCATION
     void AllocatePatch(
@@ -467,17 +493,17 @@ namespace PatchUtil
             allocParams.cellAllocationMarks,
             cellIdx);
 
-        if (resolutionResult.code == PatchUtil::patchIndexResolutionCodeAllocationFailure || resolutionResult.code == PatchUtil::patchIndexResolutionCodeLookup)
-            return;
+        if (resolutionResult.code == PatchUtil::patchIndexResolutionCodeAllocationSuccess)
+        {
+            PatchUtil::PatchGeometry geo;
+            geo.position = worldPosition;
+            geo.normal = worldNormal;
+            patchGeometries[resolutionResult.patchIdx] = geo;
 
-        PatchUtil::PatchGeometry geo;
-        geo.position = worldPosition;
-        geo.normal = worldNormal;
-        patchGeometries[resolutionResult.patchIdx] = geo;
-
-        SphericalHarmonics::RGBL1 irradianceSeed = (SphericalHarmonics::RGBL1) 0;
-        patchIrradiances[resolutionResult.patchIdx] = irradianceSeed;
-        patchStatistics[resolutionResult.patchIdx] = PatchUtil::InitPatchStatistics(irradianceSeed.l0, frameIndex, /*rank*/ 1);
+            SphericalHarmonics::RGBL1 irradianceSeed = (SphericalHarmonics::RGBL1)0;
+            patchIrradiances[resolutionResult.patchIdx] = irradianceSeed;
+            patchStatistics[resolutionResult.patchIdx] = PatchUtil::InitPatchStatistics(irradianceSeed.l0, frameIndex, /*rank*/ 1);
+        }
     }
 #endif
 }

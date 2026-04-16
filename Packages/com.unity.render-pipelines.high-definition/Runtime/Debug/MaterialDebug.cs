@@ -153,7 +153,7 @@ namespace UnityEngine.Rendering.HighDefinition
         /// <summary>List of material debug views values.</summary>
         public static int[] debugViewMaterialGBufferValues = null;
 
-        static Dictionary<MaterialSharedProperty, int[]> s_MaterialPropertyMap = new Dictionary<MaterialSharedProperty, int[]>();
+        static Dictionary<MaterialSharedProperty, int[]> s_MaterialPropertyMap = null;
 
         /// <summary>Current material shared properties debug view.</summary>
         public MaterialSharedProperty debugViewMaterialCommonValue = MaterialSharedProperty.None;
@@ -162,6 +162,34 @@ namespace UnityEngine.Rendering.HighDefinition
         {
             BuildDebugRepresentation();
         }
+
+#if UNITY_EDITOR
+        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+        static void ResetStaticsOnLoad()
+        {
+            isDebugViewMaterialInit = false;
+
+            debugViewMaterialStrings = null;
+            debugViewMaterialValues = null;
+            debugViewEngineStrings = null;
+            debugViewEngineValues = null;
+            debugViewMaterialVaryingStrings = null;
+            debugViewMaterialVaryingValues = null;
+            debugViewMaterialPropertiesStrings = null;
+            debugViewMaterialPropertiesValues = null;
+            debugViewMaterialTextureStrings = null;
+            debugViewMaterialTextureValues = null;
+
+            debugViewMaterialGBufferStrings = null;
+            debugViewMaterialGBufferValues = null;
+
+            s_MaterialPropertyMap?.Clear();
+            s_MaterialPropertyMap = null;
+
+            // Static constructors do not get called again
+            BuildDebugRepresentation();
+        }
+#endif
 
         // className include the additional "/"
         static void FillWithProperties(Type type, ref List<GUIContent> debugViewMaterialStringsList, ref List<int> debugViewMaterialValuesList, string className = "")
@@ -422,6 +450,7 @@ namespace UnityEngine.Rendering.HighDefinition
                     }
                 }
 
+                s_MaterialPropertyMap = new Dictionary<MaterialSharedProperty, int[]>();
                 foreach (var key in materialPropertyMap.Keys)
                 {
                     s_MaterialPropertyMap[key] = materialPropertyMap[key].ToArray();
@@ -500,7 +529,7 @@ namespace UnityEngine.Rendering.HighDefinition
         const int kDebugViewMaterialBufferLength = 10;
 
         //buffer must be in float as there is no SetGlobalIntArray in API
-        static float[] s_DebugViewMaterialOffsetedBuffer = new float[kDebugViewMaterialBufferLength + 1]; //first is used size
+        static readonly float[] s_DebugViewMaterialOffsetedBuffer = new float[kDebugViewMaterialBufferLength + 1]; //first is used size
 
         // Reminder: _DebugViewMaterial[i]
         //   i==0 -> the size used in the buffer

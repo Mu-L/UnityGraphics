@@ -86,7 +86,7 @@ namespace UnityEditor.VFX
 
         public override VFXValueType valueType { get { return VFXValueType.CameraBuffer; } }
 
-        sealed protected override int[] additionnalOperands { get { return new int[] { (int)valueType }; } }
+        sealed internal override int[] additionalOperands { get { return new int[] { (int)valueType }; } }
 
         public override T Get<T>()
         {

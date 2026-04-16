@@ -1719,7 +1719,7 @@ namespace UnityEngine.Rendering.HighDefinition
                 m_DebugSelectedLightShadowIndex = -1;
                 m_DebugSelectedLightShadowCount = 0;
 
-                int decalDatasCount = Math.Min(DecalSystem.m_DecalDatasCount, m_MaxDecalsOnScreen);
+                int decalDatasCount = Math.Min(DecalSystem.instance.DecalDatasCount, m_MaxDecalsOnScreen);
 
                 // We must clear the shadow requests before checking if they are any visible light because we would have requests from the last frame executed in the case where we don't see any lights
                 m_ShadowManager.Clear();
@@ -1768,11 +1768,14 @@ namespace UnityEngine.Rendering.HighDefinition
 
                 if (decalDatasCount > 0)
                 {
+                    var bounds = DecalSystem.instance.Bounds;
+                    var lightVolumes = DecalSystem.instance.LightVolumes;
+
                     for (int i = 0; i < decalDatasCount; i++)
                     {
                         for (int viewIndex = 0; viewIndex < hdCamera.viewCount; ++viewIndex)
                         {
-                            m_GpuLightsBuilder.AddLightBounds(viewIndex, DecalSystem.m_Bounds[i], DecalSystem.m_LightVolumes[i]);
+                            m_GpuLightsBuilder.AddLightBounds(viewIndex, in bounds[i], in lightVolumes[i]);
                         }
                     }
                 }
@@ -1953,7 +1956,7 @@ namespace UnityEngine.Rendering.HighDefinition
             cb._WorldAreaLightCount = (uint)(m_WorldLights.rectLightCount + m_WorldLights.lineLightCount + m_WorldLights.discLightCount);
             cb._WorldEnvLightCount = (uint)m_WorldLights.envLightCount;
 
-            cb._DecalCount = (uint)DecalSystem.m_DecalDatasCount;
+            cb._DecalCount = (uint)DecalSystem.instance.DecalDatasCount;
             HDAdditionalLightData sunLightData = GetHDAdditionalLightData(m_CurrentSunLight);
             bool sunLightShadow = sunLightData != null && m_CurrentShadowSortedSunLightIndex >= 0;
             cb._DirectionalShadowIndex = sunLightShadow ? m_CurrentShadowSortedSunLightIndex : -1;
@@ -1987,7 +1990,7 @@ namespace UnityEngine.Rendering.HighDefinition
             m_LightLoopLightData.directionalLightData.SetData(m_GpuLightsBuilder.directionalLights, 0, 0, m_GpuLightsBuilder.directionalLightCount);
             m_LightLoopLightData.lightData.SetData(m_GpuLightsBuilder.lights, 0, 0, m_GpuLightsBuilder.lightsCount);
             m_LightLoopLightData.envLightData.SetData(m_lightList.envLights);
-            m_LightLoopLightData.decalData.SetData(DecalSystem.m_DecalDatas, 0, 0, Math.Min(DecalSystem.m_DecalDatasCount, m_MaxDecalsOnScreen)); // don't add more than the size of the buffer
+            m_LightLoopLightData.decalData.SetData(DecalSystem.instance.DecalDatas, 0, 0, Math.Min(DecalSystem.instance.DecalDatasCount, m_MaxDecalsOnScreen)); // don't add more than the size of the buffer
 
             for (int viewId = 0; viewId < m_GpuLightsBuilder.lightsPerViewCount; ++viewId)
             {
