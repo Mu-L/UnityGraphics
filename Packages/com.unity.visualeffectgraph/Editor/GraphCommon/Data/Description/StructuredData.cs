@@ -3,11 +3,12 @@ using System.Collections.Generic;
 namespace Unity.GraphCommon.LowLevel.Editor
 {
     /// <summary>
-    /// Unordered data collection with elements of different types, referenced by any data identifier.
+    /// Ordered data collection with elements of different types, referenced by any data identifier.
     /// </summary>
     /*public*/ class StructuredData : IDataDescription
     {
-        Dictionary<IDataKey, IDataDescription> m_Datas = new();
+        Dictionary<IDataKey, int> m_DataIndirection = new();
+        List<IDataDescription> m_Datas = new();
 
         /// <summary>
         /// Adds a data element, providing the data identifier and the data description.
@@ -17,24 +18,23 @@ namespace Unity.GraphCommon.LowLevel.Editor
         /// <returns>True if the data element was added, false otherwise (for instance, if it was already present).</returns>
         public bool AddSubdata(IDataKey dataKey, IDataDescription data)
         {
-            return m_Datas.TryAdd(dataKey, data);
+            bool added = m_DataIndirection.TryAdd(dataKey, m_Datas.Count);
+            if(added)
+                m_Datas.Add(data);
+            return added;
         }
 
         /// <inheritdoc cref="IDataDescription"/>
         public IDataDescription GetSubdata(IDataKey dataKey)
         {
-            return m_Datas.GetValueOrDefault(dataKey);
+            if(m_DataIndirection.TryGetValue(dataKey, out int index))
+                return m_Datas[index];
+            return null;
         }
 
         /// <summary>
-        /// Enumerates all the subdata descriptions included in this data description.
+        /// Enumerates all the subdata descriptions included in this data description, in order of addition.
         /// </summary>
-        public IEnumerable<IDataDescription> SubDataDescriptions => m_Datas.Values;
-
-        /// <summary>
-        /// Enumerates all the subdata descriptions included in this data description.
-        /// </summary>
-        public IEnumerable<KeyValuePair<IDataKey, IDataDescription>> SubDatas => m_Datas;
+        public IEnumerable<IDataDescription> SubDataDescriptions => m_Datas;
     }
 }
-

@@ -26,12 +26,13 @@ namespace UnityEditor.VFX
         private static readonly IDataKey kParticleBindingKey = new NameDataKey("ParticleDataBinding");
         private static readonly IDataKey kSpawnDataBindingKey = new NameDataKey("SpawnDataBinding");
         private static readonly IDataKey kMainTextureKey = new NameDataKey("MainTexture");
+        static readonly IDataKey kGraphValuesKey = new NameDataKey("GraphValues");
 
         Dictionary<VFXData, ParticleSystemBuildInfo> m_ParticleSystems = new();
         VFXSystemNames m_SystemNames = new();
         VFXExpressionGraph m_ExpressionGraph;
 
-        Dictionary<StructuredData, Dictionary<string, uint>> m_StructuredDataNamesCount = new();
+        Dictionary<IDataDescription, Dictionary<string, uint>> m_GraphValueNameCounts = new();
 
         public IReadOnlyGraph BuildGraph(VFXGraph graph)
         {
@@ -100,7 +101,8 @@ namespace UnityEditor.VFX
         void Clear()
         {
             m_ParticleSystems.Clear();
-            m_StructuredDataNamesCount.Clear();
+            m_GraphValueNameCounts.Clear();
+            m_SystemNames = new VFXSystemNames();
         }
 
         void BuildSpawnerSystem(VFXBasicSpawner spawner, TaskGraph intermediateGraph)
@@ -156,10 +158,10 @@ namespace UnityEditor.VFX
             var systemTask = intermediateGraph.AddTask(BuildSystemTask());
             intermediateGraph.BindData(systemTask, kParticleBindingKey, particleData, BindingUsage.Write);
 
-            BuildGraphValuesBuffer(intermediateGraph, systemTask, out var graphValuesViewId, out var contextDataViewId, out var graphValuesBuffer);
+            BuildGraphValuesBuffer(intermediateGraph, systemTask, out var graphValuesBufferViewId, out var contextDataViewId, out var graphValuesBuffer);
 
             var initializeTask = intermediateGraph.AddTask(BuildInitializeTask(particleSystemBuildInfo.InitContext));
-            BindExpressions(intermediateGraph, particleSystemBuildInfo.InitContext, initializeTask, systemTask, graphValuesBuffer, graphValuesViewId);
+            BindExpressions(intermediateGraph, particleSystemBuildInfo.InitContext, initializeTask, systemTask, graphValuesBuffer, graphValuesBufferViewId);
             BindContextData(intermediateGraph, initializeTask, contextDataViewId);
 
             var spawnData = particleSystemBuildInfo.InputSpawnData;
@@ -173,7 +175,7 @@ namespace UnityEditor.VFX
             {
                 var updateTask = intermediateGraph.AddTask(BuildUpdateTask(updateContext));
                 intermediateGraph.BindData(updateTask, kParticleBindingKey, particleData, BindingUsage.ReadWrite);
-                BindExpressions(intermediateGraph, updateContext, updateTask, systemTask, graphValuesBuffer, graphValuesViewId);
+                BindExpressions(intermediateGraph, updateContext, updateTask, systemTask, graphValuesBuffer, graphValuesBufferViewId);
                 BindContextData(intermediateGraph, updateTask, contextDataViewId);
             }
 
@@ -181,19 +183,34 @@ namespace UnityEditor.VFX
             {
                 var outputTask = intermediateGraph.AddTask(BuildOutputTask(outputContext));
                 intermediateGraph.BindData(outputTask, kParticleBindingKey, particleData, BindingUsage.Read);
-                BindExpressions(intermediateGraph, outputContext, outputTask, systemTask, graphValuesBuffer, graphValuesViewId);
+                BindExpressions(intermediateGraph, outputContext, outputTask, systemTask, graphValuesBuffer, graphValuesBufferViewId);
                 BindContextData(intermediateGraph, outputTask, contextDataViewId);
             }
         }
 
-        void BuildGraphValuesBuffer(TaskGraph intermediateGraph, TaskNodeId systemTask, out DataViewId graphValuesViewId, out DataViewId contextDataViewId, out StructuredData graphValuesBuffer)
+        void BuildGraphValuesBuffer(TaskGraph intermediateGraph, TaskNodeId systemTask, out DataViewId graphValuesBufferViewId, out DataViewId contextDataViewId, out StructuredData graphValuesBuffer)
         {
             graphValuesBuffer = new StructuredData();
-            graphValuesViewId = intermediateGraph.AddData("GraphValuesBuffer", graphValuesBuffer);
-            intermediateGraph.BindData(systemTask, TemplatedTask.GraphValuesKey, graphValuesViewId, BindingUsage.Write);
-            graphValuesBuffer.AddSubdata(TemplatedTask.ContextDataKey, ValueData.Create(typeof(Vector4))); // Adds a default subdata for ContextData, which is expected from the C++ runtime.
-            contextDataViewId = intermediateGraph.GetSubdata(graphValuesViewId, TemplatedTask.ContextDataKey);
-            m_StructuredDataNamesCount.Add(graphValuesBuffer, new Dictionary<string, uint>());
+            graphValuesBufferViewId = intermediateGraph.AddData("GraphValuesBuffer", graphValuesBuffer);
+
+            StructuredData contextData = new StructuredData();
+            contextData.AddSubdata(TemplatedTask.MaxParticleCountKey, ValueData.Create(typeof(uint)));
+            contextData.AddSubdata(TemplatedTask.SystemSeedKey, ValueData.Create(typeof(uint)));
+            contextData.AddSubdata(TemplatedTask.InitSpawnIndexKey, ValueData.Create(typeof(uint)));
+            NameDataKey paddingKey = new NameDataKey("padding");
+            contextData.AddSubdata(paddingKey, ValueData.Create(typeof(uint)));
+
+            graphValuesBuffer.AddSubdata(TemplatedTask.ContextDataKey, contextData); // Adds a default subdata for ContextData, which is expected from the C++ runtime.
+
+            contextDataViewId = intermediateGraph.GetSubdata(graphValuesBufferViewId, TemplatedTask.ContextDataKey);
+            intermediateGraph.GetSubdata(contextDataViewId, paddingKey); // Force data view to be registered
+
+            UnorderedData graphValues = new UnorderedData();
+            graphValuesBuffer.AddSubdata(kGraphValuesKey, graphValues);
+
+            intermediateGraph.BindData(systemTask, TemplatedTask.GraphValuesBufferKey, graphValuesBufferViewId, BindingUsage.Write);
+
+            m_GraphValueNameCounts.Add(graphValuesBuffer, new Dictionary<string, uint>());
         }
 
         void BindContextData(TaskGraph intermediateGraph, TaskNodeId contextTask, DataViewId contextDataViewId)
@@ -219,8 +236,11 @@ namespace UnityEditor.VFX
             BindCPUExpressions(intermediateGraph, context, contextTask, systemTask);
         }
 
-        void BindGPUExpressions(TaskGraph intermediateGraph, VFXContext context, TaskNodeId contextTask, TaskNodeId systemTask, StructuredData graphValuesBuffer, DataViewId graphValuesViewId)
+        void BindGPUExpressions(TaskGraph intermediateGraph, VFXContext context, TaskNodeId contextTask, TaskNodeId systemTask, StructuredData graphValuesBuffer, DataViewId graphValuesBufferViewId)
         {
+            var graphValuesViewId = intermediateGraph.GetSubdata(graphValuesBufferViewId, kGraphValuesKey);
+            var graphValuesUnordered = intermediateGraph.DataViews[graphValuesViewId].DataDescription as UnorderedData;
+
             var gpuMapper = m_ExpressionGraph.BuildGPUMapper(context);
             foreach (var expression in gpuMapper.expressions)
             {
@@ -233,9 +253,12 @@ namespace UnityEditor.VFX
                 }
                 else
                 {
-                    Debug.Assert(m_StructuredDataNamesCount.ContainsKey(graphValuesBuffer));
+                    if(expression.IsAny(VFXExpression.Flags.NotCompilableOnCPU))
+                        continue;
+
+                    Debug.Assert(m_GraphValueNameCounts.ContainsKey(graphValuesBuffer));
                     string bindingName = gpuMapper.GetData(expression)[0].name;
-                    var nameCountMap = m_StructuredDataNamesCount[graphValuesBuffer];
+                    var nameCountMap = m_GraphValueNameCounts[graphValuesBuffer];
                     if (nameCountMap.TryGetValue(bindingName, out uint count))
                     {
                         nameCountMap[bindingName] = count + 1;
@@ -250,7 +273,8 @@ namespace UnityEditor.VFX
                     IDataKey systemBindingKey = new NameDataKey(systemUniqueBindingName);
                     IDataKey contextBindingKey = new NameDataKey(gpuMapper.GetData(expression)[0].fullName);
 
-                    if(graphValuesBuffer.AddSubdata(systemBindingKey, ValueData.Create(VFXExpression.TypeToType(expression.valueType))))
+                    var expressionValue = intermediateGraph.DataViews[expressionDataViewId].DataDescription;
+                    if(graphValuesUnordered.AddSubdata(systemBindingKey, expressionValue))
                     {
                         intermediateGraph.BindData(systemTask, systemBindingKey, expressionDataViewId, BindingUsage.Read);
                     }
@@ -287,7 +311,7 @@ namespace UnityEditor.VFX
                 new List<BindingRelativePath>()
             {
                 new(kParticleBindingKey, DataPath.Empty),
-                new(TemplatedTask.GraphValuesKey, DataPath.Empty)
+                new(TemplatedTask.GraphValuesBufferKey, DataPath.Empty)
             });
         }
 
@@ -308,7 +332,9 @@ namespace UnityEditor.VFX
             spawnSystemUsage.Read.Add(new DataPath(SpawnData.SourceAttributeDataKey));
 
             BindingUsagePaths contextDataUsage = new();
-            contextDataUsage.Read.Add(DataPath.Empty);
+            contextDataUsage.Read.Add(TemplatedTask.MaxParticleCountPath);
+            contextDataUsage.Read.Add(TemplatedTask.SystemSeedPath);
+            contextDataUsage.Read.Add(TemplatedTask.InitSpawnIndexPath);
 
             var args = new TemplatedTaskArgs
             {
@@ -341,7 +367,8 @@ namespace UnityEditor.VFX
             particleSystemUsage.Write.Add(new DataPath(ParticleData.DeadlistKey));
 
             BindingUsagePaths contextDataUsage = new();
-            contextDataUsage.Read.Add(DataPath.Empty);
+            contextDataUsage.Read.Add(TemplatedTask.MaxParticleCountPath);
+            contextDataUsage.Read.Add(TemplatedTask.SystemSeedPath);
 
             TemplatedTaskArgs args = new TemplatedTaskArgs
             {

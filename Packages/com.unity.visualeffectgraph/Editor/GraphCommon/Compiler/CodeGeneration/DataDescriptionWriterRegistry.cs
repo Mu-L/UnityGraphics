@@ -21,7 +21,7 @@ namespace Unity.GraphCommon.LowLevel.Editor
 
         public string GetSubdataName(DataView dataView, IDataKey subDataKey)
         {
-            return m_Writers.TryGetValue(dataView.DataDescription.GetType(), out var writer) ? writer.GetSubdataName(subDataKey) : null;
+            return m_Writers.TryGetValue(dataView.DataDescription.GetType(), out var writer) ? writer.GetSubdataName(dataView, subDataKey) : null;
         }
 
         public string GetSubdataTypeName(DataView dataView, IDataKey subDataKey)

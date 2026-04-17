@@ -6,7 +6,7 @@
 void main(ThreadData threadData)
 {
     uint particleIndex = threadData.index;
-    uint maxParticleCount = asuint(ContextData.x);
+    uint maxParticleCount = ContextData.maxParticleCount;
 
     if(particleIndex >= maxParticleCount)
     {

@@ -220,24 +220,21 @@ namespace UnityEditor.VFX
 
         void GenerateGraphValuesBufferDescriptions(ref CompilationContext context)
         {
-            var structuredDataLayoutContainer = context.data.Get<StructuredDataLayoutContainer>();
+            var dataLayoutContainer = context.data.Get<DataLayoutContainer>();
 
-            foreach (var dataView in context.graph.DataViews)
+            foreach (var dataContainer in context.graph.DataContainers)
             {
-                if (dataView.DataDescription is StructuredData structuredData)
+                if (dataLayoutContainer.TryGetLayout(dataContainer.Id, out var valueBufferLayout))
                 {
-                    if (structuredDataLayoutContainer.TryGetLayout(structuredData, out var valueBufferLayout))
+                    uint bufferIndex = AddGPUBufferData(new VFXGPUBufferDesc()
                     {
-                        uint bufferIndex = AddGPUBufferData(new VFXGPUBufferDesc()
-                        {
-                            target = GraphicsBuffer.Target.Raw,
-                            size = valueBufferLayout.GetBufferSize(),
-                            stride = 4u,
-                            mode = ComputeBufferMode.Dynamic,
-                        });
+                        target = GraphicsBuffer.Target.Raw,
+                        size = valueBufferLayout.GetBufferSize(),
+                        stride = 4u,
+                        mode = ComputeBufferMode.Dynamic,
+                    });
 
-                        m_GpuBufferDescIndices[structuredData] = bufferIndex;
-                    }
+                    m_GpuBufferDescIndices[dataContainer.RootDataView.DataDescription] = bufferIndex;
                 }
             }
         }
@@ -433,10 +430,21 @@ namespace UnityEditor.VFX
         VFXMapping[] GenerateSystemValuesMappings(CompilationContext context, VfxGraphLegacyParticleSystemContainer.ParticleSystem particleSystem)
         {
             var valueMappings = new List<VFXMapping>();
-            var graphValueMappings = new Dictionary<ValueData, VFXMapping>();
+            var graphValueMappings = new List<(int, VFXMapping)>();
             var taskNode = context.graph.TaskNodes[particleSystem.SystemTask.Id];
 
-            ValueBufferLayout graphValueBufferLayout = new ValueBufferLayout();
+            var dataLayoutContainer = context.data.Get<DataLayoutContainer>();
+
+            DataContainerId graphValuesContainerId = DataContainerId.Invalid;
+            // Find graph values buffer in bindings
+            foreach (var dataBinding in taskNode.DataBindings)
+            {
+                if (dataBinding.BindingDataKey == TemplatedTask.GraphValuesBufferKey)
+                {
+                    graphValuesContainerId = dataBinding.DataView.DataContainer.Id;
+                }
+            }
+            dataLayoutContainer.TryGetLayout(graphValuesContainerId, out var graphValuesBufferLayout);
 
             foreach (var dataBinding in taskNode.DataBindings)
             {
@@ -449,9 +457,10 @@ namespace UnityEditor.VFX
                         valueMappings.Add(new VFXMapping(name, (int)index));
                         continue;
                     }
+
                     // Graph values
-                    graphValueMappings.Add(dataBinding.DataView.DataDescription as ValueData, new VFXMapping(name, (int)index));
-                    graphValueBufferLayout.AddValueData(dataBinding.DataView.DataDescription as ValueData);
+                    int graphValueOffset = graphValuesBufferLayout.GetValueOffset(dataBinding.DataView.DataDescription as ValueData);
+                    graphValueMappings.Add((graphValueOffset, new VFXMapping(name, (int)index)));
                 }
             }
             List<VFXMapping> mappings = new();
@@ -462,13 +471,13 @@ namespace UnityEditor.VFX
             mappings.Add(new VFXMapping("graphValuesOffset", valueMappings.Count + 1));
 
             //Need to add the graph value mapping in the order of graph value layout for the runtime to work correctly
-            graphValueBufferLayout.ComputeOffsets();
-            graphValueBufferLayout.GetSortedValueDatas();
-            foreach (var valueData in graphValueBufferLayout.GetSortedValueDatas())
+            graphValueMappings.Sort((a, b) => a.Item1.CompareTo(b.Item1));
+            foreach ( (int _, VFXMapping mapping) in graphValueMappings)
             {
-                mappings.Add(graphValueMappings[valueData]);
+                mappings.Add(mapping);
             }
             return mappings.ToArray();
+
         }
         VFXMapping[] GenerateSystemBuffersMappings(CompilationContext context, VfxGraphLegacyParticleSystemContainer.ParticleSystem particleSystem)
         {

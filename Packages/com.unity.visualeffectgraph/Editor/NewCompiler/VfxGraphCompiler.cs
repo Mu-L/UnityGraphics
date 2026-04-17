@@ -25,7 +25,7 @@ namespace UnityEditor.VFX
             m_GraphCompiler = new(new VfxGraphLegacyOutputPass(),
                 new AttributeLayoutPass(),
                 new VfxGraphLegacyParticleSystemPass(),
-                new StructuredDataLayoutPass(),
+                new DataLayoutPass(),
                 new TemplateCodeGenerationPass(m_DataWriter));
         }
 
