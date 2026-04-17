@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using NUnit.Framework;
 using UnityEditor.SceneManagement;
@@ -233,6 +234,11 @@ namespace UnityEditor.LightBaking.Tests
             }
             Texture2D actualTexture2D = ConvertVector4ImageToRGBAHalfTexture(actualTextureData.resolution.width, actualTextureData.resolution.height, actualTextureData.data);
 
+            // Tests need higher threshold on AMD due to platform-specific rasterization differences.
+            bool isAMD = SystemInfo.graphicsDeviceVendor.Contains("amd", StringComparison.InvariantCultureIgnoreCase) ||
+                         SystemInfo.graphicsDeviceVendor.Contains("ati", StringComparison.InvariantCultureIgnoreCase);
+float rmseThreshold = isAMD ? Math.Max(0.02f, metaPassTest.RMSEThreshold) : metaPassTest.RMSEThreshold;
+
             ImageComparisonSettings imageComparisonSettings =
                 new()
                 {
@@ -242,7 +248,7 @@ namespace UnityEditor.LightBaking.Tests
                     ActiveImageTests = ImageComparisonSettings.ImageTests.RMSE,
                     IncorrectPixelsThreshold =
                         1.0f / (actualTexture2D.width * actualTexture2D.height),
-                    RMSEThreshold = metaPassTest.RMSEThreshold
+                    RMSEThreshold = rmseThreshold,
                 };
 
             ImageAssert.AreEqualLinearHDR(
