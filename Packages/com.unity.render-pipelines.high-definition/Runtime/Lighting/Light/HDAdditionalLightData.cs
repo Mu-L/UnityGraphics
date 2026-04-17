@@ -138,8 +138,17 @@ namespace UnityEngine.Rendering.HighDefinition
         internal const float k_MinAreaLightShadowCone = 10.0f;
         internal const float k_MaxAreaLightShadowCone = 179.0f;
 
+#if UNITY_EDITOR
         /// <summary>List of the lights that overlaps when the OverlapLight scene view mode is enabled</summary>
         internal static HashSet<HDAdditionalLightData> s_overlappingHDLights = new HashSet<HDAdditionalLightData>();
+
+        [RuntimeInitializeOnLoadMethod]
+        static void ResetStaticsOnLoad()
+        {
+            s_overlappingHDLights?.Clear();
+            s_overlappingHDLights = new HashSet<HDAdditionalLightData>();
+        }
+#endif
 
         #region HDLight Properties API
 
@@ -2193,7 +2202,9 @@ namespace UnityEngine.Rendering.HighDefinition
             }
 
             SetEmissiveMeshRendererEnabled(false);
+#if UNITY_EDITOR
             s_overlappingHDLights.Remove(this);
+#endif
             DestroyHDLightRenderEntity();
         }
 
