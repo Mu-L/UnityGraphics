@@ -54,7 +54,7 @@ namespace UnityEngine.Rendering.Universal
             _entityIDToWorldMaterialDescriptors.Add(fallbackMaterial.GetEntityId(), _fallbackMaterialDescriptor);
         }
 
-        internal void Update(SceneUpdatesTracker sceneTracker, AmbientMode ambientMode, Material skyboxMaterial, Color ambientSkycolor, SurfaceCacheWorld world)
+        internal void Update(SceneUpdatesTracker sceneTracker, AmbientMode ambientMode, Material skyboxMaterial, Color ambientSkycolor, float envIntensityMultiplier, SurfaceCacheWorld world)
         {
             const bool filterBakedLights = true;
             var changes = sceneTracker.GetChanges(filterBakedLights);
@@ -83,16 +83,19 @@ namespace UnityEngine.Rendering.Universal
             {
                 world.SetEnvironmentMode(CubemapRender.Mode.Material);
                 world.SetEnvironmentMaterial(skyboxMaterial);
+                world.SetEnvironmentIntensityMultiplier(envIntensityMultiplier);
             }
             else if (ambientMode == AmbientMode.Flat)
             {
                 world.SetEnvironmentMode(CubemapRender.Mode.Color);
                 world.SetEnvironmentColor(ambientSkycolor);
+                world.SetEnvironmentIntensityMultiplier(1.0f);
             }
             else
             {
                 world.SetEnvironmentMode(CubemapRender.Mode.Color);
                 world.SetEnvironmentColor(Color.black);
+                world.SetEnvironmentIntensityMultiplier(1.0f);
             }
         }
 

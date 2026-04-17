@@ -268,7 +268,7 @@ float3 OutgoingDirectionalBounceAndMultiBounceRadiance(
     return radiance;
 }
 
-float3 IncomingEnviromentAndDirectionalBounceAndMultiBounceRadiance(
+float3 IncomingEnvironmentAndDirectionalBounceAndMultiBounceRadiance(
     UnifiedRT::DispatchInfo dispatchInfo,
     UnifiedRT::RayTracingAccelStruct accelStruct,
     UnifiedRT::Ray ray,
@@ -277,6 +277,7 @@ float3 IncomingEnviromentAndDirectionalBounceAndMultiBounceRadiance(
     float3 dirLightIntensity,
     bool multiBounce,
     TextureCube<float3> envTex,
+    float envIntensityMultiplier,
     SamplerState envSampler,
     PatchIrradianceBufferType patchIrradiances,
     PatchGeometryBufferType patchGeometries,
@@ -348,7 +349,7 @@ float3 IncomingEnviromentAndDirectionalBounceAndMultiBounceRadiance(
     }
     else
     {
-        radiance = envTex.SampleLevel(envSampler, ray.direction, 0);
+        radiance = envIntensityMultiplier * envTex.SampleLevel(envSampler, ray.direction, 0);
     }
     return radiance;
 }

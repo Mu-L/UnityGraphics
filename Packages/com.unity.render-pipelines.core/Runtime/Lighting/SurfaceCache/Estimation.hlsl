@@ -48,6 +48,7 @@ uint _RingConfigOffset;
 float3 _VolumeTargetPos;
 float _MaterialAtlasTexelSize; // The size of 1 texel in the atlases above
 float _AlbedoBoost;
+float _EnvironmentIntensityMultiplier;
 uint _PunctualLightSampleCount;
 float3 _DirectionalLightDirection;
 float3 _DirectionalLightIntensity;
@@ -175,7 +176,7 @@ void SampleEnvironmentAndDirectionalBounceAndMultiBounceRadiance(
     for(uint sampleIdx = 0; sampleIdx < _SampleCount; ++sampleIdx)
     {
         ray.direction = UniformHemisphereSample(rng.GetSample(0), patchGeo.normal);
-        const float3 radiance = IncomingEnviromentAndDirectionalBounceAndMultiBounceRadiance(
+        const float3 radiance = IncomingEnvironmentAndDirectionalBounceAndMultiBounceRadiance(
             dispatchInfo,
             accelStruct,
             ray,
@@ -184,6 +185,7 @@ void SampleEnvironmentAndDirectionalBounceAndMultiBounceRadiance(
             _DirectionalLightIntensity,
             _MultiBounce,
             _EnvironmentCubemap,
+            _EnvironmentIntensityMultiplier,
             sampler_EnvironmentCubemap,
             _PatchIrradiances,
             patchGeometries,

@@ -658,7 +658,10 @@ namespace UnityEngine.Rendering.Universal
                     builder.SetRenderFunc((PatchAllocationPassData data, ComputeGraphContext cgContext) => AllocatePatches(data, cgContext));
                 }
 
-                _worldAdapter.Update(_sceneTracker, RenderSettings.ambientMode, RenderSettings.skybox, RenderSettings.ambientSkyColor, _world);
+                // RenderSettings.ambientIntensity is used directly as a linear value for Surface Cache, which is not currently
+                // the case for the standard ambient probe lighting, which is assumed to be in gamma space and then converted to
+                // linear space. We will make this more coherent for the ambient probe in the future.
+                _worldAdapter.Update(_sceneTracker, RenderSettings.ambientMode, RenderSettings.skybox, RenderSettings.ambientSkyColor, RenderSettings.ambientIntensity, _world);
 
                 using (var builder = renderGraph.AddUnsafePass("Surface Cache World Update", out WorldUpdatePassData passData))
                 {

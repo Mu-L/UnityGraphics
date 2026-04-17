@@ -346,6 +346,7 @@ namespace UnityEngine.Rendering
             internal uint PunctualLightSampleCount;
             internal SurfaceCacheWorld World;
             internal float AlbedoBoost;
+            internal float EnvironmentIntensityMultiplier;
             internal uint FrameIdx;
             internal uint CascadeCount;
             internal bool MultiBounce;
@@ -404,6 +405,7 @@ namespace UnityEngine.Rendering
             public static readonly int _MaterialEntries = Shader.PropertyToID("_MaterialEntries");
             public static readonly int _AlbedoTextures = Shader.PropertyToID("_AlbedoTextures");
             public static readonly int _AlbedoBoost = Shader.PropertyToID("_AlbedoBoost");
+            public static readonly int _EnvironmentIntensityMultiplier = Shader.PropertyToID("_EnvironmentIntensityMultiplier");
             public static readonly int _DirectionalLightDirection = Shader.PropertyToID("_DirectionalLightDirection");
             public static readonly int _DirectionalLightIntensity = Shader.PropertyToID("_DirectionalLightIntensity");
             public static readonly int _MaterialAtlasTexelSize = Shader.PropertyToID("_MaterialAtlasTexelSize");
@@ -624,6 +626,7 @@ namespace UnityEngine.Rendering
                 passData.VolumeTargetPos = Volume.TargetPos;
                 passData.FrameIdx = frameIdx;
                 passData.AlbedoBoost = _albedoBoost;
+                passData.EnvironmentIntensityMultiplier = world.GetEnvironmentIntensityMultiplier();
                 passData.VolumeSpatialResolution = Volume.SpatialResolution;
                 passData.CascadeOffsets = Volume.CascadeOffsetBuffer;
                 passData.CascadeCount = Volume.CascadeCount;
@@ -732,6 +735,7 @@ namespace UnityEngine.Rendering
                 shader.SetTextureParam(cmd, ShaderIDs._AlbedoTextures, data.World.GetMaterialAlbedoTextures());
                 shader.SetTextureParam(cmd, ShaderIDs._EmissionTextures, data.World.GetMaterialEmissionTextures());
                 shader.SetFloatParam(cmd, ShaderIDs._AlbedoBoost, data.AlbedoBoost);
+                shader.SetFloatParam(cmd, ShaderIDs._EnvironmentIntensityMultiplier, data.EnvironmentIntensityMultiplier);
                 shader.SetFloatParam(cmd, ShaderIDs._MaterialAtlasTexelSize, GetMaterialAtlasTexelSize(data.World.GetMaterialAlbedoTextures()));
                 shader.SetIntParam(cmd, ShaderIDs._PunctualLightCount, punctualLightCount);
 
