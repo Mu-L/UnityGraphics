@@ -30,8 +30,8 @@ namespace UnityEngine.Rendering.Universal
         // TODO RENDERGRAPH: Once all cameras will run in a single RenderGraph we should remove all RTHandles and use per frame RG textures.
         // We use 2 camera color handles so we can handle the edge case when a pass might want to read and write the same target.
         // This is not allowed so we just swap the current target, this keeps camera stacking working and avoids an extra blit pass.
-        static int m_CurrentColorHandle = 0;
-        internal RTHandle[] m_RenderGraphCameraColorHandles = new RTHandle[]
+        private static int m_CurrentColorHandle = 0;
+        private static RTHandle[] m_RenderGraphCameraColorHandles = new RTHandle[]
         {
             null, null
         };
@@ -70,6 +70,24 @@ namespace UnityEngine.Rendering.Universal
 
         PostProcess m_PostProcess;
         ColorGradingLutPass m_ColorGradingLutPassRenderGraph;
+
+#if UNITY_EDITOR
+        [RuntimeInitializeOnLoadMethod]
+        static void ResetStaticsOnLoad()
+        {
+            m_CurrentColorHandle = 0;
+
+            m_RenderGraphCameraColorHandles[0]?.Release();
+            m_RenderGraphCameraColorHandles[1]?.Release();
+            m_RenderGraphCameraColorHandles = new RTHandle[]
+            {
+                null, null
+            };
+
+            m_OffscreenUIColorHandle?.Release();
+            m_OffscreenUIColorHandle = null;
+        }
+#endif
 
         private RTHandle currentRenderGraphCameraColorHandle
         {
@@ -482,7 +500,6 @@ namespace UnityEngine.Rendering.Universal
                 cameraData.baseCamera.TryGetComponent<UniversalAdditionalCameraData>(out var baseCameraData);
                 var baseRenderer = (Renderer2D)baseCameraData.scriptableRenderer;
 
-                m_RenderGraphCameraColorHandles = baseRenderer.m_RenderGraphCameraColorHandles;
                 m_RenderGraphCameraDepthHandle = baseRenderer.m_RenderGraphCameraDepthHandle;
                 m_RenderGraphBackbufferColorHandle = baseRenderer.m_RenderGraphBackbufferColorHandle;
                 m_RenderGraphBackbufferDepthHandle = baseRenderer.m_RenderGraphBackbufferDepthHandle;
@@ -1045,7 +1062,6 @@ namespace UnityEngine.Rendering.Universal
         private void CleanupRenderGraphResources()
         {
             m_Renderer2DData.Dispose();
-            m_UpscalePass.Dispose();
             m_CopyDepthPass?.Dispose();
             m_FinalBlitPass?.Dispose();
             m_OffscreenUICoverPrepass?.Dispose();
@@ -1060,6 +1076,7 @@ namespace UnityEngine.Rendering.Universal
             m_RenderGraphBackbufferColorHandle?.Release();
             m_RenderGraphBackbufferDepthHandle?.Release();
             m_CameraSortingLayerHandle?.Release();
+            m_OffscreenUIColorHandle?.Release();
 
             Light2DManager.Dispose();
             Light2DLookupTexture.Release();

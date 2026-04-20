@@ -60,7 +60,6 @@ namespace UnityEngine.Rendering.Universal
     // identified from the Blue Channel of the Vertex Colors (Solely used for this purpose). This can batch a maximum of kLightMod meshes in best-case scenario. Simple but no optizations have been added yet
     internal class LightBatch
     {
-
         static readonly ProfilingSampler profilingDrawBatched = new ProfilingSampler("Light2D Batcher");
         static readonly int k_BufferOffset = Shader.PropertyToID("_BatchBufferOffset");
         static int sBatchIndexCounter = 0; // For LightMesh asset conditioning to facilitate batching.
@@ -82,6 +81,14 @@ namespace UnityEngine.Rendering.Universal
         private int maxIndex = 0;
         private int batchCount = 0;
         private int activeCount = 0;
+
+#if UNITY_EDITOR
+        [RuntimeInitializeOnLoadMethod]
+        static void ResetStaticsOnLoad()
+        {
+            sBatchIndexCounter = 0;
+        }
+#endif
 
         internal NativeArray<PerLight2D> nativeBuffer
         {
@@ -150,15 +157,15 @@ namespace UnityEngine.Rendering.Universal
         {
 #if UNITY_EDITOR
             if (!kRegisterCallback)
-                UnityEditor.AssemblyReloadEvents.beforeAssemblyReload += OnAssemblyReload;
+                UnityEditor.AssemblyReloadEvents.beforeAssemblyReload += Release;
             kRegisterCallback = true;
 #endif
         }
 
-        void OnAssemblyReload()
+        internal void Release()
         {
             for (int i = 0; i < LightBuffer.kCount; ++i)
-                lightBuffer[activeCount].Release();
+                lightBuffer[i]?.Release();
         }
 
         void ResetInternals()

@@ -78,6 +78,17 @@ namespace UnityEngine.Rendering.Universal
         // Light Batcher.
         internal static LightBatch lightBatch = new LightBatch();
 
+#if UNITY_EDITOR
+        [RuntimeInitializeOnLoadMethod]
+        static void ResetStaticsOnLoad()
+        {
+            s_HasSetupRenderTextureFormatToUse = false;
+            s_RenderTextureFormatToUse = GraphicsFormat.R8G8B8A8_UNorm;
+            lightBatch.Release();
+            lightBatch = new LightBatch();
+        }
+#endif
+
         internal static GraphicsFormat GetRenderTextureFormat()
         {
             if (!s_HasSetupRenderTextureFormatToUse)

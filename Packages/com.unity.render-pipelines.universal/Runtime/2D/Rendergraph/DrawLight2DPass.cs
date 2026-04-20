@@ -21,6 +21,14 @@ namespace UnityEngine.Rendering.Universal
 
         internal static MaterialPropertyBlock s_PropertyBlock = new MaterialPropertyBlock();
 
+#if UNITY_EDITOR
+        [RuntimeInitializeOnLoadMethod]
+        static void ResetStaticsOnLoad()
+        {
+            s_PropertyBlock = new MaterialPropertyBlock();
+        }
+#endif
+
         internal void Setup(RenderGraph renderGraph, ref Renderer2DData rendererData)
         {
             foreach (var light in rendererData.lightCullResult.visibleLights)
