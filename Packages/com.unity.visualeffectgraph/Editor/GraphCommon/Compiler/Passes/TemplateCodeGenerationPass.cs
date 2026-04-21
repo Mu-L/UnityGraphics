@@ -2,6 +2,7 @@ using System;
 using System.Reflection;
 using System.Collections.Generic;
 using UnityEditor;
+using UnityEditor.VFX;
 using UnityEngine;
 
 namespace Unity.GraphCommon.LowLevel.Editor
@@ -19,14 +20,6 @@ namespace Unity.GraphCommon.LowLevel.Editor
         public TemplateCodeGenerationPass(DataDescriptionWriterRegistry dataWriter)
         {
             m_DataWriter = dataWriter;
-        }
-
-        static readonly MethodInfo k_CreateComputeShaderAsset = typeof(ShaderUtil).GetMethod("CreateComputeShaderAsset", BindingFlags.Static | BindingFlags.NonPublic, null, new Type[] { typeof(string) }, null);
-        ComputeShader CreateComputeShaderAsset(string sourceCode)
-        {
-            if (k_CreateComputeShaderAsset == null)
-                throw new NullReferenceException();
-            return (ComputeShader)k_CreateComputeShaderAsset.Invoke(null, new object[] {sourceCode});
         }
 
         public bool Execute(ref CompilationContext context)
@@ -52,7 +45,7 @@ namespace Unity.GraphCommon.LowLevel.Editor
                     {
                         sourceCode = GenerateTemplatedTaskSourceCode_Compute(taskNode, context);
 
-                        var computeShader = CreateComputeShaderAsset(sourceCode);
+                        var computeShader = ShaderUtil.CreateComputeShaderAsset(sourceCode);
                         computeShader.name = templatedTask.TemplateName;
                         var task = new GpuKernelTask(computeShader, 0);
                         context.graph.SetTask(taskNode.Id, task);
@@ -114,6 +107,8 @@ namespace Unity.GraphCommon.LowLevel.Editor
 
             GenerateDataViews(m_ComputeShaderWriter, taskNode, templatedTask, context);
 
+            IncludeCommonLibrary(m_ComputeShaderWriter);
+
             ForwardDeclarations(m_ComputeShaderWriter, templatedTask);
 
             IncludeTemplateFile(m_ComputeShaderWriter, templatedTask.TemplateName);
@@ -142,6 +137,8 @@ namespace Unity.GraphCommon.LowLevel.Editor
                     GenerateAttributeSets(m_RenderingShaderWriter, taskNode, templatedTask, context);
 
                     GenerateDataViews(m_RenderingShaderWriter, taskNode, templatedTask, context);
+
+                    IncludeCommonLibrary(m_RenderingShaderWriter);
 
                     ForwardDeclarations(m_RenderingShaderWriter, templatedTask);
 
@@ -319,12 +316,16 @@ namespace Unity.GraphCommon.LowLevel.Editor
             shaderWriter.Write(")");
         }
 
-        void ForwardDeclarations(ShaderWriter shaderWriter, TemplatedTask templatedTask)
+        void IncludeCommonLibrary(ShaderWriter shaderWriter)
         {
             shaderWriter.NewLine();
             shaderWriter.Define("VFX_LOCAL_SPACE", "1");
-            shaderWriter.IncludeFile("Packages/com.unity.render-pipelines.universal/Runtime/VFXGraph/Shaders/VFXCommon.hlsl");
+            shaderWriter.IncludeFile($"{VFXLibrary.currentSRPBinder.runtimePath}/VFXCommon.hlsl");
             shaderWriter.IncludeFile("Packages/com.unity.visualeffectgraph/Shaders/VFXCommon.hlsl");
+        }
+
+        void ForwardDeclarations(ShaderWriter shaderWriter, TemplatedTask templatedTask)
+        {
             WriteProcessBlocksDeclaration(shaderWriter, templatedTask);
             shaderWriter.Write(";");
             shaderWriter.NewLine();

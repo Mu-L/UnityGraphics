@@ -70,8 +70,8 @@ namespace Unity.GraphCommon.LowLevel.Editor
 
     class ConcreteLayout
     {
-        public int Size { get; private set; }
-        private Dictionary<ValueData, int> m_ValueDataOffsets = new();
+        int Size { get; set; }
+        Dictionary<ValueData, int> m_ValueDataOffsets = new();
 
         public ConcreteLayout(ValueData valueData)
         {
@@ -128,7 +128,7 @@ namespace Unity.GraphCommon.LowLevel.Editor
             return layout;
         }
 
-        public void AppendSubLayout(ConcreteLayout subLayout)
+        void AppendSubLayout(ConcreteLayout subLayout)
         {
             int currentSize = Size;
             foreach (var kvp in subLayout.m_ValueDataOffsets)
@@ -138,7 +138,7 @@ namespace Unity.GraphCommon.LowLevel.Editor
             Size += subLayout.Size;
         }
 
-        public void PadSize()
+        void PadSize()
         {
             if(Size % 4 != 0)
             {
@@ -146,7 +146,7 @@ namespace Unity.GraphCommon.LowLevel.Editor
             }
         }
 
-        public string DebugString()
+        public override string ToString()
         {
             string result = $"ConcreteLayout(Size: {Size}, ValueDataOffsets: {{";
             foreach (var kvp in m_ValueDataOffsets)

@@ -7,7 +7,8 @@ namespace Unity.GraphCommon.LowLevel.Editor
     /// </summary>
     /*public*/ class UnorderedData : IDataDescription
     {
-        Dictionary<IDataKey, IDataDescription> m_Datas = new();
+        Dictionary<IDataKey, IDataDescription> m_DataKeyToDataDescriptions = new();
+        Dictionary<IDataDescription, IDataKey> m_DataDescriptionToDataKey = new();
 
         /// <summary>
         /// Adds a data element, providing the data identifier and the data description.
@@ -17,24 +18,34 @@ namespace Unity.GraphCommon.LowLevel.Editor
         /// <returns>True if the data element was added, false otherwise (for instance, if it was already present).</returns>
         public bool AddSubdata(IDataKey dataKey, IDataDescription data)
         {
-            return m_Datas.TryAdd(dataKey, data);
+            return m_DataKeyToDataDescriptions.TryAdd(dataKey, data) && m_DataDescriptionToDataKey.TryAdd(data, dataKey);
         }
 
         /// <inheritdoc cref="IDataDescription"/>
         public IDataDescription GetSubdata(IDataKey dataKey)
         {
-            return m_Datas.GetValueOrDefault(dataKey);
+            return m_DataKeyToDataDescriptions.GetValueOrDefault(dataKey);
+        }
+
+        /// <summary>
+        /// Get the IDataKey associated with the sub data dataDescription.
+        /// </summary>
+        /// <param name="dataDescription">The sub data to query the key from.</param>
+        /// <returns> The IDataKey associated with the sub data dataDescription if it exists, null otherwise.</returns>
+        public IDataKey GetSubDataKey(IDataDescription dataDescription)
+        {
+            return m_DataDescriptionToDataKey.GetValueOrDefault(dataDescription);
         }
 
         /// <summary>
         /// Enumerates all the subdata descriptions included in this data description.
         /// </summary>
-        public IEnumerable<IDataDescription> SubDataDescriptions => m_Datas.Values;
+        public IEnumerable<IDataDescription> SubDataDescriptions => m_DataKeyToDataDescriptions.Values;
 
         /// <summary>
         /// Enumerates all the subdata descriptions included in this data description.
         /// </summary>
-        public IEnumerable<KeyValuePair<IDataKey, IDataDescription>> SubDatas => m_Datas;
+        public IEnumerable<KeyValuePair<IDataKey, IDataDescription>> SubDatas => m_DataKeyToDataDescriptions;
 
         /// <inheritdoc cref="IDataDescription"/>
         public bool IsCompatible(IDataDescription other)

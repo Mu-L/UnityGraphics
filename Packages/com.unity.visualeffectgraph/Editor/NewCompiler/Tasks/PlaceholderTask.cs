@@ -44,10 +44,12 @@ namespace UnityEditor.VFX
                 writeUsage = m_BindingToUsage[dataKey].Write;
                 return true;
             }
-
-            readUsage = null;
+            // If the data key is not explicitly used, we assume it's read without any specific path (e.g., whole struct) and not written.
+            // This has no functional impact, it is just to clarify the intent, and help debug visualizers.
+            readUsage = new DataPathSet();
+            readUsage.Add(DataPath.Empty);
             writeUsage = null;
-            return false;
+            return true;
         }
 
         /// <inheritdoc />

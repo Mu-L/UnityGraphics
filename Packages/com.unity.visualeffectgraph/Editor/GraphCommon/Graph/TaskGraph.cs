@@ -290,25 +290,31 @@ namespace Unity.GraphCommon.LowLevel.Editor
             bool usesData = task.GetDataUsage(bindingKey, out DataPathSet readUsage, out DataPathSet writeUsage);
             if (usesData)
             {
-                foreach (var path in readUsage.DataPaths)
+                if(readUsage != null)
                 {
-                    var currentDataViewId = dataViewId;
-                    foreach (var key in path.PathSequence)
+                    foreach (var path in readUsage.DataPaths)
                     {
-                        currentDataViewId = key != null ? GetSubdata(currentDataViewId, key) : currentDataViewId;
-                        if (!currentDataViewId.IsValid)
-                            break;
+                        var currentDataViewId = dataViewId;
+                        foreach (var key in path.PathSequence)
+                        {
+                            currentDataViewId = key != null ? GetSubdata(currentDataViewId, key) : currentDataViewId;
+                            if (!currentDataViewId.IsValid)
+                                break;
+                        }
                     }
                 }
 
-                foreach (var path in writeUsage.DataPaths)
+                if(writeUsage != null)
                 {
-                    var currentDataViewId = dataViewId;
-                    foreach (var key in path.PathSequence)
+                    foreach (var path in writeUsage.DataPaths)
                     {
-                        currentDataViewId = key != null ? GetSubdata(currentDataViewId, key) : currentDataViewId;
-                        if (!currentDataViewId.IsValid)
-                            break;
+                        var currentDataViewId = dataViewId;
+                        foreach (var key in path.PathSequence)
+                        {
+                            currentDataViewId = key != null ? GetSubdata(currentDataViewId, key) : currentDataViewId;
+                            if (!currentDataViewId.IsValid)
+                                break;
+                        }
                     }
                 }
             }

@@ -10,7 +10,7 @@ namespace Unity.GraphCommon.LowLevel.Editor
 
             Pragma("kernel CSMain");
             Pragma("only_renderers d3d11 glcore gles3 metal vulkan xboxone xboxone xboxseries playstation ps5 switch webgpu");
-            //Pragma("enable_d3d11_debug_symbols");
+            //Pragma("enable_debug_symbols");
             NewLine();
         }
 

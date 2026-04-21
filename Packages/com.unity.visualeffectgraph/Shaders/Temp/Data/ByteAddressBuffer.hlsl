@@ -225,20 +225,27 @@ struct VFXByteAddressBuffer
         data = 0u;
         if (valid && readAccess)
         {
+            float4 c0, c1, c2, c3;
             if (writeAccess)
             {
-                data[0] = asfloat(bufferRW.Load4((offset + index + 0) << 2));
-                data[1] = asfloat(bufferRW.Load4((offset + index + 4) << 2));
-                data[2] = asfloat(bufferRW.Load4((offset + index + 8) << 2));
-                data[3] = asfloat(bufferRW.Load4((offset + index + 12) << 2));
+                c0 = asfloat(bufferRW.Load4((offset + index + 0) << 2));
+                c1 = asfloat(bufferRW.Load4((offset + index + 4) << 2));
+                c2 = asfloat(bufferRW.Load4((offset + index + 8) << 2));
+                c3 = asfloat(bufferRW.Load4((offset + index + 12) << 2));
             }
             else
             {
-                data[0] = asfloat(buffer.Load4((offset + index + 0) << 2));
-                data[1] = asfloat(buffer.Load4((offset + index + 4) << 2));
-                data[2] = asfloat(buffer.Load4((offset + index + 8) << 2));
-                data[3] = asfloat(buffer.Load4((offset + index + 12) << 2));
+                c0 = asfloat(buffer.Load4((offset + index + 0) << 2));
+                c1 = asfloat(buffer.Load4((offset + index + 4) << 2));
+                c2 = asfloat(buffer.Load4((offset + index + 8) << 2));
+                c3 = asfloat(buffer.Load4((offset + index + 12) << 2));
             }
+            data = float4x4(
+                c0.x, c1.x, c2.x, c3.x,
+                c0.y, c1.y, c2.y, c3.y,
+                c0.z, c1.z, c2.z, c3.z,
+                c0.w, c1.w, c2.w, c3.w
+            );
         }
         return valid;
     }
@@ -248,10 +255,10 @@ struct VFXByteAddressBuffer
         bool valid = !rangeCheck || index + 15 < size;
         if (valid && writeAccess)
         {
-            for (int i = 0; i < 4; ++i)
-            {
-                bufferRW.Store4((offset + index + 4 * i) << 2, data[i]);
-            }
+            bufferRW.Store4((offset + index + 0) << 2, asuint(float4(data[0].x, data[1].x, data[2].x, data[3].x)));
+            bufferRW.Store4((offset + index + 4) << 2, asuint(float4(data[0].y, data[1].y, data[2].y, data[3].y)));
+            bufferRW.Store4((offset + index + 8) << 2, asuint(float4(data[0].z, data[1].z, data[2].z, data[3].z)));
+            bufferRW.Store4((offset + index + 12) << 2, asuint(float4(data[0].w, data[1].w, data[2].w, data[3].w)));
         }
         return valid;
     }

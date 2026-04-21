@@ -47,7 +47,7 @@ namespace Unity.GraphCommon.LowLevel.Editor
             OpenBlock();
             WriteLine("HLSLPROGRAM");
             Pragma("target 5.0");
-            Pragma("enable_d3d11_debug_symbols");
+            Pragma("enable_debug_symbols");
             Pragma("vertex VFXVertex");
             Pragma("fragment VFXFragment");
 
