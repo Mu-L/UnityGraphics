@@ -41,6 +41,7 @@ namespace UnityEditor.VFX.Test
         }
 
         [UnityTest]
+        [UnityPlatform(exclude = new RuntimePlatform[] { RuntimePlatform.WindowsEditor })] // Unstable: https://jira.unity3d.com/browse/UUM-140366
         public IEnumerator Create_New_ShaderGraph_Output_Context()
         {
             const int kTemplateWindowTimeoutInMs = 5000;
