@@ -19,7 +19,7 @@ RWStructuredBuffer<SphericalHarmonics::RGBL1> _PatchIrradiances1;
 RWStructuredBuffer<uint> _CellAllocationMarks;
 RWStructuredBuffer<uint> _CellPatchIndices;
 RWStructuredBuffer<uint> _PatchCellIndices;
-StructuredBuffer<int3> _CascadeOffsets;
+StructuredBuffer<int3> _VolumeCascadeOffsets;
 
 Texture2D<float> _CurrentFullResScreenDepths;
 Texture2D<float3> _CurrentFullResScreenFlatNormals;
@@ -33,7 +33,7 @@ Texture2D<float> _PreviousLowResScreenNdcDepths;
 uint _FrameIdx;
 uint _VolumeSpatialResolution;
 float _VolumeVoxelMinSize;
-uint _CascadeCount;
+uint _VolumeCascadeCount;
 uint _RingConfigOffset;
 float4x4 _CurrentClipToWorldTransform;
 float4x4 _PreviousClipToWorldTransform;
@@ -119,15 +119,15 @@ void Allocate(uint2 lowResPixelPos : SV_DispatchThreadID)
     volumeParams.targetPos = _VolumeTargetPos;
     volumeParams.spatialResolution = _VolumeSpatialResolution;
     volumeParams.voxelMinSize = _VolumeVoxelMinSize;
-    volumeParams.cascadeOffsets = _CascadeOffsets;
-    volumeParams.cascadeCount = _CascadeCount;
+    volumeParams.cascadeOffsets = _VolumeCascadeOffsets;
+    volumeParams.cascadeCount = _VolumeCascadeCount;
 
     PatchUtil::VolumePositionResolution patchPosResolution = PatchUtil::ResolveVolumePosition(sourceWorldPosition, volumeParams);
 
     if (patchPosResolution.isValid())
     {
         const uint directionIdx = PatchUtil::GetDirectionIndex(sourceWorldFlatNormal, PatchUtil::volumeAngularResolution);
-        const uint3 positionStorageSpace = PatchUtil::ConvertVolumeSpaceToStorageSpace(patchPosResolution.positionVolumeSpace, _VolumeSpatialResolution, _CascadeOffsets[patchPosResolution.cascadeIdx]);
+        const uint3 positionStorageSpace = PatchUtil::ConvertVolumeSpaceToStorageSpace(patchPosResolution.positionVolumeSpace, _VolumeSpatialResolution, _VolumeCascadeOffsets[patchPosResolution.cascadeIdx]);
         const uint cellIdx = PatchUtil::GetCellIndex(patchPosResolution.cascadeIdx, positionStorageSpace, directionIdx, _VolumeSpatialResolution, PatchUtil::volumeAngularResolution);
 
         PatchUtil::PatchIndexResolutionResult resolutionResult = PatchUtil::ResolvePatchIndex(

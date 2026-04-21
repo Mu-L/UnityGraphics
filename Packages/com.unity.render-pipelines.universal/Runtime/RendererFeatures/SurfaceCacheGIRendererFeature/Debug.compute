@@ -15,7 +15,7 @@ StructuredBuffer<uint> _PatchCellIndices;
 StructuredBuffer<PatchUtil::PatchGeometry> _PatchGeometries;
 RWStructuredBuffer<PatchUtil::PatchStatisticsSet> _PatchStatistics;
 StructuredBuffer<uint> _CellPatchIndices;
-StructuredBuffer<int3> _CascadeOffsets;
+StructuredBuffer<int3> _VolumeCascadeOffsets;
 
 RWTexture2D<float4> _Result;
 Texture2D<float> _ScreenDepths;
@@ -24,7 +24,7 @@ Texture2D<float3> _ScreenFlatNormals;
 
 uint _RingConfigOffset;
 uint _VolumeSpatialResolution;
-uint _CascadeCount;
+uint _VolumeCascadeCount;
 uint _ViewMode;
 uint _ShowSamplePosition;
 float4x4 _ClipToWorldTransform;
@@ -98,15 +98,15 @@ void Visualize(uint2 threadIdx : SV_DispatchThreadID)
         volumeParams.targetPos = _VolumeTargetPos;
         volumeParams.spatialResolution = _VolumeSpatialResolution;
         volumeParams.voxelMinSize = _VolumeVoxelMinSize;
-        volumeParams.cascadeOffsets = _CascadeOffsets;
-        volumeParams.cascadeCount = _CascadeCount;
+        volumeParams.cascadeOffsets = _VolumeCascadeOffsets;
+        volumeParams.cascadeCount = _VolumeCascadeCount;
 
         PatchUtil::VolumePositionResolution posResolution = PatchUtil::ResolveVolumePosition(worldPos, volumeParams);
         output = float3(1.0f, 0.0f, 1.0f);
         if (posResolution.isValid())
         {
             const uint directionIdx = PatchUtil::GetDirectionIndex(worldFlatNormal, PatchUtil::volumeAngularResolution);
-            const uint3 positionStorageSpace = PatchUtil::ConvertVolumeSpaceToStorageSpace(posResolution.positionVolumeSpace, _VolumeSpatialResolution, _CascadeOffsets[posResolution.cascadeIdx]);
+            const uint3 positionStorageSpace = PatchUtil::ConvertVolumeSpaceToStorageSpace(posResolution.positionVolumeSpace, _VolumeSpatialResolution, _VolumeCascadeOffsets[posResolution.cascadeIdx]);
             const uint cellIdx = PatchUtil::GetCellIndex(posResolution.cascadeIdx, positionStorageSpace, directionIdx, _VolumeSpatialResolution, PatchUtil::volumeAngularResolution);
             const uint patchIdx = _CellPatchIndices[cellIdx];
             const bool hasPatch = (patchIdx != PatchUtil::invalidPatchIndex);

@@ -76,15 +76,6 @@ namespace PatchUtil
         uint cascadeCount;
     };
 
-    struct PatchAllocationParamSet
-    {
-        CellPatchIndexBufferType cellPatchIndices;
-        PatchCellIndexBufferType patchCellIndices;
-        CellAllocationMarkBufferType cellAllocationMarks;
-        RingConfigBufferType ringConfigBuffer;
-        uint ringConfigOffset;
-    };
-
     uint ModuloDistance(uint a, uint b, uint modulo)
     {
             int dif = abs(int(a) - int(b));
@@ -465,47 +456,6 @@ namespace PatchUtil
 
         return stats;
     }
-
-#if BOUNCE_PATCH_ALLOCATION
-    void AllocatePatch(
-        float3 worldPosition,
-        float3 worldNormal,
-        RWStructuredBuffer<SphericalHarmonics::RGBL1> patchIrradiances,
-        RWStructuredBuffer<PatchUtil::PatchGeometry> patchGeometries,
-        RWStructuredBuffer<PatchUtil::PatchStatisticsSet> patchStatistics,
-        PatchAllocationParamSet allocParams,
-        PatchUtil::VolumeParamSet volumeParams,
-        uint frameIndex)
-    {
-        PatchUtil::VolumePositionResolution patchPosResolution = PatchUtil::ResolveVolumePosition(worldPosition, volumeParams);
-        if (!patchPosResolution.isValid())
-            return;
-
-        const uint directionIdx = PatchUtil::GetDirectionIndex(worldNormal, PatchUtil::volumeAngularResolution);
-        const uint3 positionStorageSpace = PatchUtil::ConvertVolumeSpaceToStorageSpace(patchPosResolution.positionVolumeSpace, volumeParams.spatialResolution, volumeParams.cascadeOffsets[patchPosResolution.cascadeIdx]);
-        const uint cellIdx = PatchUtil::GetCellIndex(patchPosResolution.cascadeIdx, positionStorageSpace, directionIdx, volumeParams.spatialResolution, PatchUtil::volumeAngularResolution);
-
-        PatchUtil::PatchIndexResolutionResult resolutionResult = PatchUtil::ResolvePatchIndex(
-            allocParams.ringConfigBuffer,
-            allocParams.ringConfigOffset,
-            allocParams.cellPatchIndices,
-            allocParams.patchCellIndices,
-            allocParams.cellAllocationMarks,
-            cellIdx);
-
-        if (resolutionResult.code == PatchUtil::patchIndexResolutionCodeAllocationSuccess)
-        {
-            PatchUtil::PatchGeometry geo;
-            geo.position = worldPosition;
-            geo.normal = worldNormal;
-            patchGeometries[resolutionResult.patchIdx] = geo;
-
-            SphericalHarmonics::RGBL1 irradianceSeed = (SphericalHarmonics::RGBL1)0;
-            patchIrradiances[resolutionResult.patchIdx] = irradianceSeed;
-            patchStatistics[resolutionResult.patchIdx] = PatchUtil::InitPatchStatistics(irradianceSeed.l0, frameIndex, /*rank*/ 1);
-        }
-    }
-#endif
 }
 
 #endif
