@@ -127,6 +127,10 @@ namespace UnityEngine.Rendering.Universal
             return GL.GetGPUProjectionMatrix(GetProjectionMatrix(viewIndex), renderIntoTexture);
         }
 
+        // The jitter matrix is Matrix4x4.Translate(offsetX, offsetY, 0), so the offsets sit in column 3.
+        // Jitter values are in NDC space (-1 to 1).
+        internal Vector2 jitter => new Vector2(m_JitterMatrix.m03, m_JitterMatrix.m13);
+
         /// <summary>
         /// The camera component.
         /// </summary>

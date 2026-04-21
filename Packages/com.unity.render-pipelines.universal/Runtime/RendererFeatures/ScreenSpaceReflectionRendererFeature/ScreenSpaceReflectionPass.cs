@@ -76,6 +76,7 @@ namespace UnityEngine.Rendering.Universal
             internal static readonly int _HitRefinementSteps = Shader.PropertyToID("_HitRefinementSteps");
             internal static readonly int _DepthPyramidMipLevelOffsets = Shader.PropertyToID("_DepthPyramidMipLevelOffsets");
             internal static readonly int _SourceSize = Shader.PropertyToID("_SourceSize");
+            internal static readonly int _CameraDeltaJitterOffset = Shader.PropertyToID("_CameraDeltaJitterOffset");
         }
 
         // Private Variables
@@ -182,6 +183,9 @@ namespace UnityEngine.Rendering.Universal
             // MipInfo for HiZ marching.
             internal PackedMipChainInfo mipsInfo;
 
+            // Various camera settings
+            internal Vector2 previousJitter;
+
             // Required textures.
             internal TextureHandle cameraColor;          // Camera target texture.
             internal TextureHandle cameraDepth;          // Camera depth target texture.
@@ -268,6 +272,7 @@ namespace UnityEngine.Rendering.Universal
 
                     // Set required pass data.
                     passData.cameraData = cameraData;
+                    passData.previousJitter = Vector2.zero;
                     passData.afterOpaque = m_AfterOpaque;
                     passData.linearMarching = settings.ShouldUseLinearMarching();
                     passData.useGaussianBlur = settings.ShouldUseGaussianBlurRoughness();
@@ -364,6 +369,8 @@ namespace UnityEngine.Rendering.Universal
                             {
                                 passData.lastFrameCameraDepth = renderGraph.ImportTexture(depthHistoryTexture);
                                 builder.UseTexture(passData.lastFrameCameraDepth);
+
+                                passData.previousJitter = history.GetPreviousJitter(multipassId);
                             }
                         }
                     }
@@ -526,6 +533,10 @@ namespace UnityEngine.Rendering.Universal
                 data.cameraInverseViewProjections[eyeIndex] = data.cameraViewProjections[eyeIndex].inverse;
             }
 
+            // Send the difference between the current and previous jitter values so we can reproject taking jittering
+            // into account. Divide by 2 because the jittering values are in NDC space (-1 to 1) and we need them in texture space (0 to 1).
+            // We use the current jitter from the cameraData as the one in the history is not yet up to date because the depth history update is done later on in the frame.
+            data.material.SetVector(ShaderConstants._CameraDeltaJitterOffset, (Vector4)(cameraData.jitter - data.previousJitter) * 0.5f);
             data.material.SetMatrixArray(ShaderConstants._CameraProjections, data.cameraProjections);
             data.material.SetMatrixArray(ShaderConstants._CameraInverseProjections, data.cameraInverseProjections);
             data.material.SetMatrixArray(ShaderConstants._CameraViews, data.cameraViews);
@@ -698,7 +709,7 @@ namespace UnityEngine.Rendering.Universal
                         tempColorDepthDesc.graphicsFormat = GraphicsFormat.R32_SFloat;
                         tempColorDepthDesc.depthStencilFormat = GraphicsFormat.None;
 
-                        depthHistory.Update(ref tempColorDepthDesc, xrMultipassEnabled);
+                        depthHistory.Update(cameraData, xrMultipassEnabled, tempColorDepthDesc);
 
                         if (depthHistory.GetCurrentTexture(multipassId) != null)
                         {

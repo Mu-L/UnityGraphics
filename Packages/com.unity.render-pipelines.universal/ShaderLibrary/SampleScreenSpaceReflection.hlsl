@@ -10,16 +10,20 @@ half4 SampleScreenSpaceReflection(float2 normalizedScreenSpaceUV, float3 positio
 {
     float2 uv = UnityStereoTransformScreenSpaceTex(normalizedScreenSpaceUV);
 
-    // Map roughness to mip level to get blur.
-    float mipLevel = GetSSRMipLevelFromPerceptualRoughness(positionWS, perceptualRoughness);
-    float4 reflColor = SAMPLE_TEXTURE2D_X_LOD(_ScreenSpaceReflectionTexture, sampler_TrilinearClamp, uv, mipLevel);
-
     // Fade out reflections for pixels that have smoothness below our minimum.
     float perceptualSmoothness = PerceptualRoughnessToPerceptualSmoothness(perceptualRoughness);
     float fadeStart = _ScreenSpaceReflectionParam.y;
     float fadeEnd = _ScreenSpaceReflectionParam.z;
     float fade = smoothstep(fadeStart, fadeEnd, perceptualSmoothness);
-    reflColor.a *= fade;
+    float4 reflColor = float4(0,0,0,0);
+
+    if (fade > 1e-3)
+    {
+        // Map roughness to mip level to get blur.
+        float mipLevel = GetSSRMipLevelFromPerceptualRoughness(positionWS, perceptualRoughness);
+        reflColor = SAMPLE_TEXTURE2D_X_LOD(_ScreenSpaceReflectionTexture, sampler_TrilinearClamp, uv, mipLevel);
+        reflColor.a *= fade;
+    }
 
     return reflColor;
 }

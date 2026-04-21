@@ -540,7 +540,7 @@ namespace UnityEngine.Rendering.Universal
                     var colorHistory = history.GetHistoryForWrite<RawColorHistory>();
                     if (colorHistory != null)
                     {
-                        colorHistory.Update(cameraData, ref cameraData.cameraTargetDescriptor, xrMultipassEnabled);
+                        colorHistory.Update(cameraData, xrMultipassEnabled);
                         if (colorHistory.GetCurrentTexture(multipassId) != null)
                         {
                             var colorHistoryTarget = renderGraph.ImportTexture(colorHistory.GetCurrentTexture(multipassId));
@@ -555,22 +555,7 @@ namespace UnityEngine.Rendering.Universal
                     var depthHistory = history.GetHistoryForWrite<RawDepthHistory>();
                     if (depthHistory != null)
                     {
-                        var tempColorDepthDesc = cameraData.cameraTargetDescriptor;
-
-                        //On GLES we don't support sampling the MSAA targets, so if auto depth resolve is not available, the only thing that works is rendering to a color target.
-                        //This has been the behavior from at least 6.0. However, it results in the format mostly being color on the different graphics APIs, even when
-                        //it could be a depth format if MSAA sampling for depht is allowed.
-                        if (RenderingUtils.MultisampleDepthResolveSupported())
-                        {
-                            tempColorDepthDesc.graphicsFormat = GraphicsFormat.None;
-                        }
-                        else
-                        {
-                            tempColorDepthDesc.graphicsFormat = GraphicsFormat.R32_SFloat;
-                            tempColorDepthDesc.depthStencilFormat = GraphicsFormat.None;
-                        }
-
-                        depthHistory.Update(ref tempColorDepthDesc, xrMultipassEnabled);
+                        depthHistory.Update(cameraData, xrMultipassEnabled);
 
                         if (depthHistory.GetCurrentTexture(multipassId) != null)
                         {
@@ -603,7 +588,7 @@ namespace UnityEngine.Rendering.Universal
                     var colorHistory = history.GetHistoryForWrite<BeforeTransparentsColorHistory>();
                     if (colorHistory != null)
                     {
-                        colorHistory.Update(cameraData, ref cameraData.cameraTargetDescriptor, xrMultipassEnabled);
+                        colorHistory.Update(cameraData, xrMultipassEnabled);
                         if (colorHistory.GetCurrentTexture(multipassId) != null)
                         {
                             var colorHistoryTarget = renderGraph.ImportTexture(colorHistory.GetCurrentTexture(multipassId));
@@ -1469,7 +1454,7 @@ namespace UnityEngine.Rendering.Universal
             }
 
             RecordCustomRenderGraphPasses(renderGraph, RenderPassEvent.AfterRendering);
-            
+
             // We can explicitely render the overlay UI from URP when HDR output is not enabled.
             // SupportedRenderingFeatures.active.rendersUIOverlay should also be set to true.
             bool shouldRenderUI = cameraData.rendersOverlayUI && cameraData.isLastBaseCamera;
@@ -1478,10 +1463,10 @@ namespace UnityEngine.Rendering.Universal
             {
                 var color = resourceData.activeColorTexture;
                 var cameraDepth = resourceData.cameraDepth;
-                
+
                 TextureHandle depth;
 
-                if (cameraDepth.IsValid() && SystemInfo.supportsBackbufferInMultipleRenderTargets)  
+                if (cameraDepth.IsValid() && SystemInfo.supportsBackbufferInMultipleRenderTargets)
                 {
                     var backbufferInfo = renderGraph.GetRenderTargetInfo(resourceData.backBufferDepth);
                     var cameraDepthDesc = renderGraph.GetTextureDesc(in cameraDepth);
@@ -1490,7 +1475,7 @@ namespace UnityEngine.Rendering.Universal
                         && backbufferInfo.width == cameraDepthDesc.width && backbufferInfo.height == cameraDepthDesc.height
                         && backbufferInfo.volumeDepth == cameraDepthDesc.slices;
 
-                    // Using the cameraDepth avoids switching the depth target, that would break the native render pass. 
+                    // Using the cameraDepth avoids switching the depth target, that would break the native render pass.
                     depth = (matchingDimensions) ? cameraDepth : resourceData.activeDepthTexture;
                 }
                 else
