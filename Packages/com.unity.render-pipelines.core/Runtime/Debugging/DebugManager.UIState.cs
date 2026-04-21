@@ -152,7 +152,7 @@ namespace UnityEngine.Rendering
                 }
                 else
                 {
-                    CoreUtils.Destroy(m_RuntimePersistentDebugUI.gameObject);
+                    CoreUtils.Destroy(m_RuntimePersistentDebugUI?.gameObject);
                     m_RuntimePersistentDebugUI = null;
                 }
             }
