@@ -5,6 +5,7 @@ using System.Linq;
 using UnityEngine.Experimental.Rendering;
 using UnityEngine.Rendering.RenderGraphModule;
 using Unity.Collections;
+using Unity.Scripting.LifecycleManagement;
 
 namespace UnityEngine.Rendering.HighDefinition
 {
@@ -1945,8 +1946,8 @@ namespace UnityEngine.Rendering.HighDefinition
             && m_AdditionalCameraData.doesSceneViewOverrideExposure;
 
         internal float sceneViewExposureOverride
-            => m_AdditionalCameraData == null 
-            ? 10f 
+            => m_AdditionalCameraData == null
+            ? 10f
             : m_AdditionalCameraData.sceneViewOverrideExposureValue;
 #endif
 
@@ -1955,9 +1956,10 @@ namespace UnityEngine.Rendering.HighDefinition
 
         #region Private API
 
+        // s_Cameras and s_Cleanup are cleared when pipeline is disposed by calling HDCamera.ClearAll()
+        [NoAutoStaticsCleanup] static readonly Dictionary<(Camera, int, HistoryChannel), HDCamera> s_Cameras = new Dictionary<(Camera, int, HistoryChannel), HDCamera>();
+        [NoAutoStaticsCleanup] static readonly List<(Camera, int, HistoryChannel)> s_Cleanup = new List<(Camera, int, HistoryChannel)>(); // Recycled to reduce GC pressure
 
-        static Dictionary<(Camera, int, HistoryChannel), HDCamera> s_Cameras = new Dictionary<(Camera, int, HistoryChannel), HDCamera>();
-        static List<(Camera, int, HistoryChannel)> s_Cleanup = new List<(Camera, int, HistoryChannel)>(); // Recycled to reduce GC pressure
         HDAdditionalCameraData m_AdditionalCameraData = null; // Init in Update
         BufferedRTHandleSystem m_HistoryRTSystem = new BufferedRTHandleSystem();
         int m_HistoryViewCount = 0; // Used to track view count change if XR is enabled/disabled

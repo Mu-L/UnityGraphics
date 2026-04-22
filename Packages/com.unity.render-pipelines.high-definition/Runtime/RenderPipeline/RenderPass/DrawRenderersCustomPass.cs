@@ -153,11 +153,8 @@ namespace UnityEngine.Rendering.HighDefinition
 
         int fadeValueId;
 
-        static ShaderTagId[] forwardShaderTags;
-        static ShaderTagId[] depthShaderTags;
-
-        // Cache the shaderTagIds so we don't allocate a new array each frame
-        ShaderTagId[] cachedShaderTagIDs;
+        [NonSerialized] ShaderTagId[] m_ForwardShaderTags;
+        [NonSerialized] ShaderTagId[] m_DepthShaderTags;
 
         /// <summary>
         /// Called before the first execution of the pass occurs.
@@ -175,7 +172,7 @@ namespace UnityEngine.Rendering.HighDefinition
             if (String.IsNullOrEmpty(overrideShaderPassName) && overrideShader != null)
                 overrideShaderPassName = new Material(overrideShader).GetPassName(overrideShaderPassIndex);
 
-            forwardShaderTags = new ShaderTagId[]
+            m_ForwardShaderTags = new ShaderTagId[]
             {
                 HDShaderPassNames.s_ForwardName,            // HD Lit shader
                 HDShaderPassNames.s_ForwardOnlyName,        // HD Unlit shader
@@ -183,7 +180,7 @@ namespace UnityEngine.Rendering.HighDefinition
                 HDShaderPassNames.s_EmptyName,              // Add an empty slot for the override material
             };
 
-            depthShaderTags = new ShaderTagId[]
+            m_DepthShaderTags = new ShaderTagId[]
             {
                 HDShaderPassNames.s_DepthForwardOnlyName,
                 HDShaderPassNames.s_DepthOnlyName,
@@ -205,9 +202,9 @@ namespace UnityEngine.Rendering.HighDefinition
         ShaderTagId[] GetShaderTagIds()
         {
             if (shaderPass == ShaderPass.DepthPrepass)
-                return depthShaderTags;
+                return m_DepthShaderTags;
             else
-                return forwardShaderTags;
+                return m_ForwardShaderTags;
         }
 
         /// <summary>

@@ -1,4 +1,5 @@
 using System;
+using Unity.Scripting.LifecycleManagement;
 
 namespace UnityEngine.Rendering.HighDefinition
 {
@@ -50,7 +51,7 @@ namespace UnityEngine.Rendering.HighDefinition
     internal class ObsoleteCaptureSettings
     {
         /// <summary>Obsolete</summary>
-        public static ObsoleteCaptureSettings @default = new ObsoleteCaptureSettings();
+        [NoAutoStaticsCleanup] public static ObsoleteCaptureSettings @default = new ObsoleteCaptureSettings();
 
         /// <summary>Obsolete</summary>
         public ObsoleteCaptureSettingsOverrides overrides;

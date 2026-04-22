@@ -3,6 +3,7 @@ using UnityEngine.VFX;
 using System;
 using System.Diagnostics;
 using System.Linq;
+using Unity.Scripting.LifecycleManagement;
 using UnityEngine.Experimental.GlobalIllumination;
 using UnityEngine.Experimental.Rendering;
 using UnityEngine.Rendering.RenderGraphModule;
@@ -95,9 +96,9 @@ namespace UnityEngine.Rendering.HighDefinition
         bool m_FrameSettingsHistoryEnabled = false;
 
 #if UNITY_SWITCH
-        internal static bool k_PreferFragment = true;
+        internal static readonly bool k_PreferFragment = true;
 #else
-        internal static bool k_PreferFragment = false;
+        internal static readonly bool k_PreferFragment = false;
 #endif
 
         /// <summary>
@@ -441,10 +442,12 @@ namespace UnityEngine.Rendering.HighDefinition
         // MSAA resolve materials
         Material m_ColorResolveMaterial = null;
         Material m_MotionVectorResolve = null;
-        static int s_ColorResolve1XPassIndex;
-        static int s_ColorResolve2XPassIndex;
-        static int s_ColorResolve4XPassIndex;
-        static int s_ColorResolve8XPassIndex;
+
+        // No reset needed, always initialized at pipeline create
+        [NoAutoStaticsCleanup] static int s_ColorResolve1XPassIndex;
+        [NoAutoStaticsCleanup] static int s_ColorResolve2XPassIndex;
+        [NoAutoStaticsCleanup] static int s_ColorResolve4XPassIndex;
+        [NoAutoStaticsCleanup] static int s_ColorResolve8XPassIndex;
 
         WorldLights m_WorldLights = new WorldLights();
         WorldLightsGpu m_WorldLightsGpu = new WorldLightsGpu();
@@ -601,8 +604,6 @@ namespace UnityEngine.Rendering.HighDefinition
 
             m_MipGenerator = new MipGenerator(this);
             m_BlueNoise = new BlueNoise(this);
-
-            EncodeBC6H.DefaultInstance = EncodeBC6H.DefaultInstance ?? new EncodeBC6H(runtimeShaders.encodeBC6HCS);
 
             // Scan material list and assign it
             m_MaterialList = HDUtils.GetRenderPipelineMaterialList();
@@ -1344,7 +1345,7 @@ namespace UnityEngine.Rendering.HighDefinition
         // only the remapping shader functions. EnableFoveatedRemapping() can be used also with
         // rasterization passes where foveated rasterization isn't desired (e.g. full-screen pass with
         // foveated remapping in shaders).
-        static GlobalKeyword _FOVEATED_RENDERING_NON_UNIFORM_RASTER = GlobalKeyword.Create("_FOVEATED_RENDERING_NON_UNIFORM_RASTER");
+        static readonly GlobalKeyword _FOVEATED_RENDERING_NON_UNIFORM_RASTER = GlobalKeyword.Create("_FOVEATED_RENDERING_NON_UNIFORM_RASTER");
 
         /// <summary>
         /// Enable foveated rasterization state and foveated coordinate remapping by FoveatedRemap*() shader functions.
@@ -2033,7 +2034,9 @@ namespace UnityEngine.Rendering.HighDefinition
             visibleProbe.RepeatRenderSteps(skippedRenderSteps);
         }
 
-        static List<(int index, float weight)> s_TempGenerateProbeRenderRequestsList = new List<(int index, float weight)>();
+
+        [NoAutoStaticsCleanup] // No clear needed, always cleared before use
+        static readonly List<(int index, float weight)> s_TempGenerateProbeRenderRequestsList = new List<(int index, float weight)>();
 
         void GenerateProbeRenderRequests(
             Dictionary<HDProbe, List<(int index, float weight)>> renderRequestIndicesWhereTheProbeIsVisible,
@@ -2541,8 +2544,8 @@ namespace UnityEngine.Rendering.HighDefinition
             return false;
         }
 
-        // To prevent run-time alloc
-        static List<Camera> s_RenderRequestCamera = new List<Camera>();
+        [NoAutoStaticsCleanup] // No need to clear, always cleared before use
+        static readonly List<Camera> s_RenderRequestCamera = new List<Camera>(); // To prevent run-time alloc
         static readonly AOVRequestDataCollection s_EmptyAOVRequests = new AOVRequestDataCollection(null);
 
         /// <summary>

@@ -4,7 +4,7 @@ namespace UnityEngine.Rendering.HighDefinition
 {
     static class FrameSettingsDefaults
     {
-        private static uint[] s_CameraDefaultbitDatas = new uint[]
+        private static readonly uint[] s_CameraDefaultbitDatas = new uint[]
         {
             (uint)FrameSettingsField.ShadowMaps,
             (uint)FrameSettingsField.ContactShadows,
@@ -89,7 +89,7 @@ namespace UnityEngine.Rendering.HighDefinition
             // (uint)FullResolutionCloudsForSky
         };
 
-        private static uint[] s_BakedOrCustomReflectionbitDatas = new uint[]
+        private static readonly uint[] s_BakedOrCustomReflectionbitDatas = new uint[]
         {
             (uint)FrameSettingsField.ShadowMaps,
             //(uint)FrameSettingsField.ContactShadow,
@@ -146,7 +146,7 @@ namespace UnityEngine.Rendering.HighDefinition
             // (uint)FullResolutionCloudsForSky
         };
 
-        private static uint[] s_RealtimeReflectionbitDatas = new uint[]
+        private static readonly uint[] s_RealtimeReflectionbitDatas = new uint[]
         {
             (uint)FrameSettingsField.ShadowMaps,
             (uint)FrameSettingsField.ContactShadows,

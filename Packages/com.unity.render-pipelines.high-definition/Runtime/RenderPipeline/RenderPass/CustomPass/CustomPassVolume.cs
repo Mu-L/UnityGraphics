@@ -94,8 +94,8 @@ namespace UnityEngine.Rendering.HighDefinition
         internal bool useTargetCamera;
 
         // The current active custom pass volume is simply the smallest overlapping volume with the trigger transform
-        static HashSet<CustomPassVolume> m_ActivePassVolumes = new HashSet<CustomPassVolume>();
-        static List<CustomPassVolume> m_OverlappingPassVolumes = new List<CustomPassVolume>();
+        static readonly HashSet<CustomPassVolume> m_ActivePassVolumes = new HashSet<CustomPassVolume>();
+        static readonly List<CustomPassVolume> m_OverlappingPassVolumes = new List<CustomPassVolume>();
         static readonly Dictionary<CustomPassInjectionPoint, List<GlobalCustomPass>> m_GlobalCustomPasses = new();
         static readonly List<GlobalCustomPass> s_EmptyGlobalCustomPassList = new();
 
@@ -124,6 +124,19 @@ namespace UnityEngine.Rendering.HighDefinition
 
         /// <summary>The current injection point used to render passes. Used to determine the injection point of global custom passes.</summary>
         internal static CustomPassInjectionPoint currentGlobalInjectionPoint;
+
+#if UNITY_EDITOR
+        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterAssembliesLoaded)]
+        static void ResetStaticsOnLoad()
+        {
+            m_ActivePassVolumes.Clear();
+            m_OverlappingPassVolumes.Clear();
+            m_GlobalCustomPasses.Clear();
+            m_InjectionPoints = null;
+            m_CurrentInjectionPointList.Clear();
+            currentGlobalInjectionPoint = default;
+        }
+#endif
 
         /// <summary>
         /// Data structure used to store the global custom pass data needed for evaluation during the frame.

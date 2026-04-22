@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using UnityEngine.Experimental.Rendering;
 using System.Text.RegularExpressions;
+using Unity.Scripting.LifecycleManagement;
 
 #if UNITY_EDITOR
 using UnityEditor.SceneManagement;
@@ -52,10 +53,9 @@ namespace UnityEngine.Rendering.HighDefinition
         /// <summary>Default HDAdditionalCameraData</summary>
         static internal HDAdditionalCameraData s_DefaultHDAdditionalCameraData { get { return ComponentSingleton<HDAdditionalCameraData>.instance; } }
 
-        static List<CustomPassVolume> m_TempCustomPassVolumeList = new List<CustomPassVolume>();
-
         static Texture3D m_ClearTexture3D;
         static RTHandle m_ClearTexture3DRTH;
+
         /// <summary>
         /// Default 1x1x1 3D texture initialized with Color.clear.
         /// </summary>
@@ -1016,13 +1016,16 @@ namespace UnityEngine.Rendering.HighDefinition
                 return false;
 
             bool executed = false;
-            CustomPassVolume.GetActivePassVolumes(injectionPoint, m_TempCustomPassVolumeList);
-            foreach (var customPassVolume in m_TempCustomPassVolumeList)
+            using (ListPool<CustomPassVolume>.Get(out var tempCustomPassVolumeList))
             {
-                if (customPassVolume == null)
-                    return false;
+                CustomPassVolume.GetActivePassVolumes(injectionPoint, tempCustomPassVolumeList);
+                foreach (var customPassVolume in tempCustomPassVolumeList)
+                {
+                    if (customPassVolume == null)
+                        return false;
 
-                executed |= customPassVolume.WillExecuteInjectionPoint(hdCamera);
+                    executed |= customPassVolume.WillExecuteInjectionPoint(hdCamera);
+                }
             }
 
             return executed;
@@ -1205,7 +1208,8 @@ namespace UnityEngine.Rendering.HighDefinition
             return s_DefaultHDAdditionalCameraData;
         }
 
-        static Dictionary<GraphicsFormat, int> graphicsFormatSizeCache = new Dictionary<GraphicsFormat, int>
+        [NoAutoStaticsCleanup] // Cache that is populated based on Enum.ToString(), no need to clear
+        static readonly Dictionary<GraphicsFormat, int> graphicsFormatSizeCache = new Dictionary<GraphicsFormat, int>
         {
             // Init some default format so we don't allocate more memory on the first frame.
             {GraphicsFormat.R8G8B8A8_UNorm, 4},

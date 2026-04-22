@@ -1316,12 +1316,12 @@ namespace UnityEngine.Rendering.HighDefinition
             public int dBufferCount;
         }
 
-        static string[] s_DBufferNames = { "DBuffer0", "DBuffer1", "DBuffer2", "DBuffer3" };
+        static readonly string[] s_DBufferNames = { "DBuffer0", "DBuffer1", "DBuffer2", "DBuffer3" };
 
-        static Color s_DBufferClearColor = new Color(0.0f, 0.0f, 0.0f, 1.0f);
-        static Color s_DBufferClearColorNormal = new Color(0.5f, 0.5f, 0.5f, 1.0f); // for normals 0.5 is neutral
-        static Color s_DBufferClearColorAOSBlend = new Color(1.0f, 1.0f, 1.0f, 1.0f);
-        static Color[] s_DBufferClearColors = { s_DBufferClearColor, s_DBufferClearColorNormal, s_DBufferClearColor, s_DBufferClearColorAOSBlend };
+        static readonly Color s_DBufferClearColor = new Color(0.0f, 0.0f, 0.0f, 1.0f);
+        static readonly Color s_DBufferClearColorNormal = new Color(0.5f, 0.5f, 0.5f, 1.0f); // for normals 0.5 is neutral
+        static readonly Color s_DBufferClearColorAOSBlend = new Color(1.0f, 1.0f, 1.0f, 1.0f);
+        static readonly Color[] s_DBufferClearColors = { s_DBufferClearColor, s_DBufferClearColorNormal, s_DBufferClearColor, s_DBufferClearColorAOSBlend };
 
         void SetupDBufferTargets(RenderGraph renderGraph, bool use4RTs, ref PrepassOutput output, IUnsafeRenderGraphBuilder builder, bool canReadBoundDepthBuffer)
         {

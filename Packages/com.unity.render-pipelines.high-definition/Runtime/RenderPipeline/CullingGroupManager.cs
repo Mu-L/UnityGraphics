@@ -4,16 +4,18 @@ namespace UnityEngine.Rendering.HighDefinition
 {
     class CullingGroupManager
     {
-        static CullingGroupManager m_Instance;
-        static public CullingGroupManager instance
+        static CullingGroupManager s_Instance;
+
+#if UNITY_EDITOR
+        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterAssembliesLoaded)]
+        static void ResetStaticsOnLoad()
         {
-            get
-            {
-                if (m_Instance == null)
-                    m_Instance = new CullingGroupManager();
-                return m_Instance;
-            }
+            s_Instance?.Cleanup();
+            s_Instance = null;
         }
+#endif
+
+        public static CullingGroupManager instance => s_Instance ??= new CullingGroupManager();
 
         private Stack<CullingGroup> m_FreeList = new Stack<CullingGroup>();
 

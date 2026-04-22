@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Reflection;
 using System.Linq;
+using Unity.Scripting.LifecycleManagement;
 
 namespace UnityEngine.Rendering.HighDefinition
 {
@@ -28,17 +29,20 @@ namespace UnityEngine.Rendering.HighDefinition
 
     struct FrameSettingsHistory
     {
-        internal static readonly string[] foldoutNames = { "Rendering", "Lighting", "Async Compute", "Light Loop" };
-        static readonly string[] columnNames = { "Debug", "Sanitized", "Overridden", "Default" };
-        static readonly string[] columnTooltips =
+        internal static readonly string[] k_FoldoutNames = { "Rendering", "Lighting", "Async Compute", "Light Loop" };
+        static readonly string[] k_ColumnNames = { "Debug", "Sanitized", "Overridden", "Default" };
+        static readonly string[] k_ColumnTooltips =
         {
             "Displays Frame Setting values you can modify for the selected Camera.",
             "Displays the Frame Setting values that the selected Camera uses after Unity checks to see if your HDRP Asset supports them.",
             "Displays the Frame Setting values that the selected Camera overrides.",
             "Displays the default Frame Setting values in your current HDRP Asset."
         };
-        static readonly Dictionary<FrameSettingsField, FrameSettingsFieldAttribute> attributes;
-        static Dictionary<int, IOrderedEnumerable<KeyValuePair<FrameSettingsField, FrameSettingsFieldAttribute>>> attributesGroup = new Dictionary<int, IOrderedEnumerable<KeyValuePair<FrameSettingsField, FrameSettingsFieldAttribute>>>();
+
+        [NoAutoStaticsCleanup] // Reflection data that only depends on FrameSettingsField and FrameSettingsFieldAttribute, doesn't need to be cleared.
+        static readonly Dictionary<FrameSettingsField, FrameSettingsFieldAttribute> s_Attributes = new();
+        [NoAutoStaticsCleanup] // Another cache-like data structure constructed from s_Attributes, doesn't need to be cleared.
+        static readonly Dictionary<int, IOrderedEnumerable<KeyValuePair<FrameSettingsField, FrameSettingsFieldAttribute>>> s_AttributesGroup = new();
 
         // due to strange management of Scene view cameras, all camera of type Scene will share same FrameSettingsHistory
 #if UNITY_EDITOR
@@ -80,7 +84,7 @@ namespace UnityEngine.Rendering.HighDefinition
 
         internal static IFrameSettingsHistoryContainer sceneViewFrameSettingsContainer = new MinimalHistoryContainer();
 #endif
-        internal static HashSet<IFrameSettingsHistoryContainer> containers = new HashSet<IFrameSettingsHistoryContainer>();
+        internal static readonly HashSet<IFrameSettingsHistoryContainer> containers = new HashSet<IFrameSettingsHistoryContainer>();
 
         public FrameSettingsRenderType defaultType;
         public FrameSettings overridden;
@@ -111,16 +115,23 @@ namespace UnityEngine.Rendering.HighDefinition
             }
         }
 
+#if UNITY_EDITOR
+        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterAssembliesLoaded)]
+        static void ResetStaticsOnLoad()
+        {
+            containers.Clear();
+            s_PossiblyInUse = false;
+        }
+#endif
+
         /// <summary>Initialize data for FrameSettings panel of DebugMenu construction.</summary>
         static FrameSettingsHistory()
         {
-            attributes = new Dictionary<FrameSettingsField, FrameSettingsFieldAttribute>();
-            attributesGroup = new Dictionary<int, IOrderedEnumerable<KeyValuePair<FrameSettingsField, FrameSettingsFieldAttribute>>>();
             Dictionary<FrameSettingsField, string> frameSettingsEnumNameMap = FrameSettingsFieldAttribute.GetEnumNameMap();
             Type type = typeof(FrameSettingsField);
             foreach (FrameSettingsField enumVal in frameSettingsEnumNameMap.Keys)
             {
-                attributes[enumVal] = type.GetField(frameSettingsEnumNameMap[enumVal]).GetCustomAttribute<FrameSettingsFieldAttribute>();
+                s_Attributes[enumVal] = type.GetField(frameSettingsEnumNameMap[enumVal]).GetCustomAttribute<FrameSettingsFieldAttribute>();
             }
         }
 
@@ -253,9 +264,9 @@ namespace UnityEngine.Rendering.HighDefinition
 
         static ObservableList<DebugUI.Widget> GenerateHistoryArea(IFrameSettingsHistoryContainer frameSettingsContainer, int groupIndex)
         {
-            if (!attributesGroup.ContainsKey(groupIndex) || attributesGroup[groupIndex] == null)
-                attributesGroup[groupIndex] = attributes?.Where(pair => pair.Value?.group == groupIndex)?.OrderBy(pair => pair.Value.orderInGroup);
-            if (!attributesGroup.ContainsKey(groupIndex))
+            if (!s_AttributesGroup.ContainsKey(groupIndex) || s_AttributesGroup[groupIndex] == null)
+                s_AttributesGroup[groupIndex] = s_Attributes?.Where(pair => pair.Value?.group == groupIndex)?.OrderBy(pair => pair.Value.orderInGroup);
+            if (!s_AttributesGroup.ContainsKey(groupIndex))
                 throw new ArgumentException("Unknown groupIndex");
 
             var area = new ObservableList<DebugUI.Widget>();
@@ -263,7 +274,7 @@ namespace UnityEngine.Rendering.HighDefinition
             var defaulRenderingPathFrameSettings =
                 GraphicsSettings.GetRenderPipelineSettings<RenderingPathFrameSettings>();
 
-            foreach (var field in attributesGroup[groupIndex])
+            foreach (var field in s_AttributesGroup[groupIndex])
             {
                 switch (field.Value.type)
                 {
@@ -296,11 +307,11 @@ namespace UnityEngine.Rendering.HighDefinition
             if (frameSettingsContainer == null)
                 return Array.Empty<DebugUI.Widget>();
 
-            var panelContent = new DebugUI.Widget[foldoutNames.Length];
-            for (int index = 0; index < foldoutNames.Length; ++index)
+            var panelContent = new DebugUI.Widget[k_FoldoutNames.Length];
+            for (int index = 0; index < k_FoldoutNames.Length; ++index)
             {
-                panelContent[index] = new DebugUI.Foldout(foldoutNames[index],
-                    GenerateHistoryArea(frameSettingsContainer, index), columnNames, columnTooltips);
+                panelContent[index] = new DebugUI.Foldout(k_FoldoutNames[index],
+                    GenerateHistoryArea(frameSettingsContainer, index), k_ColumnNames, k_ColumnTooltips);
             }
             return panelContent;
         }
