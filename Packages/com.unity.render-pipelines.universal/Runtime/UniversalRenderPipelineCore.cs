@@ -1034,6 +1034,7 @@ namespace UnityEngine.Rendering.Universal
             // Keeping and calling this empty static function from pipeline creation ensures the static fields are
             // initialized at that point, instead of happening on the first frame, potentially causing a hitch.
         }
+
     }
 
     /// <summary>
@@ -1402,17 +1403,18 @@ namespace UnityEngine.Rendering.Universal
     {
         // Holds light direction for directional lights or position for punctual lights.
         // When w is set to 1.0, it means it's a punctual light.
-        static Vector4 k_DefaultLightPosition = new Vector4(0.0f, 0.0f, 1.0f, 0.0f);
-        static Vector4 k_DefaultLightColor = Color.black;
+        static readonly Vector4 k_DefaultLightPosition = new Vector4(0.0f, 0.0f, 1.0f, 0.0f);
+        static readonly Vector4 k_DefaultLightColor = Color.black;
 
         // Default light attenuation is setup in a particular way that it causes
         // directional lights to return 1.0 for both distance and angle attenuation
-        static Vector4 k_DefaultLightAttenuation = new Vector4(0.0f, 1.0f, 0.0f, 1.0f);
-        static Vector4 k_DefaultLightSpotDirection = new Vector4(0.0f, 0.0f, 1.0f, 0.0f);
-        static Vector4 k_DefaultLightsProbeChannel = new Vector4(0.0f, 0.0f, 0.0f, 0.0f);
+        static readonly Vector4 k_DefaultLightAttenuation = new Vector4(0.0f, 1.0f, 0.0f, 1.0f);
+        static readonly Vector4 k_DefaultLightSpotDirection = new Vector4(0.0f, 0.0f, 1.0f, 0.0f);
+        static readonly Vector4 k_DefaultLightsProbeChannel = new Vector4(0.0f, 0.0f, 0.0f, 0.0f);
 
-        static List<Vector4> m_ShadowBiasData = new List<Vector4>();
-        static List<int> m_ShadowResolutionData = new List<int>();
+        // Note: No need to clear static lists on entering play mode as they are always cleared at the start of CreateShadowData()
+        static readonly List<Vector4> s_ShadowBiasData = new List<Vector4>();
+        static readonly List<int> s_ShadowResolutionData = new List<int>();
 
         /// <summary>
         /// Checks if a camera is a game camera.
@@ -1555,7 +1557,7 @@ namespace UnityEngine.Rendering.Universal
             return desc;
         }
 
-        private static Lightmapping.RequestLightsDelegate lightsDelegate = (Light[] requests, NativeArray<LightDataGI> lightsOutput) =>
+        private static readonly Lightmapping.RequestLightsDelegate s_LightsDelegate = (Light[] requests, NativeArray<LightDataGI> lightsOutput) =>
         {
             LightDataGI lightData = new LightDataGI();
 
@@ -1902,17 +1904,18 @@ namespace UnityEngine.Rendering.Universal
 #if ENABLE_VR && ENABLE_XR_MODULE
     #if PLATFORM_WINRT || PLATFORM_ANDROID
         // XR mobile platforms are not treated as dedicated mobile platforms in Core. Handle them specially here. (Quest and HL).
-        private static List<XR.XRDisplaySubsystem> displaySubsystemList = new List<XR.XRDisplaySubsystem>();
+        // Note: No need to clear static list on entering playmode, because it is always overwritten by SubsystemManager.GetSubsystems before usage
+        private static readonly List<XR.XRDisplaySubsystem> s_DisplaySubsystemList = new List<XR.XRDisplaySubsystem>();
         private static bool IsRunningXRMobile()
         {
             var platform = Application.platform;
             if (platform == RuntimePlatform.WSAPlayerX86 || platform == RuntimePlatform.WSAPlayerARM || platform == RuntimePlatform.WSAPlayerX64 || platform == RuntimePlatform.Android)
             {
                 XR.XRDisplaySubsystem display = null;
-                SubsystemManager.GetSubsystems(displaySubsystemList);
+                SubsystemManager.GetSubsystems(s_DisplaySubsystemList);
 
-                if (displaySubsystemList.Count > 0)
-                    display = displaySubsystemList[0];
+                if (s_DisplaySubsystemList.Count > 0)
+                    display = s_DisplaySubsystemList[0];
 
                 if (display != null)
                     return true;

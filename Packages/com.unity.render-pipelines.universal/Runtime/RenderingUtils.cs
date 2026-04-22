@@ -15,7 +15,7 @@ namespace UnityEngine.Rendering.Universal
     /// </summary>
     public static class RenderingUtils
     {
-        static List<ShaderTagId> m_LegacyShaderPassNames = new List<ShaderTagId>
+        static readonly ShaderTagId[] s_LegacyShaderPassNames =
         {
             new ShaderTagId("Always"),
             new ShaderTagId("ForwardBase"),
@@ -25,7 +25,7 @@ namespace UnityEngine.Rendering.Universal
             new ShaderTagId("VertexLM"),
         };
 
-        static AttachmentDescriptor s_EmptyAttachment = new AttachmentDescriptor(GraphicsFormat.None);
+        static readonly AttachmentDescriptor s_EmptyAttachment = new AttachmentDescriptor(GraphicsFormat.None);
         internal static AttachmentDescriptor emptyAttachment
         {
             get
@@ -33,6 +33,17 @@ namespace UnityEngine.Rendering.Universal
                 return s_EmptyAttachment;
             }
         }
+
+#if UNITY_EDITOR
+        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterAssembliesLoaded)]
+        static void ResetStaticsOnLoad()
+        {
+            CoreUtils.Destroy(s_FullscreenMesh);
+            s_FullscreenMesh = null;
+            CoreUtils.Destroy(s_ErrorMaterial);
+            s_ErrorMaterial = null;
+        }
+#endif
 
         static Mesh s_FullscreenMesh = null;
 
@@ -214,15 +225,15 @@ namespace UnityEngine.Rendering.Universal
         internal static void CreateRendererParamsObjectsWithError(ref CullingResults cullResults, Camera camera, FilteringSettings filterSettings, SortingCriteria sortFlags, ref RendererListParams param)
         {
             SortingSettings sortingSettings = new SortingSettings(camera) { criteria = sortFlags };
-            DrawingSettings errorSettings = new DrawingSettings(m_LegacyShaderPassNames[0], sortingSettings)
+            DrawingSettings errorSettings = new DrawingSettings(s_LegacyShaderPassNames[0], sortingSettings)
             {
                 perObjectData = PerObjectData.None,
                 overrideMaterial = errorMaterial,
                 overrideMaterialPassIndex = 0
             };
-            for (int i = 1; i < m_LegacyShaderPassNames.Count; ++i)
-                errorSettings.SetShaderPassName(i, m_LegacyShaderPassNames[i]);
-
+            for (int i = 1; i < s_LegacyShaderPassNames.Length; ++i)
+                errorSettings.SetShaderPassName(i, s_LegacyShaderPassNames[i]);
+            
             param = new RendererListParams(cullResults, errorSettings, filterSettings);
         }
 
@@ -251,8 +262,8 @@ namespace UnityEngine.Rendering.Universal
             cmd.DrawRendererList(rl);
         }
 
-        static ShaderTagId[] s_ShaderTagValues = new ShaderTagId[1];
-        static RenderStateBlock[] s_RenderStateBlocks = new RenderStateBlock[1];
+        static readonly ShaderTagId[] s_ShaderTagValues = new ShaderTagId[1];
+        static readonly RenderStateBlock[] s_RenderStateBlocks = new RenderStateBlock[1];
         // Create a RendererList using a RenderStateBlock override is quite common so we have this optimized utility function for it
         internal static void CreateRendererListWithRenderStateBlock(RenderGraph renderGraph, ref CullingResults cullResults, DrawingSettings ds, FilteringSettings fs, RenderStateBlock rsb, ref RendererListHandle rl)
         {
@@ -270,11 +281,11 @@ namespace UnityEngine.Rendering.Universal
         }
 
         // Caches render texture format support. SystemInfo.SupportsRenderTextureFormat allocates memory due to boxing.
-        static Dictionary<RenderTextureFormat, bool> m_RenderTextureFormatSupport = new Dictionary<RenderTextureFormat, bool>();
+        static readonly Dictionary<RenderTextureFormat, bool> s_RenderTextureFormatSupport = new Dictionary<RenderTextureFormat, bool>();
 
         internal static void ClearSystemInfoCache()
         {
-            m_RenderTextureFormatSupport.Clear();
+            s_RenderTextureFormatSupport.Clear();
         }
 
         /// <summary>
@@ -285,10 +296,10 @@ namespace UnityEngine.Rendering.Universal
         /// <returns>Returns true if the graphics card supports the given <c>RenderTextureFormat</c></returns>
         public static bool SupportsRenderTextureFormat(RenderTextureFormat format)
         {
-            if (!m_RenderTextureFormatSupport.TryGetValue(format, out var support))
+            if (!s_RenderTextureFormatSupport.TryGetValue(format, out var support))
             {
                 support = SystemInfo.SupportsRenderTextureFormat(format);
-                m_RenderTextureFormatSupport.Add(format, support);
+                s_RenderTextureFormatSupport.Add(format, support);
             }
 
             return support;

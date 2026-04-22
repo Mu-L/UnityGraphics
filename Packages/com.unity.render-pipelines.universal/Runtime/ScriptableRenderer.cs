@@ -165,6 +165,14 @@ namespace UnityEngine.Rendering.Universal
         /// </summary>
         internal static ScriptableRenderer current = null;
 
+#if UNITY_EDITOR
+        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterAssembliesLoaded)]
+        static void ResetStaticsOnLoad()
+        {
+            current = null;
+        }
+#endif
+
         internal static void SetCameraMatrices(RasterCommandBuffer cmd, UniversalCameraData cameraData, bool setInverseMatrices, bool isTargetFlipped)
         {
 #if ENABLE_VR && ENABLE_XR_MODULE
@@ -466,8 +474,9 @@ namespace UnityEngine.Rendering.Universal
         ContextContainer m_frameData = new();
         internal ContextContainer frameData => m_frameData;
 
-        private static Plane[] s_Planes = new Plane[6];
-        private static Vector4[] s_VectorPlanes = new Vector4[6];
+        // Scratch buffers for SetPerCameraClippingPlaneProperties  to avoid per-call allocations
+        private static readonly Plane[] s_Planes = new Plane[6];
+        private static readonly Vector4[] s_VectorPlanes = new Vector4[6];
 
         /// <summary>
         /// In URP RenderGraph (likely not in Compatibility Mode), this returns if the pipeline will actually perform depth priming.

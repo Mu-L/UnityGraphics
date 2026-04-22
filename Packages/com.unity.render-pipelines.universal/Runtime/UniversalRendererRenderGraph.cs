@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Runtime.CompilerServices;
+using Unity.Scripting.LifecycleManagement;
 using UnityEngine.Experimental.Rendering;
 using UnityEngine.Rendering.RenderGraphModule;
 using UnityEngine.Rendering.Universal.Internal;
@@ -170,15 +171,15 @@ namespace UnityEngine.Rendering.Universal
         // TODO RENDERGRAPH: Once all cameras will run in a single RenderGraph we should remove all RTHandles and use per frame RG textures.
         // We use 2 camera color handles so we can handle the edge case when a pass might want to read and write the same target.
         // This is not allowed so we just swap the current target, this keeps camera stacking working and avoids an extra blit pass.
-        private static RTHandle[] s_RenderGraphCameraColorHandles = new RTHandle[]
-        {
-            null, null
-        };
 
-        private static RTHandle s_RenderGraphCameraDepthHandle;
-        private static int s_CurrentColorHandle = 0;
-        private static RTHandle s_RenderGraphDebugTextureHandle;
-        private static RTHandle s_OffscreenUIColorHandle;
+        // All static variables for this class are cleaned up in CleanupRenderGraphResources(), which is called when render pipeline
+        // is disposed (when entering/exiting play mode). Therefore they are marked with [NoAutoStaticsCleanup] to mute analyzer warnings about them.
+        [NoAutoStaticsCleanup] static readonly RTHandle[] s_RenderGraphCameraColorHandles = { null, null };
+        [NoAutoStaticsCleanup] static RTHandle s_RenderGraphCameraDepthHandle;
+        [NoAutoStaticsCleanup] static int s_CurrentColorHandle = 0;
+        [NoAutoStaticsCleanup] static RTHandle s_RenderGraphDebugTextureHandle;
+        [NoAutoStaticsCleanup] static RTHandle s_OffscreenUIColorHandle;
+        [NoAutoStaticsCleanup] static bool s_RequiresIntermediateAttachments;
 
         private RTHandle currentRenderGraphCameraColorHandle
         {
@@ -225,11 +226,19 @@ namespace UnityEngine.Rendering.Universal
         private void CleanupRenderGraphResources()
         {
             s_RenderGraphCameraColorHandles[0]?.Release();
+            s_RenderGraphCameraColorHandles[0] = null;
             s_RenderGraphCameraColorHandles[1]?.Release();
+            s_RenderGraphCameraColorHandles[1] = null;
             s_RenderGraphCameraDepthHandle?.Release();
+            s_RenderGraphCameraDepthHandle = null;
 
             s_RenderGraphDebugTextureHandle?.Release();
+            s_RenderGraphDebugTextureHandle = null;
             s_OffscreenUIColorHandle?.Release();
+            s_OffscreenUIColorHandle = null;
+
+            s_RequiresIntermediateAttachments = false;
+            s_CurrentColorHandle = 0;
         }
 
         /// <summary>
@@ -726,8 +735,6 @@ namespace UnityEngine.Rendering.Universal
                 return isGpuSupported;
             }
         }
-
-        private static bool s_RequiresIntermediateAttachments;
 
         private void OnOffscreenDepthTextureRendering(RenderGraph renderGraph, ScriptableRenderContext context, UniversalResourceData resourceData, UniversalCameraData cameraData)
         {
@@ -1961,7 +1968,7 @@ namespace UnityEngine.Rendering.Universal
 
     static class RenderGraphUtils
     {
-        static private ProfilingSampler s_SetGlobalTextureProfilingSampler = new ProfilingSampler("Set Global Texture");
+        static private readonly ProfilingSampler s_SetGlobalTextureProfilingSampler = new ProfilingSampler("Set Global Texture");
 
         internal const int GBufferSize = 7;
         internal const int DBufferSize = 3;
@@ -2005,7 +2012,7 @@ namespace UnityEngine.Rendering.Universal
     }
     class ClearTargetsPass
     {
-        static private ProfilingSampler s_ClearProfilingSampler = new ProfilingSampler("Clear Targets");
+        static private readonly ProfilingSampler s_ClearProfilingSampler = new ProfilingSampler("Clear Targets");
 
         private class PassData
         {

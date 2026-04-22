@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using Unity.Scripting.LifecycleManagement;
 using UnityEditor;
 using UnityEngine.Serialization;
 using UnityEngine.Assertions;
@@ -353,7 +354,8 @@ namespace UnityEngine.Rendering.Universal
 
     static class CameraTypeUtility
     {
-        static string[] s_CameraTypeNames = Enum.GetNames(typeof(CameraRenderType)).ToArray();
+        [NoAutoStaticsCleanup] // Reflection data cache, no need to clear.
+        static readonly string[] s_CameraTypeNames = Enum.GetNames(typeof(CameraRenderType));
 
         public static string GetName(this CameraRenderType type)
         {
@@ -492,18 +494,6 @@ namespace UnityEngine.Rendering.Universal
 
         [SerializeField] internal TemporalAA.Settings m_TaaSettings = TemporalAA.Settings.Create();
 
-        static UniversalAdditionalCameraData s_DefaultAdditionalCameraData = null;
-        internal static UniversalAdditionalCameraData defaultAdditionalCameraData
-        {
-            get
-            {
-                if (s_DefaultAdditionalCameraData == null)
-                    s_DefaultAdditionalCameraData = new UniversalAdditionalCameraData();
-
-                return s_DefaultAdditionalCameraData;
-            }
-        }
-        
         internal Camera camera
         {
             get
@@ -752,6 +742,15 @@ namespace UnityEngine.Rendering.Universal
         /// creating new ones every time a new camera is instantiated.
         /// </summary>
         private static List<VolumeStack> s_CachedVolumeStacks;
+
+#if UNITY_EDITOR
+        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterAssembliesLoaded)]
+        static void ResetStaticsOnLoad()
+        {
+            s_CachedVolumeStacks?.Clear();
+            s_CachedVolumeStacks = null;
+        }
+#endif
 
         /// <summary>
         /// Returns the current volume stack used by this camera.

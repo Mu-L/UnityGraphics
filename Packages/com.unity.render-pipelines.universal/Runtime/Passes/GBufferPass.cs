@@ -1,5 +1,6 @@
 using System;
 using Unity.Collections;
+using Unity.Scripting.LifecycleManagement;
 using UnityEngine.Rendering.RenderGraphModule;
 
 namespace UnityEngine.Rendering.Universal.Internal
@@ -20,8 +21,16 @@ namespace UnityEngine.Rendering.Universal.Internal
 
         DeferredLights m_DeferredLights;
 
-        static ShaderTagId[] s_ShaderTagValues;
-        static RenderStateBlock[] s_RenderStateBlocks;
+        static readonly ShaderTagId[] s_ShaderTagValues = {
+            s_ShaderTagLit,
+            s_ShaderTagSimpleLit,
+            s_ShaderTagUnlit,
+            s_ShaderTagComplexLit,
+            s_ShaderTagBakedLit,
+            new ShaderTagId() // Special catch all case for materials where UniversalMaterialType is not defined or the tag value doesn't match anything we know.
+        };
+
+        RenderStateBlock[] m_RenderStateBlocks;
 
         FilteringSettings m_FilteringSettings;
         RenderStateBlock m_RenderStateBlock;
@@ -39,17 +48,7 @@ namespace UnityEngine.Rendering.Universal.Internal
             m_RenderStateBlock.stencilReference = stencilReference;
             m_RenderStateBlock.mask = RenderStateMask.Stencil;
 
-            s_ShaderTagValues ??= new ShaderTagId[]
-            {
-                s_ShaderTagLit,
-                s_ShaderTagSimpleLit,
-                s_ShaderTagUnlit,
-                s_ShaderTagComplexLit,
-                s_ShaderTagBakedLit,
-                new ShaderTagId() // Special catch all case for materials where UniversalMaterialType is not defined or the tag value doesn't match anything we know.
-            };
-
-            s_RenderStateBlocks ??= new RenderStateBlock[]
+            m_RenderStateBlocks = new RenderStateBlock[]
             {
                 DeferredLights.OverwriteStencil(m_RenderStateBlock, (int)StencilUsage.MaterialMask, (int)StencilUsage.MaterialLit),
                 DeferredLights.OverwriteStencil(m_RenderStateBlock, (int)StencilUsage.MaterialMask, (int)StencilUsage.MaterialSimpleLit),
@@ -123,7 +122,7 @@ namespace UnityEngine.Rendering.Universal.Internal
 #endif
 
             NativeArray<ShaderTagId> tagValues = new NativeArray<ShaderTagId>(s_ShaderTagValues, Allocator.Temp);
-            NativeArray<RenderStateBlock> stateBlocks = new NativeArray<RenderStateBlock>(s_RenderStateBlocks, Allocator.Temp);
+            NativeArray<RenderStateBlock> stateBlocks = new NativeArray<RenderStateBlock>(m_RenderStateBlocks, Allocator.Temp);
             var param = new RendererListParams(renderingData.cullResults, drawingSettings, filterSettings)
             {
                 tagValues = tagValues,

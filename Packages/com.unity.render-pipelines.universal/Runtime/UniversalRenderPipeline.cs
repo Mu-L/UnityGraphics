@@ -2,6 +2,7 @@ using System;
 using Unity.Collections;
 using System.Collections.Generic;
 using System.Reflection;
+using Unity.Scripting.LifecycleManagement;
 #if UNITY_EDITOR
 using UnityEditor;
 using UnityEditor.Rendering.Universal;
@@ -95,7 +96,7 @@ namespace UnityEngine.Rendering.Universal
                 public ProfilingSampler sampler;
             }
 
-            static Dictionary<int, CameraMetadataCacheEntry> s_MetadataCache = new();
+            static readonly Dictionary<int, CameraMetadataCacheEntry> s_MetadataCache = new();
 
             static readonly CameraMetadataCacheEntry k_NoAllocEntry = new() { sampler = new ProfilingSampler("Unknown") };
 
@@ -118,6 +119,11 @@ namespace UnityEngine.Rendering.Universal
 
                 return result;
 #endif
+            }
+
+            public static void Clear()
+            {
+                s_MetadataCache.Clear();
             }
         }
 
@@ -242,24 +248,26 @@ namespace UnityEngine.Rendering.Universal
         /// </summary>
         public override RenderPipelineGlobalSettings defaultSettings => m_GlobalSettings;
 
-        internal static RenderGraph s_RenderGraph;
-        internal static RTHandleResourcePool s_RTHandlePool;
+        // All static variables for this class are cleaned up in Dispose(), which is always called when entering/exiting play mode.
+        // Therefore they are marked with [NoAutoStaticsCleanup] to mute analyzer warnings about them.
+        [NoAutoStaticsCleanup] internal static RenderGraph s_RenderGraph;
+        [NoAutoStaticsCleanup] internal static RTHandleResourcePool s_RTHandlePool;
 
         // Store locally the value on the instance due as the Render Pipeline Asset data might change before the disposal of the asset, making some APV Resources leak.
         internal bool apvIsEnabled = false;
 
         // Flag to check if offscreen UI cover prepass should be executed for the current frame.
-        internal static bool requireOffscreenUICoverPrepass;
+        [NoAutoStaticsCleanup] internal static bool requireOffscreenUICoverPrepass;
 
         // Flag to check if offscreen UI for HDR output is rendered in this frame at the first base camera.
-        internal static bool offscreenUIRenderedInCurrentFrame;
+        [NoAutoStaticsCleanup] internal static bool offscreenUIRenderedInCurrentFrame;
 
         // In some specific cases, we modify Screen.msaaSamples to reduce GPU bandwidth
-        internal static bool canOptimizeScreenMSAASamples { get; private set; }
+        [NoAutoStaticsCleanup] internal static bool canOptimizeScreenMSAASamples { get; private set; }
 
         // For iOS and macOS players, the Screen API MSAA samples change request is only applied in the next frame (UUM-42825)
         // To adress this, we need to store here the MSAA sample count at the beginning of the frame
-        internal static int startFrameScreenMSAASamples { get; private set; }
+        [NoAutoStaticsCleanup] internal static int startFrameScreenMSAASamples { get; private set; }
 
         // Reference to the asset associated with the pipeline.
         // When a pipeline asset is switched in `GraphicsSettings`, the `UniversalRenderPipelineCore.asset` member
@@ -368,7 +376,7 @@ namespace UnityEngine.Rendering.Universal
             XRSystem.SetDisplayMSAASamples(msaaSamples);
             XRSystem.SetRenderScale(asset.renderScale);
 
-            Lightmapping.SetDelegate(lightsDelegate);
+            Lightmapping.SetDelegate(s_LightsDelegate);
 
             CameraCaptureBridge.enabled = true;
 
@@ -465,6 +473,12 @@ namespace UnityEngine.Rendering.Universal
 
             DisposeAdditionalCameraData();
             AdditionalLightsShadowAtlasLayout.ClearStaticCaches();
+
+            CameraMetadataCache.Clear();
+            requireOffscreenUICoverPrepass = false;
+            offscreenUIRenderedInCurrentFrame = false;
+            canOptimizeScreenMSAASamples = false;
+            startFrameScreenMSAASamples = 0;
         }
 
         // If the URP gets destroyed, we must clean up all the added URP specific camera data and
@@ -1504,7 +1518,7 @@ namespace UnityEngine.Rendering.Universal
             // Multiple cameras could render into the same XR display and they should share the same MSAA level.
             // However it should still respect the sample count of the target texture camera is rendering to.
             if (cameraData.xrRendering && rendererSupportsMSAA && camera.targetTexture == null)
-                msaaSamples = (int)XRSystem.GetDisplayMSAASamples();                
+                msaaSamples = (int)XRSystem.GetDisplayMSAASamples();
 
 #if ENABLE_MULTI_WINDOWING && PLATFORM_SUPPORTS_PER_WINDOW_TRANSPARENCY && !UNITY_EDITOR
             bool needsAlphaChannel = GameWindowManager.IsGameWindowTransparent(cameraData.camera.targetDisplay);
@@ -1617,7 +1631,7 @@ namespace UnityEngine.Rendering.Universal
             bool upscalerSupportsSharpening = activeUpscaler != null && activeUpscaler.supportsSharpening;
 #else
             // Convert the upscaling filter selection from the pipeline asset into an image upscaling filter
-            cameraData.upscalingFilter = supportedRenderingFeatures.upscaling? 
+            cameraData.upscalingFilter = supportedRenderingFeatures.upscaling?
                 ResolveUpscalingFilterSelection(new Vector2(cameraData.pixelWidth, cameraData.pixelHeight), cameraData.renderScale, settings.upscalingFilter)
                 : ImageUpscalingFilter.Point;
 
@@ -1686,7 +1700,7 @@ namespace UnityEngine.Rendering.Universal
             using var profScope = new ProfilingScope(Profiling.Pipeline.initializeAdditionalCameraData);
 
             var renderer = GetRenderer(camera, additionalCameraData);
-            var settings = asset;            
+            var settings = asset;
 
             bool anyShadowsEnabled = settings.supportsMainLightShadows || settings.supportsAdditionalLightShadows;
             cameraData.maxShadowDistance = Mathf.Min(settings.shadowDistance, camera.farClipPlane);
@@ -1727,14 +1741,14 @@ namespace UnityEngine.Rendering.Universal
                 cameraData.screenSizeOverride = cameraData.pixelRect.size;
                 cameraData.screenCoordScaleBias = Vector2.one;
             }
-            
+
             var supportedRenderingFeatures = renderer.supportedRenderingFeatures;
 
             if (!supportedRenderingFeatures.cameraOpaqueTexture)
                 cameraData.requiresOpaqueTexture = false;
 
             if (!supportedRenderingFeatures.cameraDepthTexture)
-                cameraData.requiresDepthTexture = false;  
+                cameraData.requiresDepthTexture = false;
 
             cameraData.renderer = renderer;
             cameraData.postProcessingRequiresDepthTexture = CheckPostProcessForDepth(cameraData);
@@ -1853,8 +1867,8 @@ namespace UnityEngine.Rendering.Universal
             UniversalCameraData cameraData = frameData.Get<UniversalCameraData>();
             UniversalLightData lightData = frameData.Get<UniversalLightData>();
 
-            m_ShadowBiasData.Clear();
-            m_ShadowResolutionData.Clear();
+            s_ShadowBiasData.Clear();
+            s_ShadowResolutionData.Clear();
 
             shadowData.shadowmapDepthBufferBits = 16;
             shadowData.mainLightShadowCascadeBorder = urpAsset.cascadeBorder;
@@ -1937,15 +1951,15 @@ namespace UnityEngine.Rendering.Universal
             {
                 if (!shadowData.supportsMainLightShadows && i == mainLightIndex)
                 {
-                    m_ShadowBiasData.Add(Vector4.zero);
-                    m_ShadowResolutionData.Add(0);
+                    s_ShadowBiasData.Add(Vector4.zero);
+                    s_ShadowResolutionData.Add(0);
                     continue;
                 }
 
                 if (!shadowData.supportsAdditionalLightShadows && i != mainLightIndex)
                 {
-                    m_ShadowBiasData.Add(Vector4.zero);
-                    m_ShadowResolutionData.Add(0);
+                    s_ShadowBiasData.Add(Vector4.zero);
+                    s_ShadowResolutionData.Add(0);
                     continue;
                 }
 
@@ -1958,27 +1972,27 @@ namespace UnityEngine.Rendering.Universal
                 }
 
                 if (data && !data.usePipelineSettings)
-                    m_ShadowBiasData.Add(new Vector4(light.shadowBias, light.shadowNormalBias, 0.0f, 0.0f));
+                    s_ShadowBiasData.Add(new Vector4(light.shadowBias, light.shadowNormalBias, 0.0f, 0.0f));
                 else
-                    m_ShadowBiasData.Add(new Vector4(urpAsset.shadowDepthBias, urpAsset.shadowNormalBias, 0.0f, 0.0f));
+                    s_ShadowBiasData.Add(new Vector4(urpAsset.shadowDepthBias, urpAsset.shadowNormalBias, 0.0f, 0.0f));
 
                 if (data && (data.additionalLightsShadowResolutionTier == UniversalAdditionalLightData.AdditionalLightsShadowResolutionTierCustom))
                 {
-                    m_ShadowResolutionData.Add((int)light.shadowResolution); // native code does not clamp light.shadowResolution between -1 and 3
+                    s_ShadowResolutionData.Add((int)light.shadowResolution); // native code does not clamp light.shadowResolution between -1 and 3
                 }
                 else if (data && (data.additionalLightsShadowResolutionTier != UniversalAdditionalLightData.AdditionalLightsShadowResolutionTierCustom))
                 {
                     int resolutionTier = Mathf.Clamp(data.additionalLightsShadowResolutionTier, UniversalAdditionalLightData.AdditionalLightsShadowResolutionTierLow, UniversalAdditionalLightData.AdditionalLightsShadowResolutionTierHigh);
-                    m_ShadowResolutionData.Add(urpAsset.GetAdditionalLightsShadowResolution(resolutionTier));
+                    s_ShadowResolutionData.Add(urpAsset.GetAdditionalLightsShadowResolution(resolutionTier));
                 }
                 else
                 {
-                    m_ShadowResolutionData.Add(urpAsset.GetAdditionalLightsShadowResolution(UniversalAdditionalLightData.AdditionalLightsShadowDefaultResolutionTier));
+                    s_ShadowResolutionData.Add(urpAsset.GetAdditionalLightsShadowResolution(UniversalAdditionalLightData.AdditionalLightsShadowDefaultResolutionTier));
                 }
             }
 
-            shadowData.bias = m_ShadowBiasData;
-            shadowData.resolution = m_ShadowResolutionData;
+            shadowData.bias = s_ShadowBiasData;
+            shadowData.resolution = s_ShadowResolutionData;
             shadowData.supportsSoftShadows = urpAsset.supportsSoftShadows && (shadowData.supportsMainLightShadows || shadowData.supportsAdditionalLightShadows);
 
             return shadowData;
