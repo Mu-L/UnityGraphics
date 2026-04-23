@@ -176,6 +176,7 @@ bool TraceScreenSpaceRay(
 
             bool aboveBase = !COMPARE_DEVICE_DEPTH_CLOSER(rayDepth, rawSceneDepth);
             bool belowFloor = COMPARE_DEVICE_DEPTH_CLOSER(rayDepth, rawSceneDepth * GetThicknessScale() + GetThicknessBias());
+            [branch]
             if (aboveBase && belowFloor)
             {
                 hitFine = COMPARE_DEVICE_DEPTH_CLOSER(rayDepth, rawSceneDepth * GetThicknessScaleFine() + GetThicknessBiasFine());
