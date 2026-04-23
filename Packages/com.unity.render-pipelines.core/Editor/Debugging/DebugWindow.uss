@@ -108,3 +108,8 @@
 .info-button:hover {
     background-color: var(--unity-colors-button-background-hover);
 }
+
+#debug-window-no-results-label {
+    display: none;
+    -unity-text-align: middle-center;
+}
