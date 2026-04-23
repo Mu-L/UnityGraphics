@@ -9,6 +9,15 @@ namespace UnityEditor.ShaderGraph
 {
     static class FileUtilities
     {
+        public static string ReadAllTextUTF8(string path)
+        {
+            ReadOnlySpan<byte> contents = FileUtil.ReadAllBytes(path);
+            ReadOnlySpan<byte> bom = Encoding.UTF8.Preamble;
+            if (contents.StartsWith(bom))
+                contents = contents[bom.Length..];
+            return Encoding.UTF8.GetString(contents);
+        }
+
         // if successfully written to disk, returns the serialized file contents as a string
         // on failure, returns null
         public static string WriteShaderGraphToDisk(string path, GraphData data)
@@ -74,7 +83,7 @@ namespace UnityEditor.ShaderGraph
             string result = null;
             try
             {
-                result = File.ReadAllText(FileUtil.PathToAbsolutePath(assetPath), Encoding.UTF8);
+                result = ReadAllTextUTF8(assetPath);
             }
             catch
             {
@@ -87,7 +96,7 @@ namespace UnityEditor.ShaderGraph
         {
             try
             {
-                var textGraph = File.ReadAllText(FileUtil.PathToAbsolutePath(path), Encoding.UTF8);
+                var textGraph = ReadAllTextUTF8(path);
                 graph = new GraphData
                 {
                     messageManager = new Graphing.Util.MessageManager(),
