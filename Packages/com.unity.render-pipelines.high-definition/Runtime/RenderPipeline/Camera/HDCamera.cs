@@ -2381,7 +2381,11 @@ namespace UnityEngine.Rendering.HighDefinition
                 Debug.Assert(HDRenderPipeline.currentPipeline != null);
                 IUpscaler upscaler = HDRenderPipeline.currentPipeline.upscaling.activeUpscaler;
                 Debug.Assert(upscaler != null); // If we're in this condition, upscaler should be non-null.
-                upscaler.CalculateJitter(taaFrameIndex, out Vector2 jitter, out bool allowScaling);
+
+                // Compute upscale ratio for upscalers that need resolution-dependent jitter (DLSS, FSR2)
+                float upscaleRatio = finalViewport.width / actualWidth;
+                upscaler.CalculateJitter(taaFrameIndex, upscaleRatio, out Vector2 jitter, out bool allowScaling);
+
                 // TODO (Apoorva): Re-examine if this negative sign is needed. It's currently there because URP and HDRP
                 // seem to be different in this regard. In URP, the jitter offset is -STP.Jit16(), while in HDRP, it
                 // seems to be STP.Jit16(). Maybe the usage of the jitter vector cancels this sign out, making the math

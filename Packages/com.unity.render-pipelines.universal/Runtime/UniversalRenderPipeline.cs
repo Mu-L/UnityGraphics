@@ -628,6 +628,17 @@ namespace UnityEngine.Rendering.Universal
 
                 s_RenderGraph.EndFrame();
                 s_RTHandlePool.PurgeUnusedResources(Time.frameCount);
+
+#if ENABLE_UPSCALER_FRAMEWORK
+                // Clean up expired upscaler contexts (unused for > 400 frames)
+                if (upscaling != null)
+                {
+                    var cmd = CommandBufferPool.Get("Upscaler Context Cleanup");
+                    upscaling.CleanupExpiredContexts(cmd);
+                    renderContext.ExecuteCommandBuffer(cmd);
+                    CommandBufferPool.Release(cmd);
+                }
+#endif
             }
 
 #if ENABLE_SHADER_DEBUG_PRINT
@@ -1792,25 +1803,38 @@ namespace UnityEngine.Rendering.Universal
             // Affects the jitter set just below. Do not move.
             ApplyTaaRenderingDebugOverrides(ref cameraData.taaSettings);
 
-            TemporalAA.JitterFunc jitterFunc;
+            Matrix4x4 jitterMat = Matrix4x4.identity;
             // Depends on the cameraTargetDesc, size and MSAA also XR modifications of those.
 #if ENABLE_UPSCALER_FRAMEWORK
             IUpscaler activeUpscaler = upscaling.activeUpscaler;
             if (cameraData.IsTemporalAAEnabled() && activeUpscaler != null)
             {
-                jitterFunc = activeUpscaler.CalculateJitter;
+                // Upscalers compute jitter with resolution-dependent parameters.
+                int taaFrameIndex = TemporalAA.CalculateTaaFrameIndex(ref cameraData.taaSettings);
+                float actualWidth = cameraData.cameraTargetDescriptor.width;
+                float upscaleRatio = (float)cameraData.pixelWidth / actualWidth;
+
+                activeUpscaler.CalculateJitter(taaFrameIndex, upscaleRatio, out Vector2 subpixelJitter, out bool allowScaling);
+
+                // Note: DLSS/FSR2 set allowScaling=false, so jitterScale is not applied
+                if (allowScaling)
+                    subpixelJitter *= cameraData.taaSettings.jitterScale;
+
+                // Store for later use by upscaler during post-process
+                cameraData.subpixelJitter = subpixelJitter;
+
+                jitterMat = TemporalAA.CalculateJitterMatrix(cameraData, subpixelJitter);
             }
             else
 #endif
             if (cameraData.IsSTPEnabled())
             {
-                jitterFunc = StpUtils.s_JitterFunc;
+                jitterMat = TemporalAA.CalculateJitterMatrix(cameraData, StpUtils.s_JitterFunc);
             }
             else
             {
-                jitterFunc = TemporalAA.s_JitterFunc;
+                jitterMat = TemporalAA.CalculateJitterMatrix(cameraData, TemporalAA.s_JitterFunc);
             }
-            Matrix4x4 jitterMat = TemporalAA.CalculateJitterMatrix(cameraData, jitterFunc);
             cameraData.SetViewProjectionAndJitterMatrix(camera.worldToCameraMatrix, projectionMatrix, jitterMat);
 
             cameraData.worldSpaceCameraPos = camera.transform.position;

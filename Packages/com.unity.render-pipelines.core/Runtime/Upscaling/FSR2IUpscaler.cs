@@ -25,6 +25,52 @@ static class RegisterFSR2
     static void InitRuntime() => UpscalerRegistry.Register<FSR2IUpscaler, FSR2Options>(FSR2IUpscaler.upscalerName);
 }
 
+/// <summary>
+/// Per-camera context for FSR2 upscaling. Wraps the native AMD FSR2Context
+/// and tracks the settings it was created with for validation.
+/// Native context creation is deferred until first use (requires CommandBuffer).
+/// </summary>
+public class FSR2UpscalerContext : PluginUpscalerContext<FSR2Context, FSR2Options>
+{
+    private readonly FSR2Quality m_CreatedWithQuality;
+    private readonly bool m_CreatedWithFixedResolutionMode;
+
+    /// <summary>
+    /// Creates a new FSR2 context wrapper. Native context creation is deferred.
+    /// </summary>
+    public FSR2UpscalerContext(FSR2Options options, Vector2Int displayResolution)
+        : base(displayResolution)
+    {
+        m_CreatedWithQuality = options.fsr2QualityMode;
+        m_CreatedWithFixedResolutionMode = options.fixedResolutionMode;
+    }
+
+    /// <summary>
+    /// Gets the native FSR2 context, creating it if necessary.
+    /// </summary>
+    /// <param name="cmd">Command buffer to record creation commands.</param>
+    /// <param name="settings">Initialization settings for the native context.</param>
+    /// <returns>The native FSR2 context.</returns>
+    public FSR2Context GetOrCreateNativeContext(CommandBuffer cmd, FSR2CommandInitializationData settings)
+    {
+        m_NativeContext ??= GraphicsDevice.device.CreateFeature(cmd, settings);
+        return m_NativeContext;
+    }
+
+    /// <inheritdoc/>
+    protected override void DestroyNativeContext(CommandBuffer cmd, FSR2Context context)
+        => GraphicsDevice.device.DestroyFeature(cmd, context);
+
+    /// <inheritdoc/>
+    protected override bool ValidateOptions(FSR2Options options)
+    {
+        // Quality mode and fixed resolution mode changes require context recreation
+        // Sharpness changes do NOT require recreation (just parameters)
+        return options.fsr2QualityMode == m_CreatedWithQuality &&
+               options.fixedResolutionMode == m_CreatedWithFixedResolutionMode;
+    }
+}
+
 public class FSR2IUpscaler : AbstractUpscaler
 {
     public static readonly string upscalerName = "FidelityFX Super Resolution 2";
@@ -38,13 +84,6 @@ public class FSR2IUpscaler : AbstractUpscaler
             Debug.LogWarning("AMDUnityPlugin not loaded.");
             return false;
         }
-    
-        // check plugin version
-        // if (s_ExpectedDeviceVersion != UnityEngine.AMD.GraphicsDevice.version)
-        // {
-        //     Debug.LogWarning("Cannot instantiate AMD device because the version HDRP expects does not match the backend version.");
-        //     return false;
-        // }
 
         // check device
         UnityEngine.AMD.GraphicsDevice device = UnityEngine.AMD.GraphicsDevice.CreateGraphicsDevice();
@@ -56,44 +95,15 @@ public class FSR2IUpscaler : AbstractUpscaler
 
         return true;
     }
-    static void DestroyContext(ref FSR2Context ctx, CommandBuffer cmd)
-    {
-        GraphicsDevice.device.DestroyFeature(cmd, ctx);
-        ctx = null;
-    }
-    static void CreateContext(ref FSR2Context ctx, CommandBuffer cmd, ref FSR2GraphData data)
-    {
-        bool displayResolutionMotionVectors = data.motionVectorSizeX == data.colorOutputSizeX && data.motionVectorSizeY == data.colorOutputSizeY;
-
-        FSR2CommandInitializationData settings = new();
-        settings.SetFlag(FfxFsr2InitializationFlags.EnableHighDynamicRange, data.inputIsHDR);
-        settings.SetFlag(FfxFsr2InitializationFlags.EnableDisplayResolutionMotionVectors, displayResolutionMotionVectors);
-        settings.SetFlag(FfxFsr2InitializationFlags.DepthInverted, data.invertedDepthBuffer);
-        settings.SetFlag(FfxFsr2InitializationFlags.EnableMotionVectorsJitterCancellation, data.motionVectorsAreJittered);
-        settings.maxRenderSizeWidth = data.colorInputSizeX;
-        settings.maxRenderSizeHeight = data.colorInputSizeY;
-        settings.displaySizeWidth = data.colorOutputSizeX;
-        settings.displaySizeHeight = data.colorOutputSizeY;
-        ctx = GraphicsDevice.device.CreateFeature(cmd, settings);
-    }
 #endregion // FSR2_UTILITIES
     
 
 #region RENDERGRAPH_INTERFACE_DATA
     class FSR2GraphData
     {
-        public bool shouldReinitializeContext;
-
-        public uint colorInputSizeX;
-        public uint colorInputSizeY;
-        public uint colorOutputSizeX;
-        public uint colorOutputSizeY;
-        public uint motionVectorSizeX;
-        public uint motionVectorSizeY;
-        public bool invertedDepthBuffer;
-        public bool inputIsHDR;
-        public bool motionVectorsAreJittered;
-
+        public FSR2UpscalerContext upscalerContext;
+        public bool needsInitSettings; // True when native context doesn't exist yet
+        public FSR2CommandInitializationData initSettings;
         public FSR2CommandExecutionData execData;
         public TextureHandle colorInput;
         public TextureHandle depth;
@@ -112,46 +122,36 @@ public class FSR2IUpscaler : AbstractUpscaler
         }
 
         m_Options = o;
-
-        m_OutputResolutionPrevious = new Vector2Int(0, 0);
-        m_InputResolution = new Vector2Int(1, 1);
-        m_OutputResolution = new Vector2Int(1, 1);
-        m_Jitter = new Vector2(0, 0);
-
         m_FSR2Ready = true;
     }
 
     public override string name => upscalerName;
     public override bool isTemporal => true;
     public override bool supportsSharpening => true;
+    public override UpscalerOptions options => m_Options;
 
-    public override void CalculateJitter(int frameIndex, out Vector2 jitter, out bool allowScaling)
+    public override IUpscalerContext CreateContext(UpscalerOptions options, Vector2Int displayResolution)
     {
-        float upscaleRatio = (float)(m_OutputResolution.x) / m_InputResolution.x;
-        int numPhases = CalculateJitterPhaseCount(upscaleRatio);
+        if (!m_FSR2Ready || options is not FSR2Options fsr2Options)
+            return null;
 
+        return new FSR2UpscalerContext(fsr2Options, displayResolution);
+    }
+
+    public override void CalculateJitter(int frameIndex, float upscaleRatio, out Vector2 jitter, out bool allowScaling)
+    {
+        int numPhases = CalculateJitterPhaseCount(upscaleRatio);
         int haltonIndex = (frameIndex % numPhases) + 1;
         float x = HaltonSequence.Get(haltonIndex, 2) - 0.5f;
         float y = HaltonSequence.Get(haltonIndex, 3) - 0.5f;
-
         jitter = new Vector2(x, y);
         allowScaling = false;
-
-        m_Jitter = jitter;
     }
 
     static int CalculateJitterPhaseCount(float upscaleRatio)
     {
         const float basePhaseCount = 8.0f;
         return (int)(basePhaseCount * upscaleRatio * upscaleRatio);
-    }
-
-    private bool ShouldResetFSR2Context(UpscalingIO io)
-    {
-        bool nullContext = m_FSR2Context == null;
-        bool outputResolutionChanged = m_OutputResolutionPrevious != io.postUpscaleResolution;
-
-        return nullContext || outputResolutionChanged;
     }
 
     public override void NegotiatePreUpscaleResolution(ref Vector2Int preUpscaleResolution, Vector2Int postUpscaleResolution)
@@ -181,8 +181,13 @@ public class FSR2IUpscaler : AbstractUpscaler
 
         UpscalingIO io = frameData.Get<UpscalingIO>();
 
-        m_InputResolution = io.preUpscaleResolution;
-        m_OutputResolution = io.postUpscaleResolution;
+        // Get the per-camera context from UpscalingIO (set by the pipeline)
+        var upscalerContext = io.context as FSR2UpscalerContext;
+        if (upscalerContext == null)
+        {
+            Debug.LogWarning("FSR2IUpscaler: No valid context provided via io.context. Skipping upscaling.");
+            return;
+        }
 
         // describe output texture
         TextureHandle outputColor;
@@ -212,17 +217,35 @@ public class FSR2IUpscaler : AbstractUpscaler
             float motionVectorScaleX = io.motionVectorDomain == UpscalingIO.MotionVectorDomain.NDC ? io.motionVectorTextureSize.x : 1.0f;
             float motionVectorScaleY = io.motionVectorDomain == UpscalingIO.MotionVectorDomain.NDC ? io.motionVectorTextureSize.y : 1.0f;
 
-            // setup pass data (UpscalingIO --> FSR2GraphData)
-            passData.shouldReinitializeContext = ShouldResetFSR2Context(io);
+            // Setup pass data
+            passData.upscalerContext = upscalerContext;
+            passData.needsInitSettings = !upscalerContext.hasNativeContext;
 
+            // Only build initialization settings when native context needs to be created
+            if (passData.needsInitSettings)
+            {
+                bool displayResolutionMotionVectors = io.motionVectorTextureSize.x == io.postUpscaleResolution.x &&
+                                                       io.motionVectorTextureSize.y == io.postUpscaleResolution.y;
+                passData.initSettings = new FSR2CommandInitializationData();
+                passData.initSettings.SetFlag(FfxFsr2InitializationFlags.EnableHighDynamicRange, io.hdrInput);
+                passData.initSettings.SetFlag(FfxFsr2InitializationFlags.EnableDisplayResolutionMotionVectors, displayResolutionMotionVectors);
+                passData.initSettings.SetFlag(FfxFsr2InitializationFlags.DepthInverted, io.invertedDepth);
+                passData.initSettings.SetFlag(FfxFsr2InitializationFlags.EnableMotionVectorsJitterCancellation, io.jitteredMotionVectors);
+                passData.initSettings.maxRenderSizeWidth = (uint)io.preUpscaleResolution.x;
+                passData.initSettings.maxRenderSizeHeight = (uint)io.preUpscaleResolution.y;
+                passData.initSettings.displaySizeWidth = (uint)io.postUpscaleResolution.x;
+                passData.initSettings.displaySizeHeight = (uint)io.postUpscaleResolution.y;
+            }
+
+            // Per-frame execution data
             passData.execData.enableSharpening = m_Options.enableSharpening ? 1 : 0;
             passData.execData.sharpness = m_Options.sharpness;
             passData.execData.MVScaleX = motionVectorSign * motionVectorScaleX;
             passData.execData.MVScaleY = motionVectorSign * motionVectorScaleY;
             passData.execData.renderSizeWidth = (uint)io.preUpscaleResolution.x;
             passData.execData.renderSizeHeight = (uint)io.preUpscaleResolution.y;
-            passData.execData.jitterOffsetX = m_Jitter.x;
-            passData.execData.jitterOffsetY = m_Jitter.y;
+            passData.execData.jitterOffsetX = io.subpixelJitter.x;
+            passData.execData.jitterOffsetY = io.subpixelJitter.y;
             passData.execData.cameraNear = io.nearClipPlane;
             passData.execData.cameraFar = io.farClipPlane;
             passData.execData.cameraFovAngleVertical = 2.0f * (float)Math.PI * (1 / 360.0f) * io.fieldOfViewDegrees; // radians
@@ -230,6 +253,7 @@ public class FSR2IUpscaler : AbstractUpscaler
             passData.execData.frameTimeDelta = io.deltaTime * 1000.0f; // in milliseconds
             passData.execData.reset = io.resetHistory ? 1 : 0;
 
+            // Texture handles
             builder.UseTexture(io.cameraColor);
             builder.UseTexture(io.cameraDepth);
             builder.UseTexture(io.motionVectorColor);
@@ -239,32 +263,20 @@ public class FSR2IUpscaler : AbstractUpscaler
             passData.motionVectors = io.motionVectorColor;
             passData.colorOutput = outputColor;
 
-            passData.colorInputSizeX = (uint)io.preUpscaleResolution.x;
-            passData.colorInputSizeY = (uint)io.preUpscaleResolution.y;
-            passData.colorOutputSizeX = (uint)io.postUpscaleResolution.x;
-            passData.colorOutputSizeY = (uint)io.postUpscaleResolution.y;
-            passData.motionVectorSizeX = (uint)io.motionVectorTextureSize.x;
-            passData.motionVectorSizeY = (uint)io.motionVectorTextureSize.y;
-            passData.invertedDepthBuffer = io.invertedDepth;
-            passData.inputIsHDR = io.hdrInput;
-            passData.motionVectorsAreJittered = io.jitteredMotionVectors;
-
             // set render function
             builder.SetRenderFunc((FSR2GraphData data, UnsafeGraphContext ctx) =>
             {
                 CommandBuffer cmd = CommandBufferHelpers.GetNativeCommandBuffer(ctx.cmd);
-                if (data.shouldReinitializeContext)
-                {
-                    if (m_FSR2Context != null)
-                    {
-                        DestroyContext(ref m_FSR2Context, cmd);
-                    }
-                    CreateContext(ref m_FSR2Context, cmd, ref data);
-                }
-                
-                Debug.Assert(m_FSR2Context != null);
 
-                m_FSR2Context.executeData = data.execData;
+                // Verify init settings were populated if native context needs to be created
+                Debug.Assert(!data.needsInitSettings || data.initSettings.displaySizeWidth > 0,
+                    "FSR2 init settings must be populated when native context doesn't exist");
+
+                // Get the native context, creating it if necessary (uses pre-built init settings)
+                FSR2Context nativeContext = data.upscalerContext.GetOrCreateNativeContext(cmd, data.initSettings);
+                Debug.Assert(nativeContext != null);
+
+                nativeContext.executeData = data.execData;
                 FSR2TextureTable textureTable = new()
                 {
                     colorInput = data.colorInput,
@@ -273,30 +285,19 @@ public class FSR2IUpscaler : AbstractUpscaler
                     colorOutput = data.colorOutput,
                 };
 
-                GraphicsDevice.device.ExecuteFSR2(cmd, m_FSR2Context, textureTable);
+                GraphicsDevice.device.ExecuteFSR2(cmd, nativeContext, textureTable);
             });
         }
 
         io.cameraColor = outputColor;
-
-        m_OutputResolutionPrevious = io.postUpscaleResolution;
     }
 #endregion
 
 
 #region DATA
-    // static data
     private bool m_FSR2Ready = false;
-
-    // per-view FSR2 data (per camera / per use)
-    private FSR2Context m_FSR2Context = null;
     private FSR2Options m_Options = null;
-
-    private Vector2Int m_OutputResolutionPrevious;
-    private Vector2Int m_InputResolution;
-    private Vector2Int m_OutputResolution;
-    private Vector2 m_Jitter;
-    #endregion
+#endregion
 }
 
 #endif // ENABLE_UPSCALER_FRAMEWORK && ENABLE_AMD && ENABLE_AMD_MODULE

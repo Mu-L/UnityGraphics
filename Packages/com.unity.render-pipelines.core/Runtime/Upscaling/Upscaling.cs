@@ -5,6 +5,156 @@ using System.Collections.Generic;
 
 namespace UnityEngine.Rendering
 {
+    /// <summary>
+    /// Manages per-camera upscaler contexts. Handles context creation, caching, validation, and expiry.
+    /// </summary>
+    internal class UpscalerContextManager
+    {
+        private struct ContextKey : IEquatable<ContextKey>
+        {
+            public ulong cameraId;
+            public string upscalerName;
+
+            public ContextKey(ulong cameraId, string upscalerName)
+            {
+                this.cameraId = cameraId;
+                this.upscalerName = upscalerName;
+            }
+
+            public bool Equals(ContextKey other)
+            {
+                return cameraId == other.cameraId &&
+                       upscalerName == other.upscalerName;
+            }
+
+            public override bool Equals(object? obj) => obj is ContextKey other && Equals(other);
+            public override int GetHashCode() => HashCode.Combine(cameraId, upscalerName);
+        }
+
+        // Contexts unused for this many frames are automatically cleaned up.
+        // 400 frames at 60 FPS ≈ 6.7 seconds. This threshold follows the pattern
+        // established in HDRP's existing context management.
+        private const int k_ContextExpiryFrames = 400;
+        private readonly Dictionary<ContextKey, IUpscalerContext> m_Contexts = new();
+        private readonly List<ContextKey> m_KeysToRemove = new(); // Reusable list for cleanup
+        private readonly List<IUpscalerContext> m_InvalidatedContexts = new(); // Contexts pending cleanup
+
+        /// <summary>
+        /// Acquires a context for the specified camera and upscaler.
+        /// Returns a cached context if valid, or creates a new one if missing or invalid.
+        /// Also updates the context's last-used frame for expiry tracking.
+        /// </summary>
+        /// <param name="cameraId">Unique ID for the camera. In XR scenarios, this must be unique per view (encode eye information into the ID).</param>
+        /// <param name="upscaler">The upscaler to acquire a context for.</param>
+        /// <param name="options">The current upscaler options.</param>
+        /// <param name="displayResolution">The target display resolution.</param>
+        /// <returns>The context, or null for spatial upscalers that don't need context.</returns>
+        public IUpscalerContext? AcquireContext(
+            ulong cameraId,
+            IUpscaler upscaler,
+            UpscalerOptions options,
+            Vector2Int displayResolution)
+        {
+            var key = new ContextKey(cameraId, upscaler.name);
+
+            // Note: Time.frameCount may not advance in Editor when Game view is inactive.
+            // This is acceptable because contexts are only acquired during active rendering,
+            // and lastUsedFrame is updated on every AcquireContext call. If a more robust
+            // solution is needed (e.g., for scene view upscaling), consider using
+            // Time.realtimeSinceStartup or a pipeline-provided render counter.
+            int currentFrame = Time.frameCount;
+
+            if (m_Contexts.TryGetValue(key, out var existingContext))
+            {
+                // Check if context is still valid
+                bool resolutionValid = existingContext.createdForDisplayResolution == displayResolution;
+                bool optionsValid = existingContext.IsValidForOptions(options);
+
+                if (resolutionValid && optionsValid)
+                {
+                    existingContext.lastUsedFrame = currentFrame;
+                    return existingContext;
+                }
+
+                // Context is invalid, queue it for cleanup and remove from cache
+                m_InvalidatedContexts.Add(existingContext);
+                m_Contexts.Remove(key);
+            }
+
+            // Create new context
+            var newContext = upscaler.CreateContext(options, displayResolution);
+            if (newContext != null)
+            {
+                newContext.lastUsedFrame = currentFrame;
+                m_Contexts[key] = newContext;
+            }
+            else if (upscaler.isTemporal)
+            {
+                // Temporal upscalers should always return a context. Null indicates
+                // a creation failure (e.g., plugin not loaded, GPU not supported).
+                Debug.LogWarning($"[UpscalerContextManager] Temporal upscaler '{upscaler.name}' returned null context. " +
+                                 "Upscaling may not function correctly.");
+            }
+
+            return newContext;
+        }
+
+        /// <summary>
+        /// Removes contexts that haven't been used for more than k_ContextExpiryFrames frames.
+        /// Also cleans up any contexts that were invalidated (due to resolution or option changes).
+        /// Should be called once per frame from the render pipeline.
+        /// </summary>
+        public void CleanupExpiredContexts(CommandBuffer cmd)
+        {
+            // Clean up invalidated contexts first
+            foreach (var context in m_InvalidatedContexts)
+            {
+                context.Cleanup(cmd);
+            }
+            m_InvalidatedContexts.Clear();
+
+            // Clean up expired contexts (see AcquireContext for Time.frameCount limitations)
+            int currentFrame = Time.frameCount;
+            m_KeysToRemove.Clear();
+
+            foreach (var kvp in m_Contexts)
+            {
+                var context = kvp.Value;
+                int framesSinceLastUse = currentFrame - context.lastUsedFrame;
+                if (framesSinceLastUse > k_ContextExpiryFrames)
+                {
+                    context.Cleanup(cmd);
+                    m_KeysToRemove.Add(kvp.Key);
+                }
+            }
+
+            foreach (var key in m_KeysToRemove)
+            {
+                m_Contexts.Remove(key);
+            }
+        }
+
+        /// <summary>
+        /// Cleans up all contexts. Called when the upscaling system is disposed.
+        /// </summary>
+        public void Dispose(CommandBuffer cmd)
+        {
+            // Clean up any pending invalidated contexts
+            foreach (var context in m_InvalidatedContexts)
+            {
+                context.Cleanup(cmd);
+            }
+            m_InvalidatedContexts.Clear();
+
+            // Clean up all active contexts
+            foreach (var kvp in m_Contexts)
+            {
+                kvp.Value.Cleanup(cmd);
+            }
+            m_Contexts.Clear();
+        }
+    }
+
     public static class UpscalerRegistry
     {
         public static readonly Dictionary<Type, (Type? OptionsType, string ID)> s_RegisteredUpscalers = new();
@@ -55,6 +205,7 @@ namespace UnityEngine.Rendering
         private List<UpscalerEntry> m_Upscalers = new List<UpscalerEntry>();
         private string[] m_UpscalerNamesCache;
         private int m_ActiveUpscalerIndex = -1;
+        private readonly UpscalerContextManager m_ContextManager = new();
         #endregion
 
         /// <summary>
@@ -204,6 +355,39 @@ namespace UnityEngine.Rendering
             Debug.LogErrorFormat($"Upscaler type {T} not found");
             return null;
         }
+
+        #region Context Management
+
+        /// <summary>
+        /// Acquires an upscaler context for the specified camera.
+        /// Returns a cached context if valid, or creates a new one if missing or invalid.
+        /// Also updates the context's last-used frame for expiry tracking.
+        /// </summary>
+        /// <param name="cameraId">Unique ID for the camera. In XR scenarios, this must be unique per view (encode eye information into the ID).</param>
+        /// <param name="upscaler">The upscaler to acquire a context for.</param>
+        /// <param name="options">The current upscaler options.</param>
+        /// <param name="displayResolution">The target display resolution.</param>
+        /// <returns>The context, or null for spatial upscalers that don't need context.</returns>
+        public IUpscalerContext? AcquireContext(
+            ulong cameraId,
+            IUpscaler upscaler,
+            UpscalerOptions options,
+            Vector2Int displayResolution)
+        {
+            return m_ContextManager.AcquireContext(cameraId, upscaler, options, displayResolution);
+        }
+
+        /// <summary>
+        /// Cleans up contexts that haven't been used for a while (400 frames).
+        /// Should be called once per frame from the render pipeline.
+        /// </summary>
+        /// <param name="cmd">The command buffer to record cleanup commands into.</param>
+        public void CleanupExpiredContexts(CommandBuffer cmd)
+        {
+            m_ContextManager.CleanupExpiredContexts(cmd);
+        }
+
+        #endregion
     }
 }
 #endif

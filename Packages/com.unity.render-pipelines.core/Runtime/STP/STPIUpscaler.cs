@@ -18,7 +18,48 @@ static class RegisterSTP
 
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.BeforeSceneLoad)]
     static void InitRuntime() => UpscalerRegistry.Register<STPIUpscaler, STPOptions>(STPIUpscaler.upscalerName);
-} 
+}
+
+/// <summary>
+/// Per-camera context for STP upscaling. Wraps the STP.HistoryContext
+/// and tracks the display resolution it was created for.
+/// </summary>
+public class STPUpscalerContext : IUpscalerContext
+{
+    private STP.HistoryContext m_HistoryContext;
+
+    /// <inheritdoc/>
+    public Vector2Int createdForDisplayResolution { get; private set; }
+
+    /// <inheritdoc/>
+    public int lastUsedFrame { get; set; }
+
+    public STP.HistoryContext historyContext => m_HistoryContext;
+
+    public STPUpscalerContext(Vector2Int displayResolution)
+    {
+        m_HistoryContext = new STP.HistoryContext();
+        createdForDisplayResolution = displayResolution;
+    }
+
+    /// <inheritdoc/>
+    public bool IsValidForOptions(UpscalerOptions options)
+    {
+        // STP options only contain injection point which doesn't affect context validity.
+        // Resolution validation is handled by the framework via createdForDisplayResolution.
+        return true;
+    }
+
+    /// <inheritdoc/>
+    public void Cleanup(CommandBuffer cmd)
+    {
+        if (m_HistoryContext != null)
+        {
+            m_HistoryContext.Dispose();
+            m_HistoryContext = null;
+        }
+    }
+}
 
 public class STPIUpscaler : AbstractUpscaler
 {
@@ -26,17 +67,10 @@ public class STPIUpscaler : AbstractUpscaler
 
     STPOptions m_Options; // contains injection point (for HDRP at this time)
     private const string k_UpscaledColorTargetName = "_UpscaledCameraColor";
-    private STP.HistoryContext[] m_Histories; // One history per eye
 
     public STPIUpscaler(STPOptions optionsIn)
     {
         m_Options = optionsIn;
-
-        m_Histories = new STP.HistoryContext[2];
-        for (int i = 0; i < m_Histories.Length; i++)
-        {
-            m_Histories[i] = new STP.HistoryContext();
-        }
     }
 
     public override UpscalerOptions options => m_Options;
@@ -46,9 +80,22 @@ public class STPIUpscaler : AbstractUpscaler
     public override bool isTemporal => true;
     public override bool supportsSharpening => true;
 
+    public override IUpscalerContext CreateContext(UpscalerOptions options, Vector2Int displayResolution)
+    {
+        return new STPUpscalerContext(displayResolution);
+    }
+
     public override void RecordRenderGraph(RenderGraph renderGraph, ContextContainer frameData)
     {
         UpscalingIO io = frameData.Get<UpscalingIO>();
+
+        // Get the per-camera context from UpscalingIO (set by the pipeline)
+        var upscalerContext = io.context as STPUpscalerContext;
+        if (upscalerContext == null)
+        {
+            Debug.LogWarning("STPIUpscaler: No valid context provided via io.context. Skipping upscaling.");
+            return;
+        }
 
         // Create an output texture
         TextureHandle outputColor;
@@ -104,7 +151,7 @@ public class STPIUpscaler : AbstractUpscaler
 
             config.destination = outputColor;
 
-            Debug.Assert(io.eyeIndex < m_Histories.Length);
+            // Use the per-camera history context
             bool hasValidHistory;
             {
                 STP.HistoryUpdateInfo info;
@@ -112,9 +159,9 @@ public class STPIUpscaler : AbstractUpscaler
                 info.postUpscaleSize = io.postUpscaleResolution;
                 info.useHwDrs = io.enableHwDrs;
                 info.useTexArray = io.enableTexArray;
-                hasValidHistory = m_Histories[io.eyeIndex].Update(ref info);
+                hasValidHistory = upscalerContext.historyContext.Update(ref info);
             }
-            config.historyContext = m_Histories[io.eyeIndex];
+            config.historyContext = upscalerContext.historyContext;
             config.enableHwDrs = io.enableHwDrs;
             config.hasValidHistory = !io.resetHistory && hasValidHistory;
 
@@ -124,7 +171,7 @@ public class STPIUpscaler : AbstractUpscaler
             Debug.Assert(io.numActiveViews <= STP.perViewConfigs.Length);
             for (int viewIndex = 0; viewIndex < io.numActiveViews; ++viewIndex)
             {
-                int targetIndex = viewIndex + io.eyeIndex;
+                int targetIndex = viewIndex;
 
                 STP.PerViewConfig perViewConfig;
 

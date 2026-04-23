@@ -599,6 +599,10 @@ namespace UnityEngine.Rendering.Universal
         // TAA settings.
         internal TemporalAA.Settings taaSettings;
 
+        // Sub-pixel jitter applied to the projection matrix this frame.
+        // Computed once during camera setup, read by upscalers during post-process.
+        internal Vector2 subpixelJitter;
+
         // Post-process history reset has been triggered for this camera.
         internal bool resetHistory
         {
@@ -676,6 +680,7 @@ namespace UnityEngine.Rendering.Universal
             taaHistory = null;
             stpHistory = null;
             taaSettings = default;
+            subpixelJitter = default;
             baseCamera = null;
             isLastBaseCamera = false;
             stackAnyPostProcessingEnabled = false;

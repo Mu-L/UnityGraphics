@@ -2526,6 +2526,17 @@ namespace UnityEngine.Rendering.HighDefinition
             m_RenderGraph.EndFrame();
             XRSystem.EndLayout();
 
+#if ENABLE_UPSCALER_FRAMEWORK
+            // Clean up expired upscaler contexts (unused for > 400 frames)
+            if (upscaling != null)
+            {
+                var cmd = CommandBufferPool.Get("Upscaler Context Cleanup");
+                upscaling.CleanupExpiredContexts(cmd);
+                renderContext.ExecuteCommandBuffer(cmd);
+                CommandBufferPool.Release(cmd);
+            }
+#endif
+
             EndContextRendering(renderContext, cameras);
         }
 

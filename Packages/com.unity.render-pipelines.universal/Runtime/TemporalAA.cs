@@ -199,31 +199,35 @@ namespace UnityEngine.Rendering.Universal
 
         internal static Matrix4x4 CalculateJitterMatrix(UniversalCameraData cameraData, JitterFunc jitterFunc)
         {
-            Matrix4x4 jitterMat = Matrix4x4.identity;
+            if (!cameraData.IsTemporalAAEnabled())
+                return Matrix4x4.identity;
 
-            bool isJitter = cameraData.IsTemporalAAEnabled();
-            if (isJitter)
-            {
-                int taaFrameIndex = CalculateTaaFrameIndex(ref cameraData.taaSettings);
+            int taaFrameIndex = CalculateTaaFrameIndex(ref cameraData.taaSettings);
+            float jitterScale = cameraData.taaSettings.jitterScale;
 
-                float actualWidth = cameraData.cameraTargetDescriptor.width;
-                float actualHeight = cameraData.cameraTargetDescriptor.height;
-                float jitterScale = cameraData.taaSettings.jitterScale;
+            jitterFunc(taaFrameIndex, out Vector2 jitter, out bool allowScaling);
 
-                Vector2 jitter;
-                bool allowScaling;
-                jitterFunc(taaFrameIndex, out jitter, out allowScaling);
+            if (allowScaling)
+                jitter *= jitterScale;
 
-                if (allowScaling)
-                    jitter *= jitterScale;
+            return CalculateJitterMatrix(cameraData, jitter);
+        }
 
-                float offsetX = jitter.x * (2.0f / actualWidth);
-                float offsetY = jitter.y * (2.0f / actualHeight);
+        /// <summary>
+        /// Builds a jitter matrix from a pre-computed sub-pixel jitter offset.
+        /// Used by upscalers that compute jitter with resolution-dependent parameters.
+        /// </summary>
+        /// <param name="cameraData">Camera data containing render target dimensions.</param>
+        /// <param name="subpixelJitter">Sub-pixel jitter offset, typically in range [-0.5, 0.5].</param>
+        internal static Matrix4x4 CalculateJitterMatrix(UniversalCameraData cameraData, Vector2 subpixelJitter)
+        {
+            float actualWidth = cameraData.cameraTargetDescriptor.width;
+            float actualHeight = cameraData.cameraTargetDescriptor.height;
 
-                jitterMat = Matrix4x4.Translate(new Vector3(offsetX, offsetY, 0.0f));
-            }
+            float offsetX = subpixelJitter.x * (2.0f / actualWidth);
+            float offsetY = subpixelJitter.y * (2.0f / actualHeight);
 
-            return jitterMat;
+            return Matrix4x4.Translate(new Vector3(offsetX, offsetY, 0.0f));
         }
 
         internal static void CalculateJitter(int frameIndex, out Vector2 jitter, out bool allowScaling)
