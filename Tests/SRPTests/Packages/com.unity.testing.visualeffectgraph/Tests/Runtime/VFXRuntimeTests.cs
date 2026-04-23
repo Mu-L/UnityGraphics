@@ -636,6 +636,13 @@ namespace UnityEngine.VFX.Test
         [UnityTest, Description("Regression test UUM-58615")]
         public IEnumerator SampleGradient_Branch_Instancing()
         {
+#if UNITY_EDITOR_OSX || UNITY_STANDALONE_OSX
+        if (System.Runtime.InteropServices.RuntimeInformation.ProcessArchitecture == System.Runtime.InteropServices.Architecture.X64)
+        {
+            Assert.Ignore("See UUM-140411");
+        }
+#endif
+
             var structuredBuffer = new GraphicsBuffer(GraphicsBuffer.Target.Structured, GraphicsBuffer.UsageFlags.None, 2, 16);
             Shader.SetGlobalBuffer("Repro_SampleGradient_Branch_Instancing_Buffer", structuredBuffer);
 
@@ -825,6 +832,13 @@ namespace UnityEngine.VFX.Test
         [UnityTest, Description("Cover internal behavior linked to readback of alive particle count")]
         public IEnumerator Verify_AliveParticleCount_Readback([ValueSource(nameof(kVerify_AliveParticleCount_ReadbackCase))] string currentName)
         {
+#if UNITY_EDITOR_OSX || UNITY_STANDALONE_OSX
+        if (System.Runtime.InteropServices.RuntimeInformation.ProcessArchitecture == System.Runtime.InteropServices.Architecture.X64)
+        {
+            Assert.Ignore("See UUM-140411");
+        }
+#endif
+
             //Prepare
             SceneManagement.SceneManager.LoadScene("Packages/com.unity.testing.visualeffectgraph/Scenes/Readback_ParticleCount.unity");
             yield return null;
