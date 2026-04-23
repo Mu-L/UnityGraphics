@@ -315,6 +315,7 @@ namespace UnityEngine.Rendering
                 }
                 m_VisualElement.AddToClassList("unity-inspector-element");
                 m_VisualElement.name = displayName;
+                m_VisualElement.tooltip = tooltip;
 
 #if UNITY_EDITOR
                 // Support for legacy state handling
