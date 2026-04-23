@@ -335,6 +335,49 @@ namespace UnityEditor.ShaderGraph
             }
         }
 
+        #region Custom Graph Settings
+        [SerializeField]
+        internal List<string> m_CustomPragmas = new();
+
+        [Serializable]
+        internal struct CustomDefineDescriptor
+        {
+            [SerializeField] string m_Define;
+            [SerializeField] bool m_Enabled;
+
+            public CustomDefineDescriptor(string define)
+            {
+                this.m_Define = define;
+                this.m_Enabled = true;
+            }
+
+            public string Define { get => m_Define; set => m_Define = value; }
+            public bool Enabled { get => m_Enabled; set => m_Enabled = value; }
+            public bool IsValid => !String.IsNullOrEmpty(m_Define);
+        }
+
+        [SerializeField]
+        internal List<CustomDefineDescriptor> m_CustomDefines = new();
+
+        [Serializable]
+        internal struct CustomIncludeDescriptor
+        {
+            [SerializeField] ShaderInclude m_Include;
+            [SerializeField] bool m_IncludeWithPragmas;
+
+            public static implicit operator IncludeDescriptor(CustomIncludeDescriptor incl) =>
+                new IncludeDescriptor(AssetDatabase.AssetPathToGUID(incl.IncludePath), incl.IncludePath, IncludeLocation.Graph, new FieldCondition[0] { }, incl.IncludeWithPragmas);
+
+            public ShaderInclude Include { get => m_Include; set => m_Include = value; }
+            public string IncludePath => AssetDatabase.GetAssetPath(m_Include);
+            public bool IncludeWithPragmas { get => m_IncludeWithPragmas; set => m_IncludeWithPragmas = value; }
+            public bool IsValid => m_Include != null;
+        }
+
+        [SerializeField]
+        internal List<CustomIncludeDescriptor> m_CustomIncludes = new();
+        #endregion // Custom Graph Settings
+
         public ConcretePrecision graphDefaultConcretePrecision
         {
             get
@@ -2070,6 +2113,11 @@ namespace UnityEditor.ShaderGraph
             m_GraphPrecision = other.m_GraphPrecision;
             m_PreviewMode = other.m_PreviewMode;
             m_OutputNode = other.m_OutputNode;
+
+            m_CustomPragmas.CopyFrom(other.m_CustomPragmas);
+            m_CustomDefines.CopyFrom(other.m_CustomDefines);
+            m_CustomIncludes.CopyFrom(other.m_CustomIncludes);
+            m_SubDatas.CopyFrom(other.m_SubDatas);
 
             if ((this.vertexContext.position != other.vertexContext.position) ||
                 (this.fragmentContext.position != other.fragmentContext.position))

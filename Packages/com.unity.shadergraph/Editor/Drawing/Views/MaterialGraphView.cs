@@ -18,6 +18,7 @@ using UnityEngine.Assemblies;
 #endif
 using Node = UnityEditor.Experimental.GraphView.Node;
 using UnityEngine.Pool;
+using UnityEditor.ShaderGraph.Legacy;
 
 namespace UnityEditor.ShaderGraph.Drawing
 {
@@ -126,7 +127,7 @@ namespace UnityEditor.ShaderGraph.Drawing
             m_InspectorUpdateDelegate = inspectorUpdateDelegate;
             if (propertyDrawer is GraphDataPropertyDrawer graphDataPropertyDrawer)
             {
-                graphDataPropertyDrawer.GetPropertyData(this.ChangeTargetSettings, ChangePrecision);
+                graphDataPropertyDrawer.GetPropertyData(this.ChangeTargetSettings, ChangeGraphSettings, ChangePrecision);
             }
         }
 
@@ -140,6 +141,13 @@ namespace UnityEditor.ShaderGraph.Drawing
 
             graph.RefreshBadgesAndPreviews();
             graph.UpdateActiveBlocks(activeBlocks);
+            this.m_PreviewManagerUpdateDelegate();
+            this.m_InspectorUpdateDelegate();
+        }
+
+        void ChangeGraphSettings()
+        {
+            graph.RefreshBadgesAndPreviews();
             this.m_PreviewManagerUpdateDelegate();
             this.m_InspectorUpdateDelegate();
         }

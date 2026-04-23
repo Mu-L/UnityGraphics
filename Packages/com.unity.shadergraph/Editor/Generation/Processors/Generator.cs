@@ -131,6 +131,7 @@ namespace UnityEditor.ShaderGraph
                 m_PrimaryShaderFullName = primaryShaderName;
             m_AssetCollection = assetCollection;
             m_HumanReadable = humanReadable;
+
             m_ActiveBlocks = m_GraphData.GetNodes<BlockNode>().ToList().AsReadOnly();
 
             // get list of targets, and gather data from each
@@ -722,6 +723,21 @@ namespace UnityEditor.ShaderGraph
             // Function Registry
             var functionBuilder = new ShaderStringBuilder(humanReadable: m_HumanReadable);
             var graphIncludes = new IncludeCollection();
+
+            // we need to add includes before CFN and SFR adds them to force their order
+            if (m_GraphData.m_CustomIncludes.Count > 0)
+            {
+                var customIncludes = new IncludeCollection();
+                foreach (GraphData.CustomIncludeDescriptor shaderInclude in m_GraphData.m_CustomIncludes)
+                {
+                    if (!shaderInclude.IsValid)
+                        continue;
+                    var include = (IncludeDescriptor)shaderInclude;
+                    customIncludes.Add(include.path, include.location, include.shouldIncludeWithPragmas);
+                }
+                graphIncludes.Add(customIncludes);
+            }
+
             var functionRegistry = new FunctionRegistry(functionBuilder, graphIncludes, true);
 
             // Hash table of named $splice(name) commands
@@ -813,12 +829,10 @@ namespace UnityEditor.ShaderGraph
                     }
                 }
 
-                // Enable this to turn on shader debugging
-                bool debugShader = false;
-                if (debugShader)
-                {
-                    passPragmaBuilder.AppendLine("#pragma enable_d3d11_debug_symbols");
-                }
+                if (m_GraphData.m_CustomPragmas.Count > 0)
+                    foreach (string pragma in m_GraphData.m_CustomPragmas)
+                        if (!String.IsNullOrEmpty(pragma))
+                            passPragmaBuilder.AppendLine($"#pragma {pragma}");
 
                 string command = GenerationUtils.GetSpliceCommand(passPragmaBuilder.ToCodeBlock(), "PassPragmas");
                 spliceCommands.Add("PassPragmas", command);
@@ -1143,6 +1157,17 @@ namespace UnityEditor.ShaderGraph
                     if (graphRequirements.baseInstance.requirements.requiresCameraOpaqueTexture)
                         graphDefines.AppendLine("#define REQUIRE_OPAQUE_TEXTURE");
                 }
+
+                if (m_GraphData.m_CustomDefines.Count > 0)
+                    foreach (GraphData.CustomDefineDescriptor define in m_GraphData.m_CustomDefines)
+                        if (define.Enabled && define.IsValid)
+                        {
+                            var defKey = define.Define.Split(' ', StringSplitOptions.RemoveEmptyEntries)[0];
+                            graphDefines.Append(@$"#ifndef {defKey}
+    #define {define.Define}
+#endif
+");
+                        }
 
                 // Add to splice commands
                 spliceCommands.Add("GraphDefines", graphDefines.ToCodeBlock());
