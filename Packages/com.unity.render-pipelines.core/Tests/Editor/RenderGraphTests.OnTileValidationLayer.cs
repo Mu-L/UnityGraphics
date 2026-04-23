@@ -1,16 +1,12 @@
 using NUnit.Framework;
 using UnityEngine.Rendering.RenderGraphModule;
 using Unity.RenderPipelines.Core.Runtime.Shared;
-
-#if UNITY_EDITOR
-using UnityEditor;
-using UnityEditor.Rendering;
-#endif
+using UnityEditor.Rendering.Tests;
 
 namespace UnityEngine.Rendering.Tests
 {
     internal partial class RenderGraphTests : RenderGraphTestsCore
-    {       
+    {
         TextureHandle CreateTextureHandle()
         {
             var desc = new TextureDesc(16, 16);
@@ -281,10 +277,10 @@ namespace UnityEngine.Rendering.Tests
         {
             var validationLayer = CreateValidationLayer();
 
-            var tex = CreateTextureHandle();            
+            var tex = CreateTextureHandle();
 
-            validationLayer.Add(tex); 
-            
+            validationLayer.Add(tex);
+
             Assert.Catch<System.InvalidOperationException>(() =>
             {
                 using (var builder = m_RenderGraph.AddRasterRenderPass<OnTileValidationTestData>("Raster 1", out OnTileValidationTestData passData))

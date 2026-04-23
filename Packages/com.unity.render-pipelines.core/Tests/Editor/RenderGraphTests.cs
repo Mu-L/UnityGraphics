@@ -5,13 +5,11 @@ using UnityEngine.Experimental.Rendering;
 using UnityEngine.Rendering.RenderGraphModule;
 using UnityEngine.TestTools;
 using Unity.Collections;
+using UnityEditor.Rendering.Tests;
 using UnityEngine.Rendering.RendererUtils;
 using UnityEngine.Rendering.RenderGraphModule.NativeRenderPassCompiler;
-
-#if UNITY_EDITOR
 using UnityEditor;
-using UnityEditor.Rendering;
-#endif
+
 namespace UnityEngine.Rendering.Tests
 {
     [InitializeOnLoad]
