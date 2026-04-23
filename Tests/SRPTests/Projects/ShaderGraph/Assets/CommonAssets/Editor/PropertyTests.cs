@@ -3,10 +3,10 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using NUnit.Framework;
-using UnityEngine;
 using UnityEditor.ShaderGraph.Drawing;
 using UnityEditor.ShaderGraph.Internal;
 using UnityEditor.ShaderGraph.UnitTests.Controllers;
+using UnityEngine;
 using UnityEngine.TestTools;
 using UnityEngine.UIElements;
 
@@ -123,6 +123,77 @@ namespace UnityEditor.ShaderGraph.UnitTests
                 if (shaderInput.referenceName != originalReferenceName)
                     Assert.Fail("Failed to reset reference name to original value.");
             }
+        }
+
+        [UnityTest]
+        public IEnumerator BlackboardSelectionHistory()
+        {
+            Assert.IsNotNull(m_BlackboardTestController.addBlackboardItemsMenu, "Blackboard Add Items menu reference owned by BlackboardTestController is null.");
+
+            var menuItems = m_BlackboardTestController.addBlackboardItemsMenu.GetPrivateProperty<IList>("menuItems");
+            Assert.IsNotNull(menuItems, "Could not retrieve reference to the menu items of the Blackboard Add Items menu");
+
+            for (int i = 0; i < 6; i++)
+            {
+                var item = menuItems[i];
+                var menuFunction = item.GetNonPrivateField<GenericMenu.MenuFunction>("func");
+                menuFunction?.Invoke();
+                yield return null;
+            }
+
+            var fieldViewElements = m_GraphEditorView.Query("SGBlackboardField");
+            var elementList = fieldViewElements.ToList();
+
+            var selectionOrder = new List<SGBlackboardField>(elementList.Count);
+
+            for (int i = 0; i < elementList.Count - 1; i++)
+            {
+                var visualElement = elementList[i];
+                if (visualElement is not SGBlackboardField blackboardPropertyView) continue;
+
+                selectionOrder.Add(blackboardPropertyView);
+
+                m_GraphEditorView.graphView.ClearSelection();
+                m_GraphEditorView.graphView.AddToSelection(blackboardPropertyView);
+                Undo.IncrementCurrentGroup();
+
+                yield return null;
+            }
+
+            var lastSelection = selectionOrder[^1];
+            var currentSelection = m_GraphEditorView.graphView.selection[0];
+
+            Assert.AreEqual(lastSelection, currentSelection);
+
+            EditorApplication.ExecuteMenuItem("Edit/Previous Selection");
+            yield return null;
+
+            var secondToLastSelection = selectionOrder[^2];
+            currentSelection = m_GraphEditorView.graphView.selection[0];
+
+            Assert.AreEqual(secondToLastSelection, currentSelection);
+
+            EditorApplication.ExecuteMenuItem("Edit/Previous Selection");
+            yield return new WaitForSecondsRealtime(0.1f);
+
+            var thirdToLastSelection = selectionOrder[^3];
+            currentSelection = m_GraphEditorView.graphView.selection[0];
+
+            Assert.AreEqual(thirdToLastSelection, currentSelection);
+
+            EditorApplication.ExecuteMenuItem("Edit/Next Selection");
+            yield return null;
+
+            currentSelection = m_GraphEditorView.graphView.selection[0];
+
+            Assert.AreEqual(secondToLastSelection, currentSelection);
+
+            EditorApplication.ExecuteMenuItem("Edit/Next Selection");
+            yield return null;
+
+            currentSelection = m_GraphEditorView.graphView.selection[0];
+
+            Assert.AreEqual(lastSelection, currentSelection);
         }
 
         [UnityTest]

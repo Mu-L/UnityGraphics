@@ -1,4 +1,5 @@
 using System;
+using System.Buffers;
 using System.Collections;
 using System.Collections.ObjectModel;
 using System.Collections.Generic;
@@ -16,7 +17,9 @@ using UnityEngine;
 using UnityEngine.VFX;
 using UnityEngine.UIElements;
 using UnityEditor.UIElements;
+using UnityEngine.Pool;
 using UnityEngine.Profiling;
+using Object = UnityEngine.Object;
 using PositionType = UnityEngine.UIElements.Position;
 using Task = UnityEditor.VersionControl.Task;
 
@@ -221,6 +224,8 @@ namespace UnityEditor.VFX.UI
             OnFocus();
         }
 
+        const string kSelectionKey = "Unity.VisualEffectGraphHistory";
+
         void ConnectController()
         {
             schedule.Execute(() =>
@@ -253,6 +258,49 @@ namespace UnityEditor.VFX.UI
             }
 
             SceneView.duringSceneGui += OnSceneGUI;
+            Selection.RegisterCustomHandler(kSelectionKey, CustomSelectionHandler);
+        }
+
+        static void CustomSelectionHandler(string data, EntityId[] _)
+        {
+            var info = GraphSelection.FromJson(data);
+            if (info == null) return;
+
+            var window = EditorWindow.focusedWindow as VFXViewWindow;
+            var graphView = window?.graphView;
+            if (graphView?.controller == null) return;
+
+            var blackboard = graphView.blackboard;
+            var elements = ListPool<GraphElement>.Get();
+            foreach (var id in info.elements)
+            {
+                var e = graphView.GetElementByGuid(id);
+                if (e is VFXBlackboardField || e is VFXBlackboardAttributeField)
+                {
+                    var tokens = id.Split(':', StringSplitOptions.RemoveEmptyEntries);
+                    blackboard.ScrollToItem(tokens.Length == 1 ? tokens[0] : tokens[1]);
+                    elements.Add(e);
+                }
+            }
+
+            if (elements.Count > 0)
+            {
+                EditorApplication.delayCall += () =>
+                {
+                    // info.ApplyToGraphView may have added this element to selection, before our delayCall executes, avoid duplication
+                    foreach (var e in elements)
+                    {
+                        if (e != null && !graphView.selection.Contains(e)) graphView.AddToSelectionNoUndoRecord(e);
+                    }
+                    ListPool<GraphElement>.Release(elements);
+                };
+            }
+            else
+            {
+                ListPool<GraphElement>.Release(elements);
+            }
+
+            info.ApplyToGraphView(graphView, graphView.blackboard);
         }
 
         IEnumerable<Type> GetAcceptedTypeNodes()
@@ -509,7 +557,7 @@ namespace UnityEditor.VFX.UI
 
         public static Texture2D LoadImage(string text)
         {
-            string path = string.Format("{0}/VFX/{1}.png", VisualEffectAssetEditorUtility.editorResourcesPath, text);
+            string path = $"{VisualEffectAssetEditorUtility.editorResourcesPath}/VFX/{text}.png";
             return EditorGUIUtility.LoadIcon(path);
         }
 
@@ -2087,38 +2135,50 @@ namespace UnityEditor.VFX.UI
         {
             if (controller == null) return;
 
-            var objectsSelected = new List<UnityEngine.Object>();
+            using var _ = ListPool<EntityId>.Get(out var objectsSelected);
+            var sel = new GraphSelection();
             var emptyBlackboardSelection = false;
             foreach (var element in selection)
             {
                 switch (element)
                 {
                     case VFXNodeUI nodeUI:
-                        if (nodeUI.controller.model != null)
+                        var nodeModel = nodeUI.controller.model;
+                        if (nodeModel != null)
                         {
-                            objectsSelected.Add(nodeUI.controller.model);
+                            objectsSelected.Add(nodeModel.GetEntityId());
+                            sel.elements.Add(nodeUI.viewDataKey);
                             emptyBlackboardSelection = true;
                         }
                         break;
                     case VFXBlackboardField blackboardField:
-                        if (blackboardField.controller.model != null)
+                        var blackboardModel = blackboardField.controller.model;
+                        if (blackboardModel != null)
                         {
-                            objectsSelected.Add(blackboardField.controller.model);
+                            objectsSelected.Add(blackboardModel.GetEntityId());
+                            sel.elements.Add(blackboardField.viewDataKey);
                         }
                         break;
-                    case VFXBlackboardAttributeField aField:
-                        var attributeField = aField;
+                    case VFXBlackboardAttributeField attributeField:
                         var customAttribute = controller.graph.customAttributes.SingleOrDefault(x => string.Compare(attributeField.text, x.attributeName, StringComparison.OrdinalIgnoreCase) == 0);
-                        objectsSelected.Add(customAttribute);
-                        break;
-                    case VFXBlackboardCategory category:
+                        if (customAttribute != null) objectsSelected.Add(customAttribute.GetEntityId());
+                        sel.elements.Add(attributeField.viewDataKey);
                         break;
                 }
             }
 
-            if (objectsSelected.Count > 0)
+            if (sel.elements.Count > 0)
             {
-                Selection.objects = objectsSelected.ToArray();
+                var rentedArray = ArrayPool<EntityId>.Shared.Rent(objectsSelected.Count);
+                try
+                {
+                    objectsSelected.CopyTo(rentedArray, 0);
+                    Selection.SetCustomSelection(kSelectionKey, EditorJsonUtility.ToJson(sel), rentedArray);
+                }
+                finally
+                {
+                    ArrayPool<EntityId>.Shared.Return(rentedArray, clearArray: false);
+                }
                 if (emptyBlackboardSelection)
                 {
                     blackboard.EmptySelection();

@@ -374,7 +374,6 @@ namespace UnityEditor.VFX.UI
                 }
             }
         }
-
         private DragVisualMode OnHandleDrop(HandleDragAndDropArgs arg)
         {
             if (arg.parentId < 0)
@@ -1561,6 +1560,12 @@ namespace UnityEditor.VFX.UI
             }
 
             return category;
+        }
+
+        internal void ScrollToItem(string itemName)
+        {
+            var treeviewItem = m_ParametersController.SelectMany(GetDataRecursive).Single(x => string.Compare(x.data.title, itemName, StringComparison.OrdinalIgnoreCase) == 0);
+            m_Treeview.ScrollToItemById(treeviewItem.id);
         }
     }
 }

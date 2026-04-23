@@ -535,7 +535,7 @@ namespace UnityEditor.ShaderGraph.Drawing
         }
 
         // Replicating these private GraphView functions as we need them for our own purposes
-        internal void AddToSelectionNoUndoRecord(GraphElement graphElement)
+        internal new void AddToSelectionNoUndoRecord(GraphElement graphElement)
         {
             graphElement.selected = true;
             selection.Add(graphElement);
@@ -584,7 +584,7 @@ namespace UnityEditor.ShaderGraph.Drawing
             OnSelectionChange?.Invoke(selection);
         }
 
-        internal bool ClearSelectionNoUndoRecord()
+        internal new bool ClearSelectionNoUndoRecord()
         {
             foreach (var graphElement in selection.OfType<GraphElement>())
             {
