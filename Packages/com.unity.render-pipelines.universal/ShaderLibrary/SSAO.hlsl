@@ -200,7 +200,7 @@ float3 ReconstructViewPos(float2 uv, float linearDepth)
         viewPos *= zScale;
     #endif
 
-    return half3(viewPos);
+    return viewPos;
 }
 
 // Try reconstructing normal accurately from depth buffer.

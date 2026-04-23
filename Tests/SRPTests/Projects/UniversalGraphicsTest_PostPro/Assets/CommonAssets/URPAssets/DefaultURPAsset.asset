@@ -12,8 +12,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: bf2edee5c58d82540a51f03df9d42094, type: 3}
   m_Name: DefaultURPAsset
   m_EditorClassIdentifier: 
-  k_AssetVersion: 12
-  k_AssetPreviousVersion: 12
+  k_AssetVersion: 13
+  k_AssetPreviousVersion: 13
   m_RendererType: 1
   m_RendererData: {fileID: 0}
   m_RendererDataList:
@@ -30,6 +30,11 @@ MonoBehaviour:
   - {fileID: 11400000, guid: 7c7a4f27be43bd847a58021195aeadb0, type: 2}
   - {fileID: 11400000, guid: b347de46caf7551439f5930790d3c0f6, type: 2}
   - {fileID: 11400000, guid: 2724f69ce5c29884cbddc10513ecb4ab, type: 2}
+  - {fileID: 11400000, guid: 597b9f1a0b1557c448178217c078d942, type: 2}
+  - {fileID: 11400000, guid: cd2ef63e3ab2d8040b42e100d9ecd08b, type: 2}
+  - {fileID: 11400000, guid: 6c7f4485aa22e9c4e984f7c496b248dd, type: 2}
+  - {fileID: 11400000, guid: 4a3d021c6a1d2474cad4ea4e31dee9ef, type: 2}
+  - {fileID: 11400000, guid: 74814309f9845fb4cbcf8b25b1708df0, type: 2}
   m_DefaultRendererIndex: 0
   m_RequireDepthTexture: 1
   m_RequireOpaqueTexture: 1
@@ -65,6 +70,7 @@ MonoBehaviour:
   m_AdditionalLightsShadowResolutionTierHigh: 512
   m_ReflectionProbeBlending: 0
   m_ReflectionProbeBoxProjection: 0
+  m_ReflectionProbeAtlas: 0
   m_ShadowDistance: 56
   m_ShadowCascadeCount: 4
   m_Cascade2Split: 0.25
@@ -85,7 +91,6 @@ MonoBehaviour:
   m_MixedLightingSupported: 0
   m_SupportsLightCookies: 0
   m_SupportsLightLayers: 0
-  m_DebugLevel: 0
   m_StoreActionsOptimization: 0
   m_UseAdaptivePerformance: 1
   m_ColorGradingMode: 0
@@ -118,6 +123,8 @@ MonoBehaviour:
   m_PrefilteringModeForwardPlus: 0
   m_PrefilteringModeDeferredRendering: 1
   m_PrefilteringModeScreenSpaceOcclusion: 0
+  m_PrefilteringModeScreenSpaceReflection: 1
+  m_PrefilterWriteSmoothness: 1
   m_PrefilterDebugKeywords: 1
   m_PrefilterWriteRenderingLayers: 1
   m_PrefilterHDROutput: 1
@@ -139,8 +146,14 @@ MonoBehaviour:
   m_PrefilterSoftShadowsQualityHigh: 0
   m_PrefilterSoftShadows: 0
   m_PrefilterScreenCoord: 0
+  m_PrefilterScreenSpaceIrradiance: 0
   m_PrefilterNativeRenderPass: 1
   m_PrefilterUseLegacyLightmaps: 0
+  m_PrefilterBicubicLightmapSampling: 0
+  m_PrefilterReflectionProbeRotation: 0
+  m_PrefilterReflectionProbeBlending: 0
+  m_PrefilterReflectionProbeBoxProjection: 0
+  m_PrefilterReflectionProbeAtlas: 0
   m_ShaderVariantLogLevel: 0
   m_ShadowCascades: 3
   m_Textures:
