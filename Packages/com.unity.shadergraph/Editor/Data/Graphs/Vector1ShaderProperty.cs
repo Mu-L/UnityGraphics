@@ -3,7 +3,9 @@ using System.Collections.Generic;
 using System.Globalization;
 using UnityEditor.Graphing;
 using UnityEngine;
-
+#if UNITY_6000_5_OR_NEWER // LifeCycle API is available from here
+using UnityEngine.Assemblies;
+#endif
 namespace UnityEditor.ShaderGraph.Internal
 {
     [Serializable]
@@ -173,7 +175,11 @@ namespace UnityEditor.ShaderGraph.Internal
 
             var type = Type.GetType(typeName, false, true);
             if (type != null) return type;
+#if UNITY_6000_5_OR_NEWER // LifeCycle API is available from here
+            foreach (var a in CurrentAssemblies.GetLoadedAssemblies())
+#else 
             foreach (var a in AppDomain.CurrentDomain.GetAssemblies())
+#endif
             {
                 type = a.GetType(typeName, false, true);
                 if (type != null && type.IsEnum)

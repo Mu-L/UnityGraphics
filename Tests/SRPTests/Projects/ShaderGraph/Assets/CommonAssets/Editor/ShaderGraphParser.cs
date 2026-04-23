@@ -112,7 +112,7 @@ public class ShaderGraphParser
     {
         // CORECLR_FIXME - Replace Assembly.LoadFile below with CurrentAssemblies.LoadFromPath once method is public (SCP-1544)
         // Non-asmdef way
-        Assembly sga = Assembly.LoadFile(UnityEngine.Application.dataPath + "/../Library/ScriptAssemblies/Unity.ShaderGraph.Editor.dll");
+        Assembly sga = CurrentAssemblies.LoadFromPath(UnityEngine.Application.dataPath + "/../Library/ScriptAssemblies/Unity.ShaderGraph.Editor.dll");
         Type abstractMatNode = sga.GetType("UnityEditor.ShaderGraph.AbstractMaterialNode");
         Type masterNodeType = sga.GetType("UnityEditor.ShaderGraph.IMasterNode");
         List<Type> types = sga.GetTypes()
