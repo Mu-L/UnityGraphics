@@ -68,6 +68,22 @@ namespace UnityEngine.PathTracing.Lightmapping
             internal static int CopyTextureAdditiveKernel;
             internal static int MaskAlphaChannelKernel;
 
+            /// <summary>
+            /// Profiles the additive texture copy compute dispatch that blends a source region
+            /// into a destination region of a lightmap during accumulation.
+            /// </summary>
+            static readonly ProfilerMarker k_CopyTextureAdditive =
+                new ProfilerMarker(ProfilerCategory.Render, "CopyTextureAdditive",
+                    MarkerFlags.Default | MarkerFlags.SampleGPU);
+
+            /// <summary>
+            /// Profiles the alpha channel mask compute dispatch that clears or fills the alpha
+            /// channel of a lightmap texture to mark valid texel coverage.
+            /// </summary>
+            static readonly ProfilerMarker k_MaskAlphaChannel =
+                new ProfilerMarker(ProfilerCategory.Render, "MaskAlphaChannel",
+                    MarkerFlags.Default | MarkerFlags.SampleGPU);
+
 #if UNITY_EDITOR
             [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterAssembliesLoaded)]
             static void ResetStaticsOnLoad()
@@ -109,7 +125,7 @@ namespace UnityEngine.PathTracing.Lightmapping
             public void CopyTextureAdditive(CommandBuffer cmd, RenderTargetIdentifier source, RenderTargetIdentifier destination,
                 int width, int height, int sourceX = 0, int sourceY = 0, int destinationX = 0, int destinationY = 0)
             {
-                cmd.BeginSample("CopyTextureAdditive");
+                cmd.BeginSample(k_CopyTextureAdditive);
                 cmd.SetComputeTextureParam(ComputeHelperShader, CopyTextureAdditiveKernel, ShaderIDs.SourceTexture, source);
                 cmd.SetComputeTextureParam(ComputeHelperShader, CopyTextureAdditiveKernel, ShaderIDs.DestinationTexture, destination);
                 cmd.SetComputeIntParam(ComputeHelperShader, ShaderIDs.SourceWidth, width);
@@ -120,18 +136,18 @@ namespace UnityEngine.PathTracing.Lightmapping
                 cmd.SetComputeIntParam(ComputeHelperShader, ShaderIDs.DestinationY, destinationY);
                 ComputeHelperShader.GetKernelThreadGroupSizes(CopyTextureAdditiveKernel, out uint groupX, out uint groupY, out _);
                 cmd.DispatchCompute(ComputeHelperShader, CopyTextureAdditiveKernel, GraphicsHelpers.DivUp(width, groupX), GraphicsHelpers.DivUp(height, groupY), 1);
-                cmd.EndSample("CopyTextureAdditive");
+                cmd.EndSample(k_CopyTextureAdditive);
             }
 
             public void MaskAlphaChannel(CommandBuffer cmd, RenderTargetIdentifier texture, int width, int height)
             {
-                cmd.BeginSample("MaskAlphaChannel");
+                cmd.BeginSample(k_MaskAlphaChannel);
                 cmd.SetComputeTextureParam(ComputeHelperShader, MaskAlphaChannelKernel, ShaderIDs.TextureInOut, texture);
                 cmd.SetComputeIntParam(ComputeHelperShader, ShaderIDs.TextureWidth, width);
                 cmd.SetComputeIntParam(ComputeHelperShader, ShaderIDs.TextureHeight, height);
                 ComputeHelperShader.GetKernelThreadGroupSizes(MaskAlphaChannelKernel, out uint groupX, out uint groupY, out _);
                 cmd.DispatchCompute(ComputeHelperShader, MaskAlphaChannelKernel, GraphicsHelpers.DivUp(width, groupX), GraphicsHelpers.DivUp(height, groupY), 1);
-                cmd.EndSample("MaskAlphaChannel");
+                cmd.EndSample(k_MaskAlphaChannel);
             }
         }
 

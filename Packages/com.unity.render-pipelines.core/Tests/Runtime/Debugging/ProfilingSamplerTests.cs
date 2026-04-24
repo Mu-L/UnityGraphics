@@ -44,9 +44,11 @@ namespace UnityEngine.Rendering.Tests
             var sampler = ProfilingSampler.Create("CreatedMarker", MarkerFlags.Default);
             Assert.IsNotNull(sampler);
             Assert.IsTrue(sampler.IsValid());
+#if USE_RECORDER
             Assert.IsFalse(sampler.m_Recorder.Valid);
             Assert.IsFalse(sampler.m_GpuRecorder.Valid);
             Assert.IsFalse(sampler.m_InlineRecorder.Valid);
+#endif
         }
 
         [Test]
@@ -54,10 +56,12 @@ namespace UnityEngine.Rendering.Tests
         {
             var sampler = ProfilingSampler.Create("FlagsMarker", MarkerFlags.VerbosityAdvanced);
             Assert.IsTrue(sampler.IsValid());
+#if USE_RECORDER
             // Recorders are allocated lazily; none should be valid before enableRecording = true.
             Assert.IsFalse(sampler.m_Recorder.Valid);
             Assert.IsFalse(sampler.m_GpuRecorder.Valid);
             Assert.IsFalse(sampler.m_InlineRecorder.Valid);
+#endif
         }
 
         [Test]
@@ -113,6 +117,7 @@ namespace UnityEngine.Rendering.Tests
             Assert.AreEqual(0,    m_Sampler.inlineCpuSampleCount);
         }
 
+#if USE_RECORDER
         // Bits 10-12 all zero → SampleGPU auto-added → GpuRecorder is created on first enableRecording = true
         [Test]
         public void SampleGPU_AutoAdded_ForUserFacingMarker()
@@ -245,5 +250,6 @@ namespace UnityEngine.Rendering.Tests
                 sampler.Dispose(); // recorders are no longer .Valid after first dispose
             });
         }
+#endif
     }
 }

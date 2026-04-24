@@ -268,7 +268,7 @@ namespace UnityEngine.Rendering.Universal.Internal
 
             VisibleLight shadowLight = lightData.visibleLights[shadowLightIndex];
 
-            using (new ProfilingScope(cmd, URPProfilingSamplers.MainLightShadow))
+            using (new ProfilingScope(cmd, URPProfilingSamplers.MainLightShadow, shadowLight.light))
             {
                 // Need to start by setting the Camera position and worldToCamera Matrix as that is not set for passes executed before normal rendering
                 ShadowUtils.SetCameraPosition(cmd, data.cameraData.worldSpaceCameraPos);
