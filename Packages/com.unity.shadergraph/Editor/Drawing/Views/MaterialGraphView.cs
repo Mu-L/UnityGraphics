@@ -18,6 +18,7 @@ using UnityEngine.Assemblies;
 #endif
 using Node = UnityEditor.Experimental.GraphView.Node;
 using UnityEngine.Pool;
+using UnityEditor.ShaderGraph.Legacy;
 
 namespace UnityEditor.ShaderGraph.Drawing
 {
@@ -126,7 +127,7 @@ namespace UnityEditor.ShaderGraph.Drawing
             m_InspectorUpdateDelegate = inspectorUpdateDelegate;
             if (propertyDrawer is GraphDataPropertyDrawer graphDataPropertyDrawer)
             {
-                graphDataPropertyDrawer.GetPropertyData(this.ChangeTargetSettings, ChangePrecision);
+                graphDataPropertyDrawer.GetPropertyData(this.ChangeTargetSettings, ChangeGraphSettings, ChangePrecision);
             }
         }
 
@@ -140,6 +141,13 @@ namespace UnityEditor.ShaderGraph.Drawing
 
             graph.RefreshBadgesAndPreviews();
             graph.UpdateActiveBlocks(activeBlocks);
+            this.m_PreviewManagerUpdateDelegate();
+            this.m_InspectorUpdateDelegate();
+        }
+
+        void ChangeGraphSettings()
+        {
+            graph.RefreshBadgesAndPreviews();
             this.m_PreviewManagerUpdateDelegate();
             this.m_InspectorUpdateDelegate();
         }
@@ -527,7 +535,7 @@ namespace UnityEditor.ShaderGraph.Drawing
         }
 
         // Replicating these private GraphView functions as we need them for our own purposes
-        internal void AddToSelectionNoUndoRecord(GraphElement graphElement)
+        internal new void AddToSelectionNoUndoRecord(GraphElement graphElement)
         {
             graphElement.selected = true;
             selection.Add(graphElement);
@@ -576,7 +584,7 @@ namespace UnityEditor.ShaderGraph.Drawing
             OnSelectionChange?.Invoke(selection);
         }
 
-        internal bool ClearSelectionNoUndoRecord()
+        internal new bool ClearSelectionNoUndoRecord()
         {
             foreach (var graphElement in selection.OfType<GraphElement>())
             {

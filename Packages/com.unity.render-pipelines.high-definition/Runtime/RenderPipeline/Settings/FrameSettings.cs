@@ -962,7 +962,7 @@ namespace UnityEngine.Rendering.HighDefinition
 
                     var groupIndexes = attributes.Values.Where(a => a != null).Select(a => a.group).Distinct();
                     foreach (int groupIndex in groupIndexes)
-                        groups.Add(new DebuggerGroup(FrameSettingsHistory.foldoutNames[groupIndex], attributes?.Where(pair => pair.Value?.group == groupIndex)?.OrderBy(pair => pair.Value.orderInGroup).Select(kvp => new DebuggerEntry(Enum.GetName(typeof(FrameSettingsField), kvp.Key), m_FrameSettings.bitDatas[(uint)kvp.Key])).ToArray()));
+                        groups.Add(new DebuggerGroup(FrameSettingsHistory.k_FoldoutNames[groupIndex], attributes?.Where(pair => pair.Value?.group == groupIndex)?.OrderBy(pair => pair.Value.orderInGroup).Select(kvp => new DebuggerEntry(Enum.GetName(typeof(FrameSettingsField), kvp.Key), m_FrameSettings.bitDatas[(uint)kvp.Key])).ToArray()));
 
                     groups.Add(new DebuggerGroup("Bits without attribute", noAttribute.Where(fs => fs != FrameSettingsField.None)?.Select(fs => new DebuggerEntry(Enum.GetName(typeof(FrameSettingsField), fs), m_FrameSettings.bitDatas[(uint)fs])).ToArray()));
 

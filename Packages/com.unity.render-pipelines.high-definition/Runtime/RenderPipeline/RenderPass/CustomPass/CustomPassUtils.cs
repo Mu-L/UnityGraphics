@@ -2,6 +2,7 @@ using System;
 using UnityEngine.Rendering;
 using UnityEngine.Experimental.Rendering;
 using System.Collections.Generic;
+using Unity.Scripting.LifecycleManagement;
 
 namespace UnityEngine.Rendering.HighDefinition
 {
@@ -10,41 +11,46 @@ namespace UnityEngine.Rendering.HighDefinition
     /// </summary>
     public static class CustomPassUtils
     {
+        static readonly Vector4 k_DefaultFullScreenScaleBias = new Vector4(1, 1, 0, 0);
+
         /// <summary>
         /// Fullscreen scale and bias values, it is the default for functions that have scale and bias overloads.
         /// </summary>
         /// <returns>x: scaleX, y: scaleY, z: biasX, w: biasY</returns>
-        public static Vector4 fullScreenScaleBias = new Vector4(1, 1, 0, 0);
+        [NoAutoStaticsCleanup] public static Vector4 fullScreenScaleBias = k_DefaultFullScreenScaleBias;
 
-        static ShaderTagId[] litForwardTags = { HDShaderPassNames.s_ForwardOnlyName, HDShaderPassNames.s_ForwardName, HDShaderPassNames.s_SRPDefaultUnlitName };
-        static ShaderTagId[] depthTags = { HDShaderPassNames.s_DepthForwardOnlyName, HDShaderPassNames.s_DepthOnlyName };
+        static readonly ShaderTagId[] litForwardTags = { HDShaderPassNames.s_ForwardOnlyName, HDShaderPassNames.s_ForwardName, HDShaderPassNames.s_SRPDefaultUnlitName };
+        static readonly ShaderTagId[] depthTags = { HDShaderPassNames.s_DepthForwardOnlyName, HDShaderPassNames.s_DepthOnlyName };
 
-        static ProfilingSampler downSampleSampler = new ProfilingSampler("DownSample");
-        static ProfilingSampler verticalBlurSampler = new ProfilingSampler("Vertical Blur");
-        static ProfilingSampler horizontalBlurSampler = new ProfilingSampler("Horizontal Blur");
-        static ProfilingSampler gaussianblurSampler = new ProfilingSampler("Gaussian Blur");
-        static ProfilingSampler copySampler = new ProfilingSampler("Copy");
-        static ProfilingSampler renderFromCameraSampler = new ProfilingSampler("Render From Camera");
-        static ProfilingSampler renderDepthFromCameraSampler = new ProfilingSampler("Render Depth");
-        static ProfilingSampler renderNormalFromCameraSampler = new ProfilingSampler("Render Normal");
-        static ProfilingSampler renderTangentFromCameraSampler = new ProfilingSampler("Render Tangent");
+        static readonly ProfilingSampler downSampleSampler = new ProfilingSampler("DownSample");
+        static readonly ProfilingSampler verticalBlurSampler = new ProfilingSampler("Vertical Blur");
+        static readonly ProfilingSampler horizontalBlurSampler = new ProfilingSampler("Horizontal Blur");
+        static readonly ProfilingSampler gaussianblurSampler = new ProfilingSampler("Gaussian Blur");
+        static readonly ProfilingSampler copySampler = new ProfilingSampler("Copy");
+        static readonly ProfilingSampler renderFromCameraSampler = new ProfilingSampler("Render From Camera");
+        static readonly ProfilingSampler renderDepthFromCameraSampler = new ProfilingSampler("Render Depth");
+        static readonly ProfilingSampler renderNormalFromCameraSampler = new ProfilingSampler("Render Normal");
+        static readonly ProfilingSampler renderTangentFromCameraSampler = new ProfilingSampler("Render Tangent");
 
-        static MaterialPropertyBlock propertyBlock = new MaterialPropertyBlock();
-        static Material customPassUtilsMaterial;
-        static Material customPassRenderersUtilsMaterial;
+        static readonly MaterialPropertyBlock propertyBlock = new MaterialPropertyBlock();
 
+        // No cleanup needed, always assigned on pipeline create by Initialize() and destroyed on pipeline dispose by Cleanup()
+        [NoAutoStaticsCleanup] static Material customPassUtilsMaterial;
+        [NoAutoStaticsCleanup] static Material customPassRenderersUtilsMaterial;
 
-        static Dictionary<int, ComputeBuffer> gaussianWeightsCache = new Dictionary<int, ComputeBuffer>();
+        // No cleanup needed, destroyed on pipeline dispose by Cleanup()
+        [NoAutoStaticsCleanup] static readonly Dictionary<int, ComputeBuffer> gaussianWeightsCache = new Dictionary<int, ComputeBuffer>();
 
-        static int downSamplePassIndex;
-        static int verticalBlurPassIndex;
-        static int horizontalBlurPassIndex;
-        static int copyPassIndex;
-        static int copyDepthPassIndex;
-        static int depthToColorPassIndex;
-        static int depthPassIndex;
-        static int normalToColorPassIndex;
-        static int tangentToColorPassIndex;
+        // No cleanup needed, always assigned on pipeline create by Initialize()
+        [NoAutoStaticsCleanup] static int downSamplePassIndex;
+        [NoAutoStaticsCleanup] static int verticalBlurPassIndex;
+        [NoAutoStaticsCleanup] static int horizontalBlurPassIndex;
+        [NoAutoStaticsCleanup] static int copyPassIndex;
+        [NoAutoStaticsCleanup] static int copyDepthPassIndex;
+        [NoAutoStaticsCleanup] static int depthToColorPassIndex;
+        [NoAutoStaticsCleanup] static int depthPassIndex;
+        [NoAutoStaticsCleanup] static int normalToColorPassIndex;
+        [NoAutoStaticsCleanup] static int tangentToColorPassIndex;
 
         internal static void Initialize(HDRenderPipeline renderPipeline)
         {
@@ -60,6 +66,9 @@ namespace UnityEngine.Rendering.HighDefinition
             depthPassIndex = customPassRenderersUtilsMaterial.FindPass("DepthPass");
             normalToColorPassIndex = customPassRenderersUtilsMaterial.FindPass("NormalToColorPass");
             tangentToColorPassIndex = customPassRenderersUtilsMaterial.FindPass("TangentToColorPass");
+
+            fullScreenScaleBias = k_DefaultFullScreenScaleBias;
+            propertyBlock.Clear();
         }
 
         /// <summary>
@@ -321,8 +330,8 @@ namespace UnityEngine.Rendering.HighDefinition
 
         struct OverrideRTHandleScale : IDisposable
         {
-            // Prevent overriding multiple times in case of nested statements
-            static int overrideCounter = 0;
+            [NoAutoStaticsCleanup] // Symmetrical increment/decrement in ctor/Dispose, no need to reset
+            static int overrideCounter = 0; // Prevent overriding multiple times in case of nested statements
             CustomPassInjectionPoint injectionPoint;
 
             public OverrideRTHandleScale(in CustomPassContext ctx)
@@ -788,8 +797,9 @@ namespace UnityEngine.Rendering.HighDefinition
             HDCamera overrideHDCamera;
             float originalAspect;
 
-            static Stack<HDCamera> overrideCameraStack = new();
-            static Stack<ShaderVariablesGlobal> overrideGlobalVariablesStack = new();
+            // Stack is pushed/popped symmetrically by Init/Dispose so they will be empty outside the render loop, no need to reset.
+            [NoAutoStaticsCleanup] static readonly Stack<HDCamera> overrideCameraStack = new();
+            [NoAutoStaticsCleanup] static readonly Stack<ShaderVariablesGlobal> overrideGlobalVariablesStack = new();
 
             /// <summary>
             /// Overrides the current camera, changing all the matrices and view parameters for the new one.
@@ -936,6 +946,11 @@ namespace UnityEngine.Rendering.HighDefinition
             foreach (var gaussianWeights in gaussianWeightsCache)
                 gaussianWeights.Value.Release();
             gaussianWeightsCache.Clear();
+
+            CoreUtils.Destroy(customPassUtilsMaterial);
+            customPassUtilsMaterial = null;
+            CoreUtils.Destroy(customPassRenderersUtilsMaterial);
+            customPassRenderersUtilsMaterial = null;
         }
 
         internal static void SetRenderTargetWithScaleBias(in CustomPassContext ctx, MaterialPropertyBlock block, RTHandle destination, Vector4 destScaleBias, ClearFlag clearFlag, int miplevel)

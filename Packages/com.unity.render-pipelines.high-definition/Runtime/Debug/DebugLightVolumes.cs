@@ -108,6 +108,7 @@ namespace UnityEngine.Rendering.HighDefinition
                         mrt[0] = data.lightCountBuffer;
                         mrt[1] = data.colorAccumulationBuffer;
 
+#if UNITY_EDITOR
                         if (data.lightOverlapEnabled)
                         {
                             // We only need the accumulation buffer, not the color (we only display the outline of the light shape in this mode).
@@ -120,6 +121,7 @@ namespace UnityEngine.Rendering.HighDefinition
                             }
                         }
                         else
+#endif
                         {
                             // Set the render target array
                             CoreUtils.SetRenderTarget(natCmd, mrt, data.depthBuffer);

@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using Unity.Scripting.LifecycleManagement;
 using UnityEngine;
 using UnityEngine.Experimental.Rendering;
 using UnityEngine.Rendering.RenderGraphModule;
@@ -49,12 +50,13 @@ namespace UnityEngine.Rendering.HighDefinition
         /// Debug display settings.
         /// </summary>
         public DebugDisplaySettings debugDisplaySettings => m_DebugDisplaySettings;
-        private static DebugDisplaySettings s_NeutralDebugDisplaySettings;
+        [NoAutoStaticsCleanup] // No cleanup needed, always initialized at pipeline create
+        static DebugDisplaySettings s_NeutralDebugDisplaySettings;
         internal DebugDisplaySettings m_CurrentDebugDisplaySettings;
 
         void InitializeDebug()
         {
-            s_NeutralDebugDisplaySettings ??= new DebugDisplaySettings();
+            s_NeutralDebugDisplaySettings = new DebugDisplaySettings();
             m_ComputePositionNormal = runtimeShaders.probeVolumeSamplingDebugComputeShader;
             m_DebugViewMaterialGBuffer           = CoreUtils.CreateEngineMaterial(runtimeShaders.debugViewMaterialGBufferPS);
             m_DebugViewMaterialGBufferShadowMask = CoreUtils.CreateEngineMaterial(runtimeShaders.debugViewMaterialGBufferPS);

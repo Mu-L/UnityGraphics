@@ -161,9 +161,9 @@ namespace UnityEngine.Rendering.Universal
             public static readonly int _VolumeTargetPos = Shader.PropertyToID("_VolumeTargetPos");
             public static readonly int _FullResPixelOffset = Shader.PropertyToID("_FullResPixelOffset");
             public static readonly int _LowResScreenSize = Shader.PropertyToID("_LowResScreenSize");
-            public static readonly int _CascadeCount = Shader.PropertyToID("_CascadeCount");
+            public static readonly int _VolumeCascadeCount = Shader.PropertyToID("_VolumeCascadeCount");
             public static readonly int _VolumeVoxelMinSize = Shader.PropertyToID("_VolumeVoxelMinSize");
-            public static readonly int _CascadeOffsets = Shader.PropertyToID("_CascadeOffsets");
+            public static readonly int _VolumeCascadeOffsets = Shader.PropertyToID("_VolumeCascadeOffsets");
             public static readonly int _PatchCellIndices = Shader.PropertyToID("_PatchCellIndices");
         }
 
@@ -658,7 +658,13 @@ namespace UnityEngine.Rendering.Universal
                     builder.SetRenderFunc((PatchAllocationPassData data, ComputeGraphContext cgContext) => AllocatePatches(data, cgContext));
                 }
 
-                _worldAdapter.Update(_sceneTracker, RenderSettings.ambientMode, RenderSettings.skybox, RenderSettings.ambientSkyColor, _world);
+                // RenderSettings.ambientIntensity is used directly as a linear value for Surface Cache, which is not currently
+                // the case for the standard ambient probe lighting, which is assumed to be in gamma space and then converted to
+                // linear space. We will make this more coherent for the ambient probe in the future.
+                // Similarly, the ambient colors are all defined in sRGB space and must be converted to linear.
+                _worldAdapter.Update(_sceneTracker, RenderSettings.ambientMode, RenderSettings.skybox,
+                    RenderSettings.ambientSkyColor.linear, RenderSettings.ambientEquatorColor.linear, RenderSettings.ambientGroundColor.linear,
+                    RenderSettings.ambientIntensity, _world);
 
                 using (var builder = renderGraph.AddUnsafePass("Surface Cache World Update", out WorldUpdatePassData passData))
                 {
@@ -813,10 +819,10 @@ namespace UnityEngine.Rendering.Universal
                 cmd.SetComputeTextureParam(shader, kernelIndex, ShaderIDs._ScreenFlatNormals, data.FullResFlatNormals);
                 cmd.SetComputeBufferParam(shader, kernelIndex, ShaderIDs._CellPatchIndices, data.CellPatchIndices);
                 cmd.SetComputeBufferParam(shader, kernelIndex, ShaderIDs._PatchIrradiances, data.PatchIrradiances);
-                cmd.SetComputeBufferParam(shader, kernelIndex, ShaderIDs._CascadeOffsets, data.CascadeOffsets);
+                cmd.SetComputeBufferParam(shader, kernelIndex, ShaderIDs._VolumeCascadeOffsets, data.CascadeOffsets);
                 cmd.SetComputeBufferParam(shader, kernelIndex, ShaderIDs._PatchStatistics, data.PatchStatistics);
                 cmd.SetComputeIntParam(shader, ShaderIDs._VolumeSpatialResolution, (int)data.VolumeSpatialResolution);
-                cmd.SetComputeIntParam(shader, ShaderIDs._CascadeCount, (int)data.VolumeCascadeCount);
+                cmd.SetComputeIntParam(shader, ShaderIDs._VolumeCascadeCount, (int)data.VolumeCascadeCount);
                 cmd.SetComputeIntParam(shader, ShaderIDs._SampleCount, (int)data.SampleCount);
                 cmd.SetComputeIntParam(shader, ShaderIDs._FrameIdx, (int)data.FrameIndex);
                 cmd.SetComputeFloatParam(shader, ShaderIDs._VolumeVoxelMinSize, data.VolumeVoxelMinSize);
@@ -883,10 +889,10 @@ namespace UnityEngine.Rendering.Universal
                 cmd.SetComputeBufferParam(shader, kernelIndex, ShaderIDs._PatchGeometries, data.PatchGeometries);
                 cmd.SetComputeBufferParam(shader, kernelIndex, ShaderIDs._PatchCellIndices, data.PatchCellIndices);
                 cmd.SetComputeBufferParam(shader, kernelIndex, ShaderIDs._PatchStatistics, data.PatchStatistics);
-                cmd.SetComputeBufferParam(shader, kernelIndex, ShaderIDs._CascadeOffsets, data.CascadeOffsets);
+                cmd.SetComputeBufferParam(shader, kernelIndex, ShaderIDs._VolumeCascadeOffsets, data.CascadeOffsets);
                 cmd.SetComputeIntParam(shader, ShaderIDs._FrameIdx, (int)data.FrameIdx);
                 cmd.SetComputeIntParam(shader, ShaderIDs._VolumeSpatialResolution, (int)data.VolumeSpatialResolution);
-                cmd.SetComputeIntParam(shader, ShaderIDs._CascadeCount, (int)data.VolumeCascadeCount);
+                cmd.SetComputeIntParam(shader, ShaderIDs._VolumeCascadeCount, (int)data.VolumeCascadeCount);
                 cmd.SetComputeIntParam(shader, ShaderIDs._RingConfigOffset, (int)data.RingConfigOffset);
                 cmd.SetComputeIntParams(shader, ShaderIDs._FullResPixelOffset, (int)data.FullResPixelOffset.x, (int)data.FullResPixelOffset.y);
                 cmd.SetComputeIntParams(shader, ShaderIDs._LowResScreenSize, (int)data.LowResScreenSize.x, (int)data.LowResScreenSize.y);
@@ -913,12 +919,12 @@ namespace UnityEngine.Rendering.Universal
                 cmd.SetComputeBufferParam(shader, kernelIndex, ShaderIDs._RingConfigBuffer, data.RingConfigBuffer);
                 cmd.SetComputeBufferParam(shader, kernelIndex, ShaderIDs._PatchIrradiances, data.PatchIrradiances);
                 cmd.SetComputeBufferParam(shader, kernelIndex, ShaderIDs._PatchGeometries, data.PatchGeometries);
-                cmd.SetComputeBufferParam(shader, kernelIndex, ShaderIDs._CascadeOffsets, data.CascadeOffsets);
+                cmd.SetComputeBufferParam(shader, kernelIndex, ShaderIDs._VolumeCascadeOffsets, data.CascadeOffsets);
                 cmd.SetComputeBufferParam(shader, kernelIndex, ShaderIDs._PatchCellIndices, data.PatchCellIndices);
                 cmd.SetComputeBufferParam(shader, kernelIndex, ShaderIDs._PatchStatistics, data.PatchStatistics);
 
                 cmd.SetComputeIntParam(shader, ShaderIDs._VolumeSpatialResolution, (int)data.VolumeSpatialResolution);
-                cmd.SetComputeIntParam(shader, ShaderIDs._CascadeCount, (int)data.VolumeCascadeCount);
+                cmd.SetComputeIntParam(shader, ShaderIDs._VolumeCascadeCount, (int)data.VolumeCascadeCount);
                 cmd.SetComputeIntParam(shader, ShaderIDs._ViewMode, (int)data.ViewMode);
                 cmd.SetComputeIntParam(shader, ShaderIDs._FrameIdx, (int)data.FrameIndex);
                 cmd.SetComputeIntParam(shader, ShaderIDs._ShowSamplePosition, data.ShowSamplePosition ? 1 : 0);

@@ -167,6 +167,7 @@ namespace Unity.GraphCommon.LowLevel.Editor
             return BuildDataNodeToDataViews((task, dataBinding) =>
             {
                 bool success = task.GetDataUsage(dataBinding.BindingDataKey, out DataPathSet readUsage, out _);
+                success &= readUsage != null;
                 return (success, readUsage);
             });
         }
@@ -176,6 +177,7 @@ namespace Unity.GraphCommon.LowLevel.Editor
             return BuildDataNodeToDataViews((task, dataBinding) =>
             {
                 bool success = task.GetDataUsage(dataBinding.BindingDataKey, out _, out DataPathSet writeUsage);
+                success &= writeUsage != null;
                 return (success, writeUsage);
             });
         }

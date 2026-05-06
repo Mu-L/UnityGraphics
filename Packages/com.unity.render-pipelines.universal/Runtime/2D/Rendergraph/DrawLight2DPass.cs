@@ -21,6 +21,14 @@ namespace UnityEngine.Rendering.Universal
 
         internal static MaterialPropertyBlock s_PropertyBlock = new MaterialPropertyBlock();
 
+#if UNITY_EDITOR
+        [RuntimeInitializeOnLoadMethod]
+        static void ResetStaticsOnLoad()
+        {
+            s_PropertyBlock = new MaterialPropertyBlock();
+        }
+#endif
+
         internal void Setup(RenderGraph renderGraph, ref Renderer2DData rendererData)
         {
             foreach (var light in rendererData.lightCullResult.visibleLights)
@@ -78,7 +86,8 @@ namespace UnityEngine.Rendering.Universal
                     layerBatch.endLayerValue != light.GetTopMostLitLayer()))
                     continue;
 
-                var useShadows = passData.layerBatch.lightStats.useShadows && layerBatch.shadowIndices.Contains(j);
+                var useShadows = (!passData.isVolumetric && passData.layerBatch.lightStats.useShadows) || (passData.isVolumetric && passData.layerBatch.lightStats.useVolumetricShadowLights);
+                useShadows &= layerBatch.shadowIndices.Contains(j);
                 var lightMaterial = passData.rendererData.GetLightMaterial(light, passData.isVolumetric, useShadows);
                 var lightMesh = light.lightMesh;
 

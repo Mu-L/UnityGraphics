@@ -146,7 +146,7 @@ namespace UnityEditor.VFX
             return true;
         }
 
-        public string GetSubdataName(IDataKey subDataKey)
+        public string GetSubdataName(DataView dataView, IDataKey subDataKey)
         {
             if (subDataKey == ParticleData.AttributeDataKey)
             {

@@ -1,4 +1,3 @@
-using System;
 using UnityEngine.Experimental.Rendering;
 using UnityEngine.Rendering.RenderGraphModule;
 
@@ -12,7 +11,7 @@ namespace UnityEngine.Rendering.Universal
         private static readonly ProfilingSampler m_ExecuteProfilingSampler = new ProfilingSampler("Copy");
         internal static readonly string k_CameraSortingLayerTexture = "_CameraSortingLayerTexture";
         internal static readonly int k_CameraSortingLayerTextureId = Shader.PropertyToID(k_CameraSortingLayerTexture);
-        static Material m_BlitMaterial;
+        Material m_BlitMaterial;
 
         public CopyCameraSortingLayerPass(Material blitMaterial)
         {
@@ -37,18 +36,19 @@ namespace UnityEngine.Rendering.Universal
             filterMode = downsamplingMethod == Downsampling.None || downsamplingMethod == Downsampling._4xBox ? FilterMode.Point : FilterMode.Bilinear;
         }
 
-        private static void Execute(RasterCommandBuffer cmd, RTHandle source)
+        private static void Execute(RasterCommandBuffer cmd, RTHandle source, Material blitMaterial)
         {
             using (new ProfilingScope(cmd, m_ExecuteProfilingSampler))
             {
                 Vector2 viewportScale = source.useScaling ? new Vector2(source.rtHandleProperties.rtHandleScale.x, source.rtHandleProperties.rtHandleScale.y) : Vector2.one;
-                Blitter.BlitTexture(cmd, source, viewportScale, m_BlitMaterial, source.rt.filterMode == FilterMode.Bilinear ? 1 : 0);
+                Blitter.BlitTexture(cmd, source, viewportScale, blitMaterial, source.rt.filterMode == FilterMode.Bilinear ? 1 : 0);
             }
         }
 
         class PassData
         {
             internal TextureHandle source;
+            internal Material blitMaterial;
         }
 
         public void Render(RenderGraph graph, ContextContainer frameData)
@@ -59,6 +59,7 @@ namespace UnityEngine.Rendering.Universal
             using (var builder = graph.AddRasterRenderPass<PassData>(k_CopyCameraSortingLayerPass, out var passData, m_ProfilingSampler))
             {
                 passData.source = commonResourceData.activeColorTexture;
+                passData.blitMaterial = m_BlitMaterial;
 
                 builder.SetRenderAttachment(universal2DResourceData.cameraSortingLayerTexture, 0);
                 builder.UseTexture(passData.source);
@@ -66,7 +67,7 @@ namespace UnityEngine.Rendering.Universal
 
                 builder.SetRenderFunc(static (PassData data, RasterGraphContext context) =>
                 {
-                    Execute(context.cmd, data.source);
+                    Execute(context.cmd, data.source, data.blitMaterial);
                 });
             }
         }

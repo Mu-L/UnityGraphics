@@ -306,6 +306,7 @@ namespace UnityEngine.Rendering
         private MaterialPool _materialPool;
         private AccelStructAdapter _rayTracingAccelerationStructure;
         private CubemapRender _cubemapRender;
+        private float _environmentIntensityMultiplier = 1.0f;
 
         public void Init(RayTracingContext ctx, WorldResourceSet worldResources)
         {
@@ -348,6 +349,26 @@ namespace UnityEngine.Rendering
         public void SetEnvironmentColor(Color color)
         {
             _cubemapRender.SetColor(color);
+        }
+
+        public void SetEnvironmentGradientColors(Color skyColor, Color equatorColor, Color groundColor)
+        {
+            _cubemapRender.SetFaceColor(CubemapFace.PositiveX, equatorColor);
+            _cubemapRender.SetFaceColor(CubemapFace.NegativeX, equatorColor);
+            _cubemapRender.SetFaceColor(CubemapFace.PositiveY, skyColor);
+            _cubemapRender.SetFaceColor(CubemapFace.NegativeY, groundColor);
+            _cubemapRender.SetFaceColor(CubemapFace.PositiveZ, equatorColor);
+            _cubemapRender.SetFaceColor(CubemapFace.NegativeZ, equatorColor);
+        }
+
+        public void SetEnvironmentIntensityMultiplier(float multiplier)
+        {
+            _environmentIntensityMultiplier = multiplier;
+        }
+
+        public float GetEnvironmentIntensityMultiplier()
+        {
+            return _environmentIntensityMultiplier;
         }
 
         public ComputeBuffer GetMaterialListBuffer()

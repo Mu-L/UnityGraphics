@@ -73,13 +73,14 @@ namespace UnityEditor.Rendering.Universal
         StencilLODCrossFade = (1L << 50),
         DeferredPlus = (1L << 51),
         ReflectionProbeAtlas = (1L << 52),
+        PointSamplingUpsampling = (1L << 53),
 #if SURFACE_CACHE
-        SurfaceCache = (1L << 53),
+        SurfaceCache = (1L << 54),
 #endif
 #if URP_SCREEN_SPACE_REFLECTION
-        ScreenSpaceReflection = (1L << 54),
+        ScreenSpaceReflection = (1L << 55),
 #endif
-        RenderObjectDepthInputAttachment = (1L << 55),
+        RenderObjectDepthInputAttachment = (1L << 56),
         All = ~0
     }
 
@@ -604,6 +605,9 @@ namespace UnityEditor.Rendering.Universal
             //   HDR 64-bit, RGBA16Float, (urpAsset.supportsHDR && urpAsset.hdrColorBufferPrecision == HDRColorBufferPrecision._64Bits)
             if(urpAsset.allowPostProcessAlphaOutput)
                 urpAssetShaderFeatures |= ShaderFeatures.AlphaOutput;
+
+            if (urpAsset.upscalingFilter == UpscalingFilterSelection.Point)
+                urpAssetShaderFeatures |= ShaderFeatures.PointSamplingUpsampling;
 
             // Check each renderer & renderer feature
             urpAssetShaderFeatures = GetSupportedShaderFeaturesFromRenderers(
@@ -1205,6 +1209,9 @@ namespace UnityEditor.Rendering.Universal
                 spd.stripSSAOSampleCountMedium &= ssaoSettings.Samples != ScreenSpaceAmbientOcclusionSettings.AOSampleOption.Medium;
                 spd.stripSSAOSampleCountHigh   &= ssaoSettings.Samples != ScreenSpaceAmbientOcclusionSettings.AOSampleOption.High;
             }
+
+            // Upscaling
+            spd.stripPointSamplingUpsampling = !IsFeatureEnabled(shaderFeatures, ShaderFeatures.PointSamplingUpsampling);
 
             return spd;
         }

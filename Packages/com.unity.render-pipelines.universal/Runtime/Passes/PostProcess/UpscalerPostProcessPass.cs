@@ -70,7 +70,7 @@ namespace UnityEngine.Rendering.Universal
                 Debug.Assert(motionData != null);
             }
 
-            io.cameraInstanceID = cameraData.camera.GetEntityId().GetRawData();
+            io.cameraInstanceID = EntityId.ToULong(cameraData.camera.GetEntityId());
             io.nearClipPlane = cameraData.camera.nearClipPlane;
             io.farClipPlane = cameraData.camera.farClipPlane;
             io.fieldOfViewDegrees = cameraData.camera.fieldOfView;
@@ -79,7 +79,6 @@ namespace UnityEngine.Rendering.Universal
             io.flippedX = false;
             io.hdrInput = Experimental.Rendering.GraphicsFormatUtility.IsHDRFormat(srcDesc.format);
             io.numActiveViews = cameraData.xr.enabled ? cameraData.xr.viewCount : 1;
-            io.eyeIndex = (cameraData.xr.enabled && !cameraData.xr.singlePassEnabled) ? cameraData.xr.multipassId : 0;
             io.worldSpaceCameraPositions = new Vector3[io.numActiveViews];
             io.previousWorldSpaceCameraPositions = new Vector3[io.numActiveViews];
             io.previousPreviousWorldSpaceCameraPositions = new Vector3[io.numActiveViews];
@@ -96,10 +95,7 @@ namespace UnityEngine.Rendering.Universal
             io.previousViewMatrices = motionData.previousViewStereo;
             io.previousPreviousViewMatrices = motionData.previousPreviousViewStereo;
             io.resetHistory = cameraData.resetHistory;
-            // TODO (Apoorva): Maybe we want to support this?
-            // URP supports adding an offset value to the TAA frame index for testing determinism as follows:
-            //     io.frameIndex = Time.frameCount + settings.jitterFrameCountOffset;
-            io.frameIndex = Time.frameCount;
+            io.frameIndex = TemporalAA.CalculateTaaFrameIndex(ref cameraData.taaSettings);
             io.deltaTime = motionData.deltaTime;
             io.previousDeltaTime = motionData.lastDeltaTime;
             io.blueNoiseTextureSet = m_BlueNoise16LTex;
@@ -113,8 +109,26 @@ namespace UnityEngine.Rendering.Universal
             io.enableMotionScaling = true;
 #endif
             io.enableHwDrs = false; // URP doesn't support hardware dynamic resolution scaling
+
+            // Acquire the per-camera context for the active upscaler
+            // In XR multi-pass rendering, encode eye information into the camera ID to ensure separate contexts per eye
+            var upscaler = postProcessingData.activeUpscaler;
+            ulong viewId = io.cameraInstanceID;
+            if (cameraData.xr.enabled && !cameraData.xr.singlePassEnabled)
+                viewId = (ulong)HashCode.Combine(io.cameraInstanceID, cameraData.xr.multipassId);
+
+            io.context = UniversalRenderPipeline.upscaling.AcquireContext(
+                viewId,
+                upscaler,
+                upscaler.options,
+                io.postUpscaleResolution
+            );
+
+            // Use jitter already computed during camera setup
+            io.subpixelJitter = cameraData.subpixelJitter;
+
             // Insert the active upscaler's render graph passes
-            postProcessingData.activeUpscaler.RecordRenderGraph(renderGraph, frameData);
+            upscaler.RecordRenderGraph(renderGraph, frameData);
 
             // Update the camera resolution to reflect the upscaled size
             var dstDesc = io.cameraColor.GetDescriptor(renderGraph);

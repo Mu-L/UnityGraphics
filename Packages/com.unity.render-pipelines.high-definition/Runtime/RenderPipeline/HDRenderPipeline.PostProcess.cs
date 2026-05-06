@@ -1074,7 +1074,7 @@ namespace UnityEngine.Rendering.HighDefinition
             io.previousPreUpscaleResolution = hdCamera.historyRTHandleProperties.previousViewportSize;
             io.postUpscaleResolution = new Vector2Int((int)hdCamera.finalViewport.width, (int)hdCamera.finalViewport.height);
             io.enableTexArray = TextureXR.useTexArray;
-            io.cameraInstanceID = hdCamera.camera.GetEntityId().GetRawData();
+            io.cameraInstanceID = EntityId.ToULong(hdCamera.camera.GetEntityId());
             io.nearClipPlane = hdCamera.camera.nearClipPlane;
             io.farClipPlane = hdCamera.camera.farClipPlane;
             io.fieldOfViewDegrees = hdCamera.camera.fieldOfView;
@@ -1089,7 +1089,6 @@ namespace UnityEngine.Rendering.HighDefinition
             Debug.Assert(numActiveViews <= STP.perViewConfigs.Length);
 
             io.numActiveViews = numActiveViews;
-            io.eyeIndex = 0; // Maybe we should rename this to viewIndexBias or maybe even find a way to remove this entirely.
             io.worldSpaceCameraPositions = new Vector3[numActiveViews];
             io.previousWorldSpaceCameraPositions = new Vector3[numActiveViews];
             io.previousPreviousWorldSpaceCameraPositions = new Vector3[numActiveViews];
@@ -1148,6 +1147,19 @@ namespace UnityEngine.Rendering.HighDefinition
             // Insert the active upscaler's render graph passes
             IUpscaler upscaler = upscaling.activeUpscaler;
             Debug.Assert(upscaler != null);
+
+            // Acquire the per-camera context for the active upscaler
+            // HDRP already has separate HDCamera instances per eye in multi-pass XR, so cameraInstanceID is already unique per view
+            io.context = upscaling.AcquireContext(
+                io.cameraInstanceID,
+                upscaler,
+                upscaler.options,
+                io.postUpscaleResolution
+            );
+
+            // Use jitter already computed during camera setup (stored in taaJitter with correct sign)
+            io.subpixelJitter = new Vector2(hdCamera.taaJitter.x, hdCamera.taaJitter.y);
+
             upscaler.RecordRenderGraph(renderGraph, hdCamera.contextContainer);
 
             return io.cameraColor;

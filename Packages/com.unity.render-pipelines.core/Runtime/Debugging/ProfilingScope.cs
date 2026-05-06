@@ -392,7 +392,7 @@ namespace UnityEngine.Rendering
         /// with this sample. The Profiler displays it in the sample hierarchy.</param>
         [MethodImpl(MethodImplOptions.AggressiveInlining | (MethodImplOptions)512)]
         public ProfilingScope(ProfilingSampler sampler, Object contextObject)
-            : this(null, sampler, contextObject)
+            : this((CommandBuffer)null, sampler, contextObject)
         {
         }
 
@@ -456,6 +456,26 @@ namespace UnityEngine.Rendering
             m_Sampler = sampler;
             m_Cmd = cmd.m_WrappedCommandBuffer;
 #endif
+        }
+
+        /// <summary>
+        /// Creates a profiling scope that records markers into <paramref name="cmd"/> as well as inline on the CPU,
+        /// and associates a Unity Object with the sample for identification in the Profiler.
+        /// </summary>
+        /// <remarks>
+        /// Do not use with a named <see cref="CommandBuffer"/>. A named command buffer inserts its own
+        /// scope marker on execution, which orphans the markers added here: the begin and end appear
+        /// inside different named-buffer execution brackets and will be mismatched in the Profiler timeline.
+        /// </remarks>
+        /// <param name="cmd">BaseCommandBuffer (e.g. RasterCommandBuffer, UnsafeCommandBuffer) to receive the GPU-visible begin/end markers.</param>
+        /// <param name="sampler">The sampler that provides the underlying marker.
+        /// May be <c>null</c>; the scope is a no-op in that case.</param>
+        /// <param name="contextObject">Unity Object (e.g. Texture, Mesh, Material) to associate
+        /// with this sample. The Profiler displays it in the sample hierarchy.</param>
+        [MethodImpl(MethodImplOptions.AggressiveInlining | (MethodImplOptions)512)]
+        public ProfilingScope(BaseCommandBuffer cmd, ProfilingSampler sampler, Object contextObject)
+            : this(cmd.m_WrappedCommandBuffer, sampler, contextObject)
+        {
         }
 
         /// <summary>

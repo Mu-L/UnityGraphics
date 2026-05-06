@@ -13,7 +13,11 @@ namespace UnityEditor.VFX.UI
 
             controller = initContextUI.controller;
             controller.RegisterHandler(this);
-            ScheduleRepositionInitializePanel();
+            RegisterCallback<GeometryChangedEvent, VFXContextProfilerUI>((e, contextPanel) =>
+            {
+                contextPanel.SetVerticalOffset(e.newRect.height);
+                contextPanel.RepositionPanel();
+            }, m_SystemContexts[0]);
 
             VFXSystemNames systemNames = controller.viewController.graph.systemNames;
             string systemName = systemNames.GetUniqueSystemName(controller.model.GetData());
@@ -68,20 +72,6 @@ namespace UnityEditor.VFX.UI
         public string GetSystemName()
         {
             return m_SystemName;
-        }
-
-        void ScheduleRepositionInitializePanel()
-        {
-            schedule.Execute(() =>
-            {
-                m_SystemContexts[0].SetVerticalOffset(resolvedStyle.height);
-                m_SystemContexts[0].RepositionPanel();
-            });
-        }
-        protected override void OnCollapseChanged(ChangeEvent<bool> evt)
-        {
-            base.OnCollapseChanged(evt);
-            ScheduleRepositionInitializePanel();
         }
 
         void AddStatusSection()

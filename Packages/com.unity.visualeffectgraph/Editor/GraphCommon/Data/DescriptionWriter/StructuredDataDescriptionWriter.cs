@@ -15,8 +15,8 @@ namespace Unity.GraphCommon.LowLevel.Editor
             shaderWriter.WriteLine("VFXByteAddressBuffer buffer;");
             shaderWriter.NewLine();
 
-            var layoutCompilationData = context.data.Get<StructuredDataLayoutContainer>();
-            layoutCompilationData.TryGetLayout(structuredData, out var layout);
+            var layoutCompilationData = context.data.Get<DataLayoutContainer>();
+            layoutCompilationData.TryGetLayout(dataView.DataContainer.Id, out var layout);
 
             shaderWriter.WriteLine("void Init()");
             shaderWriter.OpenBlock();
@@ -24,21 +24,22 @@ namespace Unity.GraphCommon.LowLevel.Editor
             shaderWriter.CloseBlock();
             shaderWriter.NewLine();
 
-            foreach (var subDataView in dataView.Children)
+            foreach (var subDataView in dataView.Flat)
             {
-                if (subDataView.DataDescription is not ValueData valueData)
-                    continue;
-                var offset = layout.GetValueOffset(valueData);
-                var typeString = HlslCodeHelper.GetTypeName(valueData.Type);
-                var subDataName  = subDataView.SubDataKey.ToString();
-                DeclareMember(shaderWriter, typeString, subDataName, (uint)offset);
+                if (subDataView.DataDescription is ValueData valueData)
+                {
+                    var offset = layout.GetValueOffset(valueData);
+                    var typeString = HlslCodeHelper.GetTypeName(valueData.Type);
+                    var subDataName = subDataView.SubDataKey.ToString();
+                    DeclareValueMember(shaderWriter, typeString, subDataName, (uint)offset);
+                }
             }
 
             shaderWriter.CloseBlock(false);
             shaderWriter.WriteLine(";", ShaderWriter.WriteLineOptions.NoIndent);
         }
 
-        void DeclareMember(ShaderWriter shaderWriter, string type, string name, uint offset)
+        void DeclareValueMember(ShaderWriter shaderWriter, string type, string name, uint offset)
         {
             shaderWriter.WriteLine($"{type} Load_{name}()");
             shaderWriter.OpenBlock();
@@ -87,9 +88,20 @@ namespace Unity.GraphCommon.LowLevel.Editor
             return true;
         }
 
-        public string GetSubdataName(IDataKey subDataKey)
+        public string GetSubdataName(DataView dataView, IDataKey subDataKey)
         {
-            return $".Load_{subDataKey}()";
+            if (dataView.FindSubData(subDataKey, out var subDataView))
+            {
+                if (subDataView.DataDescription is ValueData valueData)
+                    return $".Load_{subDataKey}()";
+                return string.Empty;
+            }
+            return null;
+        }
+
+        public string GetSubdataTypeName(IDataKey subDataKey)
+        {
+            return string.Empty;
         }
 
         public void DefineResourceUsage(ShaderWriter shaderWriter, DataView usedDataView, DataView readDataView,

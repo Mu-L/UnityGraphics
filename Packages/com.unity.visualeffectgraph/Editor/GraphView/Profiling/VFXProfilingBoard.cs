@@ -394,7 +394,7 @@ namespace UnityEditor.VFX.UI
 
         void Update()
         {
-            if (m_AttachedComponent == null)
+            if (m_AttachedComponent == null || m_AttachedComponent.visualEffectAsset == null)
             {
                 Detach();
                 return;

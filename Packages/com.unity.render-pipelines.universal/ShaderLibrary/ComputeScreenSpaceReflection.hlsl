@@ -30,7 +30,7 @@ float4x4 _CameraInverseViewProjections[2];
 float4x4 _CameraProjections[2];
 float4x4 _CameraInverseProjections[2];
 float4x4 _CameraViews[2];
-
+float4 _CameraDeltaJitterOffset;
 float4 _SourceSize;
 
 TYPED_TEXTURE2D_X(float, _DepthPyramid);
@@ -176,6 +176,7 @@ bool TraceScreenSpaceRay(
 
             bool aboveBase = !COMPARE_DEVICE_DEPTH_CLOSER(rayDepth, rawSceneDepth);
             bool belowFloor = COMPARE_DEVICE_DEPTH_CLOSER(rayDepth, rawSceneDepth * GetThicknessScale() + GetThicknessBias());
+            [branch]
             if (aboveBase && belowFloor)
             {
                 hitFine = COMPARE_DEVICE_DEPTH_CLOSER(rayDepth, rawSceneDepth * GetThicknessScaleFine() + GetThicknessBiasFine());
@@ -425,8 +426,11 @@ float4 ComputeSSR(Varyings input) : SV_Target
     {
         #ifdef _USE_MOTION_VECTORS
         // Reproject position
-        const float2 downsampledScreenSize = screenSizeWithInverse.zw * _Downsample;
         rayHitPosNDC.xy -= SampleMotionVector(rayHitPosNDC.xy);
+        // Compensate for jittering
+        rayHitPosNDC.xy -= _CameraDeltaJitterOffset;
+
+        const float2 downsampledScreenSize = screenSizeWithInverse.zw * _Downsample;
         const int2 topLeftReprojectedPixelPos = int2(rayHitPosNDC.xy * downsampledScreenSize - 0.5);
 
         // Manually apply bilinear filter at the reprojected position
@@ -458,8 +462,12 @@ float4 ComputeSSR(Varyings input) : SV_Target
                 weightSum += weight;
             }
         }
-        // If we got no valid samples, just return the existing framebuffer color.
-        if (weightSum == 0)
+        // If we got no valid samples, just return the existing framebuffer color. The sample is invalid if the total
+        // sum of weights is 0 but due to precision issues if the total weight is extremely low (which can lead
+        // to wrongly high color values, once divided by it) we check if the total weight is under an epsilon
+        // value instead.
+        const float k_MinimumWeight = 1e-3;
+        if (weightSum < k_MinimumWeight)
             return float4(SAMPLE_TEXTURE2D_X_LOD(_CameraColorTexture, sampler_CameraColorTexture, positionNDC, 0).rgb, 0);
         else
             hitColor /= weightSum;

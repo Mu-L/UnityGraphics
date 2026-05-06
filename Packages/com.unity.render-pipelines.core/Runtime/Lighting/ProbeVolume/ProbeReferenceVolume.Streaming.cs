@@ -805,7 +805,7 @@ namespace UnityEngine.Rendering
             // Handle cell streaming for blending
             if (supportScenarioBlending)
             {
-                using (new ProfilingScope(cmd, CoreProfilingSamplers.APVScenarioBlendingUpdate))
+                using (new ProfilingScope(cmd, CoreProfilingSamplers.APVScenarioBlendingUpdate, camera))
                     UpdateBlendingCellStreaming(cmd);
             }
         }

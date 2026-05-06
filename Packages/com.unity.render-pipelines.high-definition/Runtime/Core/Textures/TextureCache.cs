@@ -39,7 +39,7 @@ namespace UnityEngine.Rendering.HighDefinition
         private Texture[] m_autoContentArray = new Texture[1];
 
         // Constant values
-        private static uint g_MaxFrameCount = unchecked((uint)(-1));
+        const uint k_MaxFrameCount = unchecked((uint)(-1));
 
         protected const int k_FP16SizeInByte = 2;
         protected const int k_NbChannel = 4;
@@ -81,7 +81,7 @@ namespace UnityEngine.Rendering.HighDefinition
                 m_NumTextures = numTextures / m_SliceSize;
                 for (int i = 0; i < m_NumTextures; i++)
                 {
-                    m_SliceArray[i].countLRU = g_MaxFrameCount;         // never used before
+                    m_SliceArray[i].countLRU = k_MaxFrameCount;         // never used before
                     m_SliceArray[i].texId = EntityId.None;
                     m_SortedIdxArray[i] = i;
                 }
@@ -208,7 +208,7 @@ namespace UnityEngine.Rendering.HighDefinition
             return sliceIndex;
         }
 
-        private static List<int> s_TempIntList = new List<int>();
+        private static readonly List<int> s_TempIntList = new List<int>(); // No clear needed for static member, always cleared before usage
         public void NewFrame()
         {
             var numNonZeros = 0;
@@ -235,7 +235,7 @@ namespace UnityEngine.Rendering.HighDefinition
 
             for (int i = 0; i < m_NumTextures; i++)
             {
-                if (m_SliceArray[i].countLRU < g_MaxFrameCount) ++m_SliceArray[i].countLRU;     // next frame
+                if (m_SliceArray[i].countLRU < k_MaxFrameCount) ++m_SliceArray[i].countLRU;     // next frame
             }
 
             //for(int q=1; q<m_numTextures; q++)
@@ -279,7 +279,7 @@ namespace UnityEngine.Rendering.HighDefinition
 
             // delete from m_locatorInSliceArray and m_pSliceArray.
             m_LocatorInSliceDictionnary.Remove(texId);
-            m_SliceArray[sliceIndex].countLRU = g_MaxFrameCount;            // never used before
+            m_SliceArray[sliceIndex].countLRU = k_MaxFrameCount;            // never used before
             m_SliceArray[sliceIndex].texId = EntityId.None;
         }
 

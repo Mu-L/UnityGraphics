@@ -219,6 +219,10 @@ namespace UnityEngine.Rendering.Universal
         [ShaderKeywordFilter.RemoveIf(true, keywordNames: ShaderKeywordStrings.ReflectionProbeAtlas)]
         [SerializeField] private bool m_PrefilterReflectionProbeAtlas = false;
 
+        // Point Sampling Upscaling (_POINT_SAMPLING)
+        [ShaderKeywordFilter.RemoveIf(true, keywordNames: ShaderKeywordStrings.PointSampling)]
+        [SerializeField] private bool m_PrefilterPointSamplingUpsampling = false;
+
         /// <summary>
         /// Data used for Shader Prefiltering. Gathered after going through the URP Assets,
         /// Renderers and Renderer Features in OnPreprocessBuild() inside ShaderPreprocessor.cs.
@@ -263,6 +267,8 @@ namespace UnityEngine.Rendering.Universal
             public bool stripReflectionProbeBlending;
             public bool stripReflectionProbeBoxProjection;
             public bool stripReflectionProbeAtlas;
+
+            public bool stripPointSamplingUpsampling;
 
             public bool stripScreenSpaceIrradiance;
 
@@ -330,6 +336,8 @@ namespace UnityEngine.Rendering.Universal
             m_PrefilterReflectionProbeBlending       = prefilteringData.stripReflectionProbeBlending;
             m_PrefilterReflectionProbeBoxProjection  = prefilteringData.stripReflectionProbeBoxProjection;
             m_PrefilterReflectionProbeAtlas          = prefilteringData.stripReflectionProbeAtlas;
+
+            m_PrefilterPointSamplingUpsampling       = prefilteringData.stripPointSamplingUpsampling;
 
             m_PrefilterScreenSpaceIrradiance         = prefilteringData.stripScreenSpaceIrradiance;
 

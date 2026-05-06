@@ -66,11 +66,22 @@ namespace UnityEngine.Rendering.HighDefinition
         RayCountManager m_RayCountManager;
 
         // Static variables used for the dirtiness and manual rtas management
-        const int maxNumSubMeshes = 32;
-        static RayTracingSubMeshFlags[] subMeshFlagArray = new RayTracingSubMeshFlags[maxNumSubMeshes];
-        static uint[] vfxSystemMasks = new uint[maxNumSubMeshes];
-        static List<Material> materialArray = new List<Material>(maxNumSubMeshes);
-        static Dictionary<EntityId, int> m_MaterialCRCs = new Dictionary<EntityId, int>();
+        const int k_MaxNumSubMeshes = 32;
+        static readonly RayTracingSubMeshFlags[] s_SubMeshFlagArray = new RayTracingSubMeshFlags[k_MaxNumSubMeshes];
+        static readonly uint[] s_VfxSystemMasks = new uint[k_MaxNumSubMeshes];
+        static readonly List<Material> s_MaterialArray = new List<Material>(k_MaxNumSubMeshes);
+        static readonly Dictionary<EntityId, int> s_MaterialCRCs = new Dictionary<EntityId, int>();
+
+#if UNITY_EDITOR
+        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterAssembliesLoaded)]
+        static void ResetStaticsOnLoad_HDRaytracingManager()
+        {
+            System.Array.Clear(s_SubMeshFlagArray, 0, s_SubMeshFlagArray.Length);
+            System.Array.Clear(s_VfxSystemMasks, 0, s_VfxSystemMasks.Length);
+            s_MaterialArray?.Clear();
+            s_MaterialCRCs?.Clear();
+        }
+#endif
 
         // Global shader variables ray tracing lightloop constant buffer
         ShaderVariablesRaytracingLightLoop m_ShaderVariablesRaytracingLightLoopCB = new ShaderVariablesRaytracingLightLoop();
@@ -207,14 +218,14 @@ namespace UnityEngine.Rendering.HighDefinition
         private static bool UpdateMaterialCRC(EntityId matInstanceId, int matCRC)
         {
             int matPrevCRC;
-            if (m_MaterialCRCs.TryGetValue(matInstanceId, out matPrevCRC))
+            if (s_MaterialCRCs.TryGetValue(matInstanceId, out matPrevCRC))
             {
-                m_MaterialCRCs[matInstanceId] = matCRC;
+                s_MaterialCRCs[matInstanceId] = matCRC;
                 return (matCRC != matPrevCRC);
             }
             else
             {
-                m_MaterialCRCs.Add(matInstanceId, matCRC);
+                s_MaterialCRCs.Add(matInstanceId, matCRC);
                 return true;
             }
         }
@@ -244,22 +255,22 @@ namespace UnityEngine.Rendering.HighDefinition
             {
                 SkinnedMeshRenderer skinnedMesh = (SkinnedMeshRenderer)currentRenderer;
                 if (skinnedMesh.sharedMesh == null) return AccelerationStructureStatus.MissingMesh;
-                currentRenderer.GetSharedMaterials(materialArray);
+                currentRenderer.GetSharedMaterials(s_MaterialArray);
                 numSubMeshes = skinnedMesh.sharedMesh.subMeshCount;
             }
             else
             {
                 currentRenderer.TryGetComponent(out MeshFilter meshFilter);
                 if (meshFilter == null || meshFilter.sharedMesh == null) return AccelerationStructureStatus.MissingMesh;
-                currentRenderer.GetSharedMaterials(materialArray);
+                currentRenderer.GetSharedMaterials(s_MaterialArray);
                 numSubMeshes = meshFilter.sharedMesh.subMeshCount;
             }
 
             // If the material array is null, we are done
-            if (materialArray == null) return AccelerationStructureStatus.NullMaterial;
+            if (s_MaterialArray == null) return AccelerationStructureStatus.NullMaterial;
 
             // Let's clamp the number of sub-meshes to avoid throwing an unwanted error
-            numSubMeshes = Mathf.Min(numSubMeshes, maxNumSubMeshes);
+            numSubMeshes = Mathf.Min(numSubMeshes, k_MaxNumSubMeshes);
 
             bool doubleSided = false;
             bool materialIsOnlyTransparent = true;
@@ -268,10 +279,10 @@ namespace UnityEngine.Rendering.HighDefinition
             {
                 // Initially we consider the potential mesh as invalid
                 bool validMesh = false;
-                if (materialArray.Count > subGeomIdx)
+                if (s_MaterialArray.Count > subGeomIdx)
                 {
                     // Grab the material for the current sub-mesh
-                    Material currentMaterial = materialArray[subGeomIdx];
+                    Material currentMaterial = s_MaterialArray[subGeomIdx];
 
                     // Make sure that the material is HDRP's and non-decal
                     if (IsValidRayTracedMaterial(currentMaterial))
@@ -299,13 +310,13 @@ namespace UnityEngine.Rendering.HighDefinition
 
                 // If the mesh was not valid, exclude it (without affecting sidedness)
                 if (!validMesh)
-                    subMeshFlagArray[subGeomIdx] = RayTracingSubMeshFlags.Disabled;
+                    s_SubMeshFlagArray[subGeomIdx] = RayTracingSubMeshFlags.Disabled;
             }
 
             // If the material is considered opaque, every sub-mesh has to be enabled and with unique any hit calls
             if (!materialIsOnlyTransparent && hasTransparentSubMaterial)
                 for (int meshIdx = 0; meshIdx < numSubMeshes; ++meshIdx)
-                    subMeshFlagArray[meshIdx] = RayTracingSubMeshFlags.Enabled | RayTracingSubMeshFlags.UniqueAnyHitCalls;
+                    s_SubMeshFlagArray[meshIdx] = RayTracingSubMeshFlags.Enabled | RayTracingSubMeshFlags.UniqueAnyHitCalls;
 
             // We need to build the instance flag for this renderer
             uint instanceFlag = ComputeInstanceFlag(currentRenderer, currentRenderer.shadowCastingMode, effectsParameters,
@@ -314,7 +325,7 @@ namespace UnityEngine.Rendering.HighDefinition
             // If the object was not referenced
             if (instanceFlag == 0) return AccelerationStructureStatus.Added;
 
-            targetRTAS.AddInstance(currentRenderer, subMeshFlags: subMeshFlagArray, enableTriangleCulling: !doubleSided,
+            targetRTAS.AddInstance(currentRenderer, subMeshFlags: s_SubMeshFlagArray, enableTriangleCulling: !doubleSided,
                     mask: instanceFlag);
 
             // Indicates that a transform has changed in our scene (mesh or light)
@@ -334,14 +345,14 @@ namespace UnityEngine.Rendering.HighDefinition
             if (!effectsParameters.includeVFX)
                 return AccelerationStructureStatus.Excluded;
 
-            currentRenderer.GetSharedMaterials(materialArray);
-            int numSubGeom = materialArray.Count;
+            currentRenderer.GetSharedMaterials(s_MaterialArray);
+            int numSubGeom = s_MaterialArray.Count;
 
             // If the material array is null, we are done
-            if (materialArray == null) return AccelerationStructureStatus.NullMaterial;
+            if (s_MaterialArray == null) return AccelerationStructureStatus.NullMaterial;
 
             // Let's clamp the number of sub-meshes to avoid throwing an unwanted error
-            numSubGeom = Mathf.Min(numSubGeom, maxNumSubMeshes);
+            numSubGeom = Mathf.Min(numSubGeom, k_MaxNumSubMeshes);
 
             bool materialIsOnlyTransparent = true;
             bool hasTransparentSubMaterial = false;
@@ -349,10 +360,10 @@ namespace UnityEngine.Rendering.HighDefinition
             bool hasAnyValidInstance = false;
             for (int subGeomIdx = 0; subGeomIdx < numSubGeom; ++subGeomIdx)
             {
-                if (materialArray.Count > subGeomIdx)
+                if (s_MaterialArray.Count > subGeomIdx)
                 {
                     // Grab the material for the current sub-mesh
-                    Material currentMaterial = materialArray[subGeomIdx];
+                    Material currentMaterial = s_MaterialArray[subGeomIdx];
 
                     // Make sure that the material is HDRP's and non-decal
                     if (IsValidRayTracedMaterial(currentMaterial))
@@ -367,7 +378,7 @@ namespace UnityEngine.Rendering.HighDefinition
                         ShadowCastingMode shadowCastingMode = currentMaterial.FindPass("ShadowCaster") != -1 ? ShadowCastingMode.On : ShadowCastingMode.Off;
                         uint instanceFlag = ComputeInstanceFlag(currentRenderer, shadowCastingMode, effectsParameters, transparentMaterial, transparentMaterial);
                         hasAnyValidInstance |= (instanceFlag != 0);
-                        vfxSystemMasks[compactedSubGeomIndex] = instanceFlag;
+                        s_VfxSystemMasks[compactedSubGeomIndex] = instanceFlag;
                         compactedSubGeomIndex++;
 
                         // Check if the material has changed since last time we were here
@@ -384,7 +395,7 @@ namespace UnityEngine.Rendering.HighDefinition
             if (!hasAnyValidInstance) return AccelerationStructureStatus.Added;
 
             // Add it to the acceleration structure
-            targetRTAS.AddVFXInstances(currentRenderer, vfxSystemMasks);
+            targetRTAS.AddVFXInstances(currentRenderer, s_VfxSystemMasks);
 
             // Indicates that a transform has changed in our scene (mesh or light)
             transformDirty |= currentRenderer.transform.hasChanged;
@@ -399,13 +410,13 @@ namespace UnityEngine.Rendering.HighDefinition
             ref bool doubleSided)
         {
             // Mark the thing as valid
-            subMeshFlagArray[meshIdx] = RayTracingSubMeshFlags.Enabled;
+            s_SubMeshFlagArray[meshIdx] = RayTracingSubMeshFlags.Enabled;
 
             // Append the additional flags depending on what kind of sub mesh this is
             if (!transparentMaterial && !alphaTested)
-                subMeshFlagArray[meshIdx] |= RayTracingSubMeshFlags.ClosestHitOnly;
+                s_SubMeshFlagArray[meshIdx] |= RayTracingSubMeshFlags.ClosestHitOnly;
             else if (transparentMaterial)
-                subMeshFlagArray[meshIdx] |= RayTracingSubMeshFlags.UniqueAnyHitCalls;
+                s_SubMeshFlagArray[meshIdx] |= RayTracingSubMeshFlags.UniqueAnyHitCalls;
 
             // Check if we want to enable double-sidedness for the mesh
             // (note that a mix of single and double-sided materials will result in a double-sided mesh in the AS)

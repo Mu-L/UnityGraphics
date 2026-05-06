@@ -78,6 +78,17 @@ namespace UnityEngine.Rendering.Universal
         // Light Batcher.
         internal static LightBatch lightBatch = new LightBatch();
 
+#if UNITY_EDITOR
+        [RuntimeInitializeOnLoadMethod]
+        static void ResetStaticsOnLoad()
+        {
+            s_HasSetupRenderTextureFormatToUse = false;
+            s_RenderTextureFormatToUse = GraphicsFormat.R8G8B8A8_UNorm;
+            lightBatch.Release();
+            lightBatch = new LightBatch();
+        }
+#endif
+
         internal static GraphicsFormat GetRenderTextureFormat()
         {
             if (!s_HasSetupRenderTextureFormatToUse)
@@ -140,6 +151,11 @@ namespace UnityEngine.Rendering.Universal
         internal static bool CanCastShadows(Light2D light, int layerToRender)
         {
             return light.shadowsEnabled && light.shadowIntensity > 0 && light.IsLitLayer(layerToRender);
+        }
+
+        internal static bool CanCastVolumetricShadows(Light2D light, int endLayerValue)
+        {
+            return light.volumeIntensity > 0 && light.volumetricEnabled && light.renderVolumetricShadows && light.GetTopMostLitLayer() == endLayerValue;
         }
 
         internal static void SetLightShaderGlobals(IRasterCommandBuffer cmd, Light2DBlendStyle[] lightBlendStyles, int[] blendStyleIndices)

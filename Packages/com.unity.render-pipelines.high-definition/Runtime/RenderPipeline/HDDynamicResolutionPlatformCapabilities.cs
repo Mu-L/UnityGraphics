@@ -1,3 +1,4 @@
+using Unity.Scripting.LifecycleManagement;
 using UnityEngine;
 
 namespace UnityEngine.Rendering.HighDefinition
@@ -17,8 +18,9 @@ namespace UnityEngine.Rendering.HighDefinition
         /// </summary>
         public static bool FSR2Detected { get { return m_FSR2Detected; } }
 
-        private static bool m_DLSSDetected = false;
-        private static bool m_FSR2Detected = false;
+        // No cleanup needed, initialized during pipeline construction
+        [NoAutoStaticsCleanup] static bool m_DLSSDetected = false;
+        [NoAutoStaticsCleanup] static bool m_FSR2Detected = false;
 
         internal static void SetupFeatures()
         {

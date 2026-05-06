@@ -193,6 +193,10 @@ namespace UnityEngine.Rendering
             DebugDisplaySerializer.SaveFoldoutStates();
             DebugDisplaySerializer.Clear();
             resetData?.Invoke();
+#if ENABLE_RENDERING_DEBUGGER_UI
+            displayPersistentRuntimeUI = false;
+            ForEachWidget(w => { if (w is DebugUI.ValueTuple vt) vt.pinnedElementIndex = -1; });
+#endif
         }
 
         /// <summary>

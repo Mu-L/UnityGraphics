@@ -20,7 +20,15 @@ namespace UnityEngine.PathTracing.Core
         private Material _material;
         private Shader _lastUsedShader;
         private LocalKeyword? _noSunKeyword;
-        private Color _color = Color.black;
+        private Color[] _faceColors = new Color[6]
+        {
+            Color.black,
+            Color.black,
+            Color.black,
+            Color.black,
+            Color.black,
+            Color.black
+        };
         private readonly Mesh _skyboxMesh;
         private readonly Mesh _sixFaceSkyboxMesh;
         private RenderTexture _cubemap;
@@ -59,7 +67,15 @@ namespace UnityEngine.PathTracing.Core
 
         public void SetColor(Color color)
         {
-            _color = color;
+            for (int faceIndex = 0; faceIndex < 6; faceIndex++)
+            {
+                _faceColors[faceIndex] = color;
+            }
+        }
+
+        public void SetFaceColor(CubemapFace face, Color color)
+        {
+            _faceColors[(int)face] = color;
         }
 
         public void SetMode(Mode mode)
@@ -83,7 +99,10 @@ namespace UnityEngine.PathTracing.Core
             int newHash = ((int)_mode) + 1;
             if (_mode == Mode.Color)
             {
-                newHash ^= HashCode.Combine(_color.r, _color.g, _color.b);
+                for (int faceIndex = 0; faceIndex < 6; faceIndex++)
+                {
+                    newHash = HashCode.Combine(newHash, _faceColors[faceIndex].r, _faceColors[faceIndex].g, _faceColors[faceIndex].b);
+                }
 
                 if (newHash != _hash)
                     RenderWithColor(cmd);
@@ -92,13 +111,13 @@ namespace UnityEngine.PathTracing.Core
             {
                 if (_material)
                 {
-                    newHash ^= _material.ComputeCRC();
+                    newHash = HashCode.Combine(newHash, _material.ComputeCRC());
                     if (sun != null)
                     {
                         var color = LightColorInRenderingSpace(sun);
                         var dir = -sun.GetComponent<Transform>().forward;
-                        newHash ^= HashCode.Combine(color.r, color.g, color.b);
-                        newHash ^= HashCode.Combine(dir.x, dir.y, dir.z);
+                        newHash = HashCode.Combine(newHash, color.r, color.g, color.b);
+                        newHash = HashCode.Combine(newHash, dir.x, dir.y, dir.z);
                     }
 
                     if (newHash != _hash)
@@ -136,7 +155,7 @@ namespace UnityEngine.PathTracing.Core
             {
                 cmd.SetRenderTarget(new RenderTargetIdentifier(_cubemap, 0, (CubemapFace) faceIndex));
                 cmd.SetViewport(new Rect(0, 0, 1, 1));
-                cmd.ClearRenderTarget(false, true, _color);
+                cmd.ClearRenderTarget(false, true, _faceColors[faceIndex]);
             }
         }
 

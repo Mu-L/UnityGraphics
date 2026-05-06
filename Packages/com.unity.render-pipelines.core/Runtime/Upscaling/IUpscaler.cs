@@ -42,9 +42,10 @@ namespace UnityEngine.Rendering
         /// Calculates the pixel jitter for the current frame.
         /// </summary>
         /// <param name="frameIndex">The index of the current frame, used to cycle through jitter patterns.</param>
+        /// <param name="upscaleRatio">The ratio of output resolution to input resolution (e.g., 2.0 for 1080p → 4K).</param>
         /// <param name="jitter">Outputs the calculated sub-pixel jitter vector.</param>
         /// <param name="allowScaling">Outputs whether the jitter vector permits scaling relative to resolution.</param>
-        void CalculateJitter(int frameIndex, out Vector2 jitter, out bool allowScaling);
+        void CalculateJitter(int frameIndex, float upscaleRatio, out Vector2 jitter, out bool allowScaling);
 
         /// <summary>
         /// Determines the render resolution based on display resolution and optional internal upscaler state or options.
@@ -52,6 +53,15 @@ namespace UnityEngine.Rendering
         /// <param name="preUpscaleResolution">The rendering resolution prior to upscaling. This is passed by reference and can be modified.</param>
         /// <param name="postUpscaleResolution">The target display or output resolution.</param>
         void NegotiatePreUpscaleResolution(ref Vector2Int preUpscaleResolution, Vector2Int postUpscaleResolution);
+
+        /// <summary>
+        /// Creates a new context for this upscaler. Upscaler authors implement this to create per-camera state.
+        /// Called by the context manager when a new camera needs upscaling or when an existing context is invalidated.
+        /// </summary>
+        /// <param name="options">The upscaler options to create the context with.</param>
+        /// <param name="displayResolution">The target display resolution.</param>
+        /// <returns>A new context instance, or null for spatial upscalers that don't need context.</returns>
+        IUpscalerContext CreateContext(UpscalerOptions options, Vector2Int displayResolution);
         #endregion
     }
 
@@ -79,8 +89,11 @@ namespace UnityEngine.Rendering
         /// <inheritdoc cref="IUpscaler.NegotiatePreUpscaleResolution(ref Vector2Int, Vector2Int)"/>
         public virtual void NegotiatePreUpscaleResolution(ref Vector2Int preUpscaleResolution, Vector2Int postUpscaleResolution) {}
 
-        /// <inheritdoc cref="IUpscaler.CalculateJitter(int, out Vector2, out bool)" />
-        public virtual void CalculateJitter(int frameIndex, out Vector2 jitter, out bool allowScaling)
+        /// <inheritdoc cref="IUpscaler.CreateContext(UpscalerOptions, Vector2Int)"/>
+        public virtual IUpscalerContext CreateContext(UpscalerOptions options, Vector2Int displayResolution) => null;
+
+        /// <inheritdoc cref="IUpscaler.CalculateJitter(int, float, out Vector2, out bool)" />
+        public virtual void CalculateJitter(int frameIndex, float upscaleRatio, out Vector2 jitter, out bool allowScaling)
         {
             jitter = -STP.Jit16(frameIndex);
             allowScaling = false;
@@ -88,6 +101,112 @@ namespace UnityEngine.Rendering
 
         /// <inheritdoc cref="IRenderGraphRecorder.RecordRenderGraph"/>
         public virtual void RecordRenderGraph(RenderGraph renderGraph, ContextContainer frameData) { }
+    }
+
+    /// <summary>
+    /// Represents a per-camera context for temporal upscalers.
+    /// Each camera (and XR view) gets its own context to maintain separate temporal history.
+    /// Spatial upscalers that don't need history can return null from CreateContext().
+    /// </summary>
+    public interface IUpscalerContext
+    {
+        /// <summary>
+        /// The display resolution this context was created for. Upscaler authors set this at creation time.
+        /// The context manager reads it to detect resolution and options changes that require context recreation.
+        /// </summary>
+        Vector2Int createdForDisplayResolution { get; }
+
+        /// <summary>
+        /// The frame number when this context was last used.
+        /// Set automatically by the context manager each frame to track when unused contexts should be cleaned up.
+        /// </summary>
+        int lastUsedFrame { get; set; }
+
+        /// <summary>
+        /// Checks if this context is still valid for the given options. Upscaler authors implement the validation logic.
+        /// The context manager calls this each frame to determine if the context needs recreation.
+        /// </summary>
+        /// <param name="options">The current upscaler options to validate against.</param>
+        /// <returns>True if the context is still valid, false if it needs to be recreated.</returns>
+        bool IsValidForOptions(UpscalerOptions options);
+
+        /// <summary>
+        /// Releases native resources associated with this context. Upscaler authors implement this to release GPU resources
+        /// when plugins or native code require command buffer access for cleanup.
+        /// Called automatically by the context manager when the context expires or needs recreation.
+        /// </summary>
+        /// <param name="cmd">The command buffer to record cleanup commands into.</param>
+        void Cleanup(CommandBuffer cmd);
+    }
+
+    /// <summary>
+    /// Base class for plugin-based upscaler contexts (DLSS, FSR, XeSS, etc.).
+    /// Handles common patterns: resolution tracking, type-safe validation, and cleanup.
+    /// Plugin upscalers extend this class and implement the abstract methods.
+    /// </summary>
+    /// <typeparam name="TNativeContext">The native context type from the plugin (e.g., DLSSContext, FSR2Context).</typeparam>
+    /// <typeparam name="TOptions">The options type for this upscaler (e.g., DLSSOptions, FSR2Options).</typeparam>
+    public abstract class PluginUpscalerContext<TNativeContext, TOptions> : IUpscalerContext
+        where TNativeContext : class
+        where TOptions : UpscalerOptions
+    {
+        /// <summary>
+        /// The native context from the plugin. Subclasses create this via GetOrCreateNativeContext().
+        /// </summary>
+        protected TNativeContext m_NativeContext;
+
+        /// <inheritdoc/>
+        public Vector2Int createdForDisplayResolution { get; }
+
+        /// <inheritdoc/>
+        public int lastUsedFrame { get; set; }
+
+        /// <summary>
+        /// Returns true if the native context has been created.
+        /// Use this to skip building initialization settings when the context already exists.
+        /// </summary>
+        public bool hasNativeContext => m_NativeContext != null;
+
+        /// <summary>
+        /// Creates a new plugin upscaler context for the specified display resolution.
+        /// </summary>
+        /// <param name="displayResolution">The target display resolution.</param>
+        protected PluginUpscalerContext(Vector2Int displayResolution)
+        {
+            createdForDisplayResolution = displayResolution;
+        }
+
+        /// <summary>
+        /// Destroys the native context using the plugin API.
+        /// Called by the base class Cleanup() method.
+        /// </summary>
+        /// <param name="cmd">The command buffer to record destruction commands into.</param>
+        /// <param name="context">The native context to destroy.</param>
+        protected abstract void DestroyNativeContext(CommandBuffer cmd, TNativeContext context);
+
+        /// <summary>
+        /// Validates whether the current options match the options this context was created with.
+        /// Subclasses compare tracked option values against the provided options.
+        /// </summary>
+        /// <param name="options">The current options to validate against.</param>
+        /// <returns>True if the context is still valid for these options.</returns>
+        protected abstract bool ValidateOptions(TOptions options);
+
+        /// <inheritdoc/>
+        public bool IsValidForOptions(UpscalerOptions options)
+        {
+            return options is TOptions typed && ValidateOptions(typed);
+        }
+
+        /// <inheritdoc/>
+        public void Cleanup(CommandBuffer cmd)
+        {
+            if (m_NativeContext != null)
+            {
+                DestroyNativeContext(cmd, m_NativeContext);
+                m_NativeContext = null;
+            }
+        }
     }
 
     /// <summary>
@@ -132,6 +251,9 @@ namespace UnityEngine.Rendering
         #endregion
 
         #region BACKING_FIELDS
+        // Context
+        private IUpscalerContext m_Context;
+
         // Texture I/O
         private TextureHandle m_CameraColor;
         private TextureHandle m_CameraDepth;
@@ -157,7 +279,6 @@ namespace UnityEngine.Rendering
         private float m_FarClipPlane;
         private float m_FieldOfViewDegrees;
         private int m_NumActiveViews;
-        private int m_EyeIndex;
         private Vector3[] m_WorldSpaceCameraPositions;
         private Vector3[] m_PreviousWorldSpaceCameraPositions;
         private Vector3[] m_PreviousPreviousWorldSpaceCameraPositions;
@@ -383,15 +504,6 @@ namespace UnityEngine.Rendering
         }
 
         /// <summary>
-        /// The index of the current eye being rendered (for XR).
-        /// </summary>
-        public int eyeIndex
-        {
-            get { return m_EyeIndex; }
-            set { m_EyeIndex = value; }
-        }
-
-        /// <summary>
         /// The camera positions in world space for the current frame.
         /// </summary>
         public Vector3[] worldSpaceCameraPositions
@@ -553,10 +665,39 @@ namespace UnityEngine.Rendering
         }
         #endregion
 
+        #region CONTEXT
+        /// <summary>
+        /// The per-camera context for the active upscaler.
+        /// Populated by the pipeline before calling RecordRenderGraph().
+        /// Temporal upscalers read this to access their history buffers.
+        /// Spatial upscalers that don't need context will have this set to null.
+        /// </summary>
+        public IUpscalerContext context
+        {
+            get { return m_Context; }
+            set { m_Context = value; }
+        }
+
+        /// <summary>
+        /// The sub-pixel jitter offset applied to the projection matrix this frame.
+        /// Populated by the pipeline after calling IUpscaler.CalculateJitter().
+        /// Values are typically in the range [-0.5, 0.5].
+        /// Temporal upscalers pass this to their native APIs to inform them of the jitter applied.
+        /// </summary>
+        public Vector2 subpixelJitter
+        {
+            get { return m_SubpixelJitter; }
+            set { m_SubpixelJitter = value; }
+        }
+        private Vector2 m_SubpixelJitter;
+        #endregion
+
 
         /// <inheritdoc cref="ContextItem.Reset()"/>
         public override void Reset()
         {
+            context = null;
+            subpixelJitter = Vector2.zero;
             cameraColor = TextureHandle.nullHandle;
             cameraDepth = TextureHandle.nullHandle;
             motionVectorColor = TextureHandle.nullHandle;
@@ -580,7 +721,6 @@ namespace UnityEngine.Rendering
             farClipPlane = 0f;
             fieldOfViewDegrees = 0f;
             numActiveViews = 0;
-            eyeIndex = 0;
             worldSpaceCameraPositions = Array.Empty<Vector3>();
             previousWorldSpaceCameraPositions = Array.Empty<Vector3>();
             previousPreviousWorldSpaceCameraPositions = Array.Empty<Vector3>();

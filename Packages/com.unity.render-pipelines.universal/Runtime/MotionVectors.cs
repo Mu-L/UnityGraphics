@@ -131,6 +131,7 @@ namespace UnityEngine.Rendering.Universal
         {
             get => m_previousPreviousWorldSpaceCameraPos;
         }
+
         #endregion
 
         public void Reset()

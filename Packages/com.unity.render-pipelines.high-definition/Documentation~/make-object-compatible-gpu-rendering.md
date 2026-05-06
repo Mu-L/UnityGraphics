@@ -6,6 +6,7 @@ To make a GameObject compatible with the [GPU Resident Drawer](gpu-resident-draw
 - In the Mesh Renderer component, **Light Probes** isn't set to **Use Proxy Volume**.
 - Uses only static global illumination, not real time global illumination.
 - Uses a shader that supports DOTS instancing. Refer to [Supporting DOTS Instancing](https://docs.unity3d.com/Manual/dots-instancing-shaders.html) for more information.
+- In the LOD Group component, **Animate Cross-fading** is disabled.
 - Doesn't move position after one camera finishes rendering and before another camera starts rendering.
 - Doesn't use the `MaterialPropertyBlock` API.
 - Doesn't have a script that uses a per-instance callback, for example `OnRenderObject`.

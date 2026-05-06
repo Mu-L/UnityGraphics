@@ -34,10 +34,7 @@ namespace UnityEngine.Rendering
         /// </summary>
         public LensFlareDataSRP lensFlareData
         {
-            get
-            {
-                return m_LensFlareData;
-            }
+            get => m_LensFlareData;
             set
             {
                 m_LensFlareData = value;
@@ -130,7 +127,7 @@ namespace UnityEngine.Rendering
 
         /// Our default celestial body will have an angular radius of 3.3 degrees. This is an arbitrary number, but must be kept constant
         /// so the occlusion radius for direct lights is consistent regardless of near / far clip plane configuration.
-        private static float sCelestialAngularRadius = 3.3f * Mathf.PI / 180.0f;
+        const float sCelestialAngularRadius = 3.3f * Mathf.PI / 180.0f;
 
         /// <summary>
         /// OcclusionRemapCurve allow the occlusion [from 0 to 1] to be remap with any desired shape.
@@ -154,13 +151,13 @@ namespace UnityEngine.Rendering
             return occlusionRadius * projectedRadius;
         }
 
+#if UNITY_EDITOR
         void Awake()
         {
-#if UNITY_EDITOR
             if (!lensFlareData)
                 lensFlareData = AssetDatabase.LoadAssetAtPath<LensFlareDataSRP>("Packages/com.unity.render-pipelines.core/Runtime/RenderPipelineResources/Default Lens Flare (SRP).asset");
-#endif
         }
+#endif
 
         /// <summary>
         /// Add or remove the lens flare to the queue of PostProcess
@@ -202,7 +199,7 @@ namespace UnityEngine.Rendering
         }
 
 #if UNITY_EDITOR
-        private float sDebugClippingSafePercentage = 0.9f; //for debug gizmo, only push 90% further so we avoid clipping of debug lines.
+        private const float k_DebugClippingSafePercentage = 0.9f; //for debug gizmo, only push 90% further so we avoid clipping of debug lines.
         void OnDrawGizmosSelected()
         {
             Camera mainCam = Camera.current;
@@ -213,7 +210,7 @@ namespace UnityEngine.Rendering
                 Light light = GetComponent<Light>();
                 if (light != null && light.type == LightType.Directional)
                 {
-                    positionWS = -transform.forward * (mainCam.farClipPlane * sDebugClippingSafePercentage) + mainCam.transform.position;
+                    positionWS = -transform.forward * (mainCam.farClipPlane * k_DebugClippingSafePercentage) + mainCam.transform.position;
                     adjustedOcclusionRadius = celestialProjectedOcclusionRadius(mainCam);
                 }
                 else

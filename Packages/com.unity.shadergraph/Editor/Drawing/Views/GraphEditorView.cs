@@ -1,8 +1,8 @@
 using System;
 using System.Collections.Generic;
-using System.IO;
 using System.Linq;
 using UnityEngine;
+using UnityEditor;
 using UnityEditor.Graphing;
 using UnityEditor.Graphing.Util;
 using UnityEditor.ShaderGraph.Drawing.Inspector;
@@ -523,6 +523,8 @@ namespace UnityEditor.ShaderGraph.Drawing
             m_MasterPreviewView.onResized += UpdateSerializedWindowLayout;
         }
 
+        const string kSelectionKey = "Unity.ShaderGraphHistory";
+
         void CreateInspector()
         {
             var inspectorViewModel = new InspectorViewModel() { parentView = this.graphView };
@@ -530,6 +532,111 @@ namespace UnityEditor.ShaderGraph.Drawing
             graphView.OnSelectionChange += m_InspectorView.TriggerInspectorUpdate;
             // Undo/redo actions that only affect selection don't trigger the above callback for some reason, so we also have to do this
             Undo.undoRedoPerformed += (() => { m_InspectorView?.TriggerInspectorUpdate(graphView?.selection); });
+
+            graphView.OnSelectionChange += RecordSelectionHistory;
+            Selection.RegisterCustomHandler(kSelectionKey, CustomSelectionHandler, CustomValidator);
+        }
+
+        static bool CustomValidator(string data, EditorWindow sourceWindow)
+        {
+            if (sourceWindow == null || sourceWindow is not MaterialGraphEditWindow graphWindow) return false;
+
+            var graphView = graphWindow.graphEditorView?.m_GraphView;
+            if (graphView == null) return false;
+
+            var info = GraphSelection.FromJson(data);
+            if (info == null) return false;
+
+            foreach (var id in info.elements)
+            {
+                if (graphView.GetElementByGuid(id) != null) return true;
+            }
+
+            return false;
+        }
+
+        bool m_ApplyingCustomSelection;
+        static void CustomSelectionHandler(string data, EntityId[] _)
+        {
+            var info = GraphSelection.FromJson(data);
+            if (info == null) return;
+
+            var window = EditorWindow.focusedWindow as MaterialGraphEditWindow;
+            var graphEditorView = window?.graphEditorView;
+            var graphView = graphEditorView?.m_GraphView;
+            if (graphView == null) return;
+
+            var blackboard = window.graphEditorView.blackboardController?.blackboard;
+            var fields = ListPool<SGBlackboardField>.Get();
+            foreach (var id in info.elements)
+            {
+                var e = graphView.GetElementByGuid(id);
+                if (e is SGBlackboardField field)
+                {
+                    blackboard?.ScrollToItem(field);
+                    fields.Add(field);
+                }
+            }
+
+            if (fields.Count > 0)
+            {
+                EditorApplication.delayCall += () =>
+                {
+                    try
+                    {
+                        graphEditorView.m_ApplyingCustomSelection = true;
+                        // info.ApplyToGraphView may have added this element to selection, before our delayCall executes, avoid duplication
+                        foreach(var e in fields)
+                        {
+                            if (e != null && !graphView.selection.Contains(e)) graphView.AddToSelectionNoUndoRecord(e);
+                        }
+
+                        ListPool<SGBlackboardField>.Release(fields);
+                    }
+                    finally
+                    {
+                        graphEditorView.m_ApplyingCustomSelection = false;
+                    }
+                };
+            }
+            else
+            {
+                ListPool<SGBlackboardField>.Release(fields);
+            }
+
+            try
+            {
+                graphEditorView.m_ApplyingCustomSelection = true;
+                info.ApplyToGraphView(graphView, null);
+                window.graphEditorView.m_InspectorView.TriggerInspectorUpdate(graphView.selection);
+            }
+            finally
+            {
+                graphEditorView.m_ApplyingCustomSelection = false;
+            }
+        }
+
+        void RecordSelectionHistory(IEnumerable<ISelectable> selectionList)
+        {
+            if (m_ApplyingCustomSelection || m_GraphView == null || m_GraphView.graph == null)
+                return;
+            var info = new GraphSelection();
+            foreach (var sel in selectionList)
+            {
+                if (sel is not GraphElement e)
+                    continue;
+                // In some cases (e.g. window is being hidden), elements are removed from selection,
+                // but selection changed callback is invoked with the old selection set. The elements
+                // themselves are un-selected already though. Skip over those.
+                if (!e.selected)
+                    continue;
+                info.elements.Add(e.viewDataKey);
+            }
+
+            if (info.isEmpty)
+                return;
+
+            Selection.SetCustomSelection(kSelectionKey, EditorJsonUtility.ToJson(info));
         }
 
         // a nice curve that scales well for various HID (touchpad and mice).

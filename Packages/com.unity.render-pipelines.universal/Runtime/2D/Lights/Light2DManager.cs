@@ -6,7 +6,16 @@ namespace UnityEngine.Rendering.Universal
     {
         private static SortingLayer[] s_SortingLayers;
 
-        public static List<Light2D> lights { get; } = new List<Light2D>();
+        internal static List<Light2D> lights { get; } = new List<Light2D>();
+
+#if UNITY_EDITOR
+        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+        static void ResetStaticsOnLoad()
+        {
+            s_SortingLayers = null;
+            lights.Clear();
+        }
+#endif
 
         internal static void Initialize()
         {

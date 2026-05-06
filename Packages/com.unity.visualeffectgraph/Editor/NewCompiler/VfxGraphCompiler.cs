@@ -1,6 +1,4 @@
-using System.Collections.Generic;
 using Unity.GraphCommon.LowLevel.Editor;
-using UnityEngine;
 using UnityEngine.VFX;
 
 namespace UnityEditor.VFX
@@ -25,7 +23,7 @@ namespace UnityEditor.VFX
             m_GraphCompiler = new(new VfxGraphLegacyOutputPass(),
                 new AttributeLayoutPass(),
                 new VfxGraphLegacyParticleSystemPass(),
-                new StructuredDataLayoutPass(),
+                new DataLayoutPass(),
                 new TemplateCodeGenerationPass(m_DataWriter));
         }
 
@@ -37,7 +35,7 @@ namespace UnityEditor.VFX
                 return new() { success = false };
             }
 
-            var intermediateGraph = m_GraphBuilder.BuildGraph(graph);
+            var intermediateGraph = m_GraphBuilder.BuildGraph(graph, compilationMode);
 
             // TODO: setup compilation mode and shader debug symbols
             var compilationResult = m_GraphCompiler.Compile(intermediateGraph);

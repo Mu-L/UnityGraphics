@@ -153,7 +153,7 @@ namespace UnityEngine.Rendering.Universal
         [SerializeField]
         bool m_AccurateGbufferNormals = false;
 
-        [SerializeField] IntermediateTextureMode m_IntermediateTextureMode = IntermediateTextureMode.Always;
+        [SerializeField] IntermediateTextureMode m_IntermediateTextureMode = IntermediateTextureMode.Auto;
         [SerializeField] bool m_TileOnlyMode = false;
 
         /// <inheritdoc/>

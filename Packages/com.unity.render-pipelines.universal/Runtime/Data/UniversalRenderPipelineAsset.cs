@@ -981,7 +981,7 @@ namespace UnityEngine.Rendering.Universal
         }
 
 #endif
-        private static GraphicsFormat[][] s_LightCookieFormatList = new GraphicsFormat[][]
+        private static readonly GraphicsFormat[][] k_LightCookieFormatList = new GraphicsFormat[][]
         {
             /* Grayscale Low */ new GraphicsFormat[] {GraphicsFormat.R8_UNorm},
             /* Grayscale High*/ new GraphicsFormat[] {GraphicsFormat.R16_UNorm},
@@ -995,7 +995,7 @@ namespace UnityEngine.Rendering.Universal
             get
             {
                 GraphicsFormat result = GraphicsFormat.None;
-                foreach (var format in s_LightCookieFormatList[(int)m_AdditionalLightsCookieFormat])
+                foreach (var format in k_LightCookieFormatList[(int)m_AdditionalLightsCookieFormat])
                 {
                     if (SystemInfo.IsFormatSupported(format, GraphicsFormatUsage.Render))
                     {

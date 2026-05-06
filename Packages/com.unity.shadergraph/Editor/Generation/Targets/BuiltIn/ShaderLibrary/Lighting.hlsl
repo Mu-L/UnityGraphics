@@ -202,6 +202,7 @@ int GetPerObjectLightIndex(uint index)
 {
 
 #ifndef BUILTIN_TARGET_API
+#if USE_STRUCTURED_BUFFER_FOR_LIGHT_DATA
 /////////////////////////////////////////////////////////////////////////////////////////////
 // Structured Buffer Path                                                                   /
 //                                                                                          /
@@ -209,27 +210,20 @@ int GetPerObjectLightIndex(uint index)
 // Currently all non-mobile platforms take this path :(                                     /
 // There are limitation in mobile GPUs to use SSBO (performance / no vertex shader support) /
 /////////////////////////////////////////////////////////////////////////////////////////////
-#if USE_STRUCTURED_BUFFER_FOR_LIGHT_DATA
-    uint offset = unity_LightData.x;
+    uint offset = uint(unity_LightData.x);
     return _AdditionalLightsIndices[offset + index];
-
+#else
 /////////////////////////////////////////////////////////////////////////////////////////////
 // UBO path                                                                                 /
 //                                                                                          /
-// We store 8 light indices in float4 unity_LightIndices[2];                                /
-// Due to memory alignment unity doesn't support int[] or float[]                           /
-// Even trying to reinterpret cast the unity_LightIndices to float[] won't work             /
-// it will cast to float4[] and create extra register pressure. :(                          /
+// We pack 8 x 16bit uint light indices into float4 unity_packedLightIndices;               /
+// light index 0 is packed into lower 16 bits of unity_packedLightIndices.x,                /
+// light index 1 is packed into high 16 bits of unity_packedLightIndices.x and so on        /
 /////////////////////////////////////////////////////////////////////////////////////////////
-#else
-    // since index is uint shader compiler will implement
-    // div & mod as bitfield ops (shift and mask).
-
-    // TODO: Can we index a float4? Currently compiler is
-    // replacing unity_LightIndicesX[i] with a dp4 with identity matrix.
-    // u_xlat16_40 = dot(unity_LightIndices[int(u_xlatu13)], ImmCB_0_0_0[u_xlati1]);
-    // This increases both arithmetic and register pressure.
-    return unity_LightIndices[index / 4][index % 4];
+    uint4 packed4 = asuint(unity_PackedLightIndices);
+    uint2 pair = index >= 4 ? packed4.zw : packed4.xy;
+    uint word = (index & 2) ? pair.y : pair.x;
+    return (word >> ((index & 1) << 4)) & 0xFFFF;
 #endif
 #else
     return 0;

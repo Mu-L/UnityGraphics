@@ -17,8 +17,8 @@ void main(ThreadData threadData)
         return;
     }
 
-    uint systemSeed = asuint(ContextData.y);
-    uint initSpawnIndex = asuint(ContextData.z);
+    uint systemSeed = ContextData.systemSeed;
+    uint initSpawnIndex = ContextData.initSpawnIndex;
 
     particleAttributes.particleId = initSpawnIndex + threadData.index;
     particleAttributes.seed = WangHash(particleAttributes.particleId ^ systemSeed);

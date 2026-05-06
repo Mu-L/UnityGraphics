@@ -5,6 +5,7 @@ using System.Linq;
 using UnityEngine.Experimental.Rendering;
 using UnityEngine.Rendering.RenderGraphModule;
 using Unity.Collections;
+using Unity.Scripting.LifecycleManagement;
 
 namespace UnityEngine.Rendering.HighDefinition
 {
@@ -1945,8 +1946,8 @@ namespace UnityEngine.Rendering.HighDefinition
             && m_AdditionalCameraData.doesSceneViewOverrideExposure;
 
         internal float sceneViewExposureOverride
-            => m_AdditionalCameraData == null 
-            ? 10f 
+            => m_AdditionalCameraData == null
+            ? 10f
             : m_AdditionalCameraData.sceneViewOverrideExposureValue;
 #endif
 
@@ -1955,9 +1956,10 @@ namespace UnityEngine.Rendering.HighDefinition
 
         #region Private API
 
+        // s_Cameras and s_Cleanup are cleared when pipeline is disposed by calling HDCamera.ClearAll()
+        [NoAutoStaticsCleanup] static readonly Dictionary<(Camera, int, HistoryChannel), HDCamera> s_Cameras = new Dictionary<(Camera, int, HistoryChannel), HDCamera>();
+        [NoAutoStaticsCleanup] static readonly List<(Camera, int, HistoryChannel)> s_Cleanup = new List<(Camera, int, HistoryChannel)>(); // Recycled to reduce GC pressure
 
-        static Dictionary<(Camera, int, HistoryChannel), HDCamera> s_Cameras = new Dictionary<(Camera, int, HistoryChannel), HDCamera>();
-        static List<(Camera, int, HistoryChannel)> s_Cleanup = new List<(Camera, int, HistoryChannel)>(); // Recycled to reduce GC pressure
         HDAdditionalCameraData m_AdditionalCameraData = null; // Init in Update
         BufferedRTHandleSystem m_HistoryRTSystem = new BufferedRTHandleSystem();
         int m_HistoryViewCount = 0; // Used to track view count change if XR is enabled/disabled
@@ -2379,7 +2381,11 @@ namespace UnityEngine.Rendering.HighDefinition
                 Debug.Assert(HDRenderPipeline.currentPipeline != null);
                 IUpscaler upscaler = HDRenderPipeline.currentPipeline.upscaling.activeUpscaler;
                 Debug.Assert(upscaler != null); // If we're in this condition, upscaler should be non-null.
-                upscaler.CalculateJitter(taaFrameIndex, out Vector2 jitter, out bool allowScaling);
+
+                // Compute upscale ratio for upscalers that need resolution-dependent jitter (DLSS, FSR2)
+                float upscaleRatio = finalViewport.width / actualWidth;
+                upscaler.CalculateJitter(taaFrameIndex, upscaleRatio, out Vector2 jitter, out bool allowScaling);
+
                 // TODO (Apoorva): Re-examine if this negative sign is needed. It's currently there because URP and HDRP
                 // seem to be different in this regard. In URP, the jitter offset is -STP.Jit16(), while in HDRP, it
                 // seems to be STP.Jit16(). Maybe the usage of the jitter vector cancels this sign out, making the math

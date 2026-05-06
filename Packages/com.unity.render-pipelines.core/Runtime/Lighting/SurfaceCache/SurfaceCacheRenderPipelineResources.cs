@@ -29,6 +29,9 @@ namespace UnityEngine.Rendering
         [ResourcePath("Runtime/Lighting/SurfaceCache/Eviction.compute")]
         public ComputeShader m_EvictionShader;
 
+        [ResourcePath("Runtime/Lighting/SurfaceCache/PatchAllocation.compute")]
+        public ComputeShader m_PatchAllocationShader;
+
         [ResourcePath("Runtime/Lighting/SurfaceCache/PunctualLightSampling.urtshader")]
         public ComputeShader m_PunctualLightSamplingComputeShader;
 
@@ -93,6 +96,12 @@ namespace UnityEngine.Rendering
         {
             get => m_EvictionShader;
             set => this.SetValueAndNotify(ref m_EvictionShader, value, nameof(m_EvictionShader));
+        }
+
+        public ComputeShader patchAllocationShader
+        {
+            get => m_PatchAllocationShader;
+            set => this.SetValueAndNotify(ref m_PatchAllocationShader, value, nameof(m_PatchAllocationShader));
         }
     }
 }

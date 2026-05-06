@@ -95,7 +95,6 @@ class Renderer2DTests
 
         Renderer2D baseRenderer = m_BaseCameraData.scriptableRenderer as Renderer2D;
         Renderer2D overlayRenderer = m_OverlayCameraData.scriptableRenderer as Renderer2D;
-        Assert.AreEqual(baseRenderer.m_RenderGraphCameraColorHandles, overlayRenderer.m_RenderGraphCameraColorHandles);
         Assert.AreEqual(baseRenderer.m_RenderGraphCameraDepthHandle, overlayRenderer.m_RenderGraphCameraDepthHandle);
     }
 

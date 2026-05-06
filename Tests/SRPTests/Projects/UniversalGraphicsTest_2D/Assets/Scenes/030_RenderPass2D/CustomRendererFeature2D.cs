@@ -14,6 +14,8 @@ namespace UnityEngine.Rendering.Universal
                 renderPassEvent2D = injectionPoint2D,
                 renderPassSortingLayerID = sortingLayerID
             };
+
+            m_CustomRenderPass2D.ConfigureInput(ScriptableRenderPassInput.Color);
         }
 
         public override void AddRenderPasses(ScriptableRenderer renderer, ref RenderingData renderingData)

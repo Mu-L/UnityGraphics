@@ -623,5 +623,10 @@ namespace UnityEditor.ShaderGraph.Drawing
             m_ScrollBoundaryTop = null;
             m_PathLabelTextField = null;
         }
+
+        internal void ScrollToItem(VisualElement ve)
+        {
+            m_ScrollView.ScrollTo(ve);
+        }
     }
 }

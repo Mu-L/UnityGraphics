@@ -13,6 +13,14 @@ using System.Diagnostics;
 /// </remarks>
 public class HDDynamicResolution : MonoBehaviour
 {
+#if UNITY_EDITOR
+    [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterAssembliesLoaded)]
+    static void ResetStaticsOnLoad()
+    {
+        ResetScale();
+    }
+#endif
+
     /// <summary>
     /// Target frame rate for dynamic resolution. If Application.targetFrameRate is already set, Application.targetFrameRate overrides this parameter.
     /// </summary>

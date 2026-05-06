@@ -2,11 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using UnityEditor.Callbacks;
-#if UNITY_2020_2_OR_NEWER
 using UnityEditor.AssetImporters;
-#else
-using UnityEditor.Experimental.AssetImporters;
-#endif
 using UnityEditor.ShaderGraph.Drawing;
 using UnityEngine;
 using UnityEditor.Graphing;
@@ -18,16 +14,16 @@ namespace UnityEditor.ShaderGraph
     [CustomEditor(typeof(ShaderGraphImporter))]
     class ShaderGraphImporterEditor : ScriptedImporterEditor
     {
-        protected override bool needsApplyRevert => false;
         MaterialEditor materialEditor = null;
-        bool needsSaveMetaFile = false;
-        bool needsReimport = false;
 
         public override void OnInspectorGUI()
         {
-            var hasFocus = EditorWindow.focusedWindow is InspectorWindow;
+            var useAsTemplateProp = serializedObject.FindProperty(ShaderGraphImporter.UseAsTemplateFieldName);
+            var exposeTemplateAsShaderProp = serializedObject.FindProperty(ShaderGraphImporter.ExposeTemplateAsShaderFieldName);
+            var templateProp = serializedObject.FindProperty(ShaderGraphImporter.TemplateFieldName);
 
             serializedObject.Update();
+
             GraphData GetGraphData(AssetImporter importer)
             {
                 var textGraph = File.ReadAllText(importer.assetPath, Encoding.UTF8);
@@ -142,21 +138,16 @@ namespace UnityEditor.ShaderGraph
 
             EditorGUI.BeginDisabled(EditorApplication.isPlaying);
             EditorGUILayout.Space();
-            EditorGUI.BeginChangeCheck();
-            EditorGUILayout.PropertyField(serializedObject.FindProperty(ShaderGraphImporter.UseAsTemplateFieldName));
-            needsSaveMetaFile |= EditorGUI.EndChangeCheck();
+            EditorGUILayout.PropertyField(useAsTemplateProp);
             using (new EditorGUI.IndentLevelScope(1))
-            using (new EditorGUI.DisabledScope(!(target as ShaderGraphImporter)?.UseAsTemplate ?? true))
+            using (new EditorGUI.DisabledScope(!useAsTemplateProp.boolValue))
             {
-                EditorGUI.BeginChangeCheck();
-                EditorGUILayout.PropertyField(serializedObject.FindProperty(ShaderGraphImporter.ExposeTemplateAsShaderFieldName), new GUIContent("Expose as Shader", "Toggle whether or not the template shader should be exposed in shader dropdowns."));
-                needsReimport |= EditorGUI.EndChangeCheck();
-
-                EditorGUI.BeginChangeCheck();
-                EditorGUILayout.PropertyField(serializedObject.FindProperty(ShaderGraphImporter.TemplateFieldName));
-                needsSaveMetaFile |= EditorGUI.EndChangeCheck();
+                EditorGUILayout.PropertyField(exposeTemplateAsShaderProp, new GUIContent("Expose as Shader", "Toggle whether or not the template shader should be exposed in shader dropdowns."));
+                EditorGUILayout.PropertyField(templateProp);
             }
             EditorGUI.EndDisabled();
+
+            ApplyRevertGUI();
 
             if (materialEditor)
             {
@@ -164,12 +155,6 @@ namespace UnityEditor.ShaderGraph
                 materialEditor.DrawHeader();
                 using (new EditorGUI.DisabledGroupScope(true))
                     materialEditor.OnInspectorGUI();
-            }
-
-            serializedObject.ApplyModifiedProperties();
-            if (!hasFocus && !ObjectSelector.isVisible)
-            {
-                ApplyChanges();
             }
         }
 
@@ -185,8 +170,7 @@ namespace UnityEditor.ShaderGraph
         public override void OnDisable()
         {
             base.OnDisable();
-            // Also apply changes when the inspector is closed to ensure that any changes to the template settings are not lost.
-            ApplyChanges();
+
             if (materialEditor != null)
                 DestroyImmediate(materialEditor);
         }
@@ -226,24 +210,6 @@ namespace UnityEditor.ShaderGraph
         {
             var path = AssetDatabase.GetAssetPath(entityId);
             return ShowGraphEditWindow(path);
-        }
-
-        void ApplyChanges()
-        {
-            var importer = (AssetImporter)target;
-
-            if (needsReimport || needsSaveMetaFile)
-            {
-                if (needsSaveMetaFile)
-                {
-                    needsSaveMetaFile = false;
-                    AssetDatabase.ForceReserializeAssets(new []{ importer.assetPath }, ForceReserializeAssetsOptions.ReserializeMetadata);
-                }
-
-                needsReimport = false;
-                AssetDatabase.ImportAsset(importer.assetPath);
-
-            }
         }
     }
 }

@@ -7,6 +7,7 @@
 #include "Packages/com.unity.render-pipelines.core/Runtime/PathTracing/MaterialPool/MaterialPool.hlsl"
 #include "Common.hlsl"
 #include "PatchUtil.hlsl"
+#include "PatchAllocationRequest.hlsl"
 #include "PunctualLights.hlsl"
 
 struct SurfaceGeometry
@@ -268,7 +269,7 @@ float3 OutgoingDirectionalBounceAndMultiBounceRadiance(
     return radiance;
 }
 
-float3 IncomingEnviromentAndDirectionalBounceAndMultiBounceRadiance(
+float3 IncomingEnvironmentAndDirectionalBounceAndMultiBounceRadiance(
     UnifiedRT::DispatchInfo dispatchInfo,
     UnifiedRT::RayTracingAccelStruct accelStruct,
     UnifiedRT::Ray ray,
@@ -277,11 +278,13 @@ float3 IncomingEnviromentAndDirectionalBounceAndMultiBounceRadiance(
     float3 dirLightIntensity,
     bool multiBounce,
     TextureCube<float3> envTex,
+    float envIntensityMultiplier,
     SamplerState envSampler,
     PatchIrradianceBufferType patchIrradiances,
-    PatchGeometryBufferType patchGeometries,
     RWStructuredBuffer<PatchUtil::PatchStatisticsSet> patchStatistics,
-    PatchUtil::PatchAllocationParamSet allocParams,
+    RWStructuredBuffer<PatchAllocationRequest> allocationRequests,
+    RWStructuredBuffer<uint> allocationRequestCount,
+    CellPatchIndexBufferType cellPatchIndices,
     PatchUtil::VolumeParamSet volumeParams,
     bool enablePatchAllocation,
     uint frameIndex)
@@ -312,26 +315,25 @@ float3 IncomingEnviromentAndDirectionalBounceAndMultiBounceRadiance(
                 dirLightIntensity,
                 multiBounce,
                 patchIrradiances,
-                allocParams.cellPatchIndices,
+                cellPatchIndices,
                 volumeParams,
                 hitAlbedo,
                 hitEmission,
                 bouncePatchIndex);
 
-            #if BOUNCE_PATCH_ALLOCATION
             if (enablePatchAllocation)
             {
                 if (bouncePatchIndex == PatchUtil::invalidPatchIndex)
                 {
-                    PatchUtil::AllocatePatch(
-                           hitGeo.position,
-                           hitGeo.normal,
-                           patchIrradiances,
-                           patchGeometries,
-                           patchStatistics,
-                           allocParams,
-                           volumeParams,
-                           frameIndex);
+                    uint requestIdx;
+                    InterlockedAdd(allocationRequestCount[0], 1, requestIdx);
+                    if (requestIdx < PatchAllocationRequestMax)
+                    {
+                        PatchAllocationRequest req;
+                        req.position = hitGeo.position;
+                        req.normal = hitGeo.normal;
+                        allocationRequests[requestIdx] = req;
+                    }
                 }
                 else
                 {
@@ -343,12 +345,11 @@ float3 IncomingEnviromentAndDirectionalBounceAndMultiBounceRadiance(
                     }
                 }
             }
-            #endif
         }
     }
     else
     {
-        radiance = envTex.SampleLevel(envSampler, ray.direction, 0);
+        radiance = envIntensityMultiplier * envTex.SampleLevel(envSampler, ray.direction, 0);
     }
     return radiance;
 }

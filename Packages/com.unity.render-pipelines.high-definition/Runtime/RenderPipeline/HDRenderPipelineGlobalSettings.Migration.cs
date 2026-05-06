@@ -1,6 +1,7 @@
 using System;
 using System.Linq;
 using Unity.RenderPipelines.Core.Runtime.Shared;
+using Unity.Scripting.LifecycleManagement;
 
 #if UNITY_EDITOR
 using UnityEditor.Rendering;
@@ -39,7 +40,7 @@ namespace UnityEngine.Rendering.HighDefinition
             RenderingLayerMask,
         }
 
-        static Version[] skipedStepWhenCreatedFromHDRPAsset = new Version[] { };
+        [NoAutoStaticsCleanup] static readonly Version[] skipedStepWhenCreatedFromHDRPAsset = new Version[] { };
 
         [SerializeField]
         internal Version m_Version = MigrationDescription.LastVersion<Version>();

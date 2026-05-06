@@ -246,7 +246,9 @@ namespace UnityEngine.Rendering
                 }
 
                 // Add special classes for styles
-                container.AddToClassList("debug-window-foldout");
+                // Use header style for top-level foldouts (not inside a Container), regular style for nested ones
+                bool isHeaderFoldout = parent is DebugUI.Panel;
+                container.AddToClassList(isHeaderFoldout ? "debug-window-foldout-header" : "debug-window-foldout");
                 container.Q(className: "unity-foldout__text").AddToClassList("debug-window-search-filter-target");
 
                 // Update UI to match object's initial state

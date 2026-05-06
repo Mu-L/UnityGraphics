@@ -172,9 +172,6 @@ namespace UnityEngine.Rendering.HighDefinition
             set => m_VolumeProfile = value;
         }
 
-        static string[] s_Names;
-        static int[] s_Values;
-
         /// <summary>Names used for display of rendering layer masks.</summary>
         [Obsolete("This property is obsolete. Use RenderingLayerMask API and Tags & Layers project settings instead. #from(2023.3)")]
         public override string[] renderingLayerMaskNames => UnityEngine.RenderingLayerMask.GetDefinedRenderingLayerNames();

@@ -16,7 +16,7 @@ namespace UnityEngine.Rendering
         static readonly int _RectOffset = Shader.PropertyToID("_RectOffset");
         static readonly int _Result1 = Shader.PropertyToID("_Result1");
         static readonly int _Source4 = Shader.PropertyToID("_Source4");
-        static int[] _IntParams = new int[2];
+        static readonly int[] _IntParams = new int[2];
 
         void SampleCopyChannel(
             CommandBuffer cmd,

@@ -73,6 +73,20 @@ public class FSR2Options : UpscalerOptions
         set { m_Sharpness = value; }
     }
     #endregion
+
+    /// <summary>
+    /// Shallow copies values from another FSR2Options instance into this one.
+    /// </summary>
+    public void CopyFrom(FSR2Options other)
+    {
+        if (other == null)
+            return;
+
+        m_FSR2QualityMode = other.m_FSR2QualityMode;
+        m_FixedResolutionMode = other.m_FixedResolutionMode;
+        m_EnableSharpening = other.m_EnableSharpening;
+        m_Sharpness = other.m_Sharpness;
+    }
 }
 
 #endif // ENABLE_UPSCALER_FRAMEWORK && ENABLE_AMD && ENABLE_AMD_MODULE

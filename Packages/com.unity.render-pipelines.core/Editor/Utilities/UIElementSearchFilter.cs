@@ -11,7 +11,7 @@ namespace UnityEditor.Rendering
     {
         internal const string k_SelectionColorBeginTag = "<mark=#3169ACAB>";
         internal const string k_SelectionColorEndTag = "</mark>";
-        const int k_SearchStringLimit = 15;
+        const int k_SearchStringLimit = 32;
 
         IVisualElementScheduledItem m_PreviousSearch;
         string m_PendingSearchString;
@@ -28,6 +28,7 @@ namespace UnityEditor.Rendering
         {
             var searchField = m_RootElement.Q<ToolbarSearchField>(searchFieldName);
             searchField.placeholderText = L10n.Tr("Search");
+            searchField.Q<TextField>().maxLength = k_SearchStringLimit;
             searchField.RegisterValueChangedCallback(evt => OnSearchFilterChanged(evt.newValue));
 
             // Apply empty search once in case the entire window was reloaded with a non-empty search. Search
@@ -37,13 +38,6 @@ namespace UnityEditor.Rendering
 
         void OnSearchFilterChanged(string searchString)
         {
-            // Ensure the search string is within the allowed length limit
-            if (searchString.Length > k_SearchStringLimit)
-            {
-                searchString = searchString[..k_SearchStringLimit];
-                Debug.LogWarning($"Search string limit exceeded: {k_SearchStringLimit}");
-            }
-
             // Sanitize to not match rich text tags
             searchString = searchString.Replace("<", string.Empty).Replace(">", string.Empty);
 

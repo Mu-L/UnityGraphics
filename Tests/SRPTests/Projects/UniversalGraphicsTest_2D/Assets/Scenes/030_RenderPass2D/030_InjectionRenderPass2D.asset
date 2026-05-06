@@ -1,5 +1,50 @@
 %YAML 1.1
 %TAG !u! tag:unity3d.com,2011:
+--- !u!114 &-3911986160458590877
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: ca7c3d2ecbc6d7b4c917e1e525696db0, type: 3}
+  m_Name: AfterShadowsRendererFeature2D
+  m_EditorClassIdentifier: Universal2DGraphicsTests::UnityEngine.Rendering.Universal.CustomRendererFeature2D
+  m_Active: 1
+  injectionPoint2D: 400
+  sortingLayerID: 0
+--- !u!114 &-1673627150717267422
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: ca7c3d2ecbc6d7b4c917e1e525696db0, type: 3}
+  m_Name: BeforeNormalsRendererFeature2D
+  m_EditorClassIdentifier: Universal2DGraphicsTests::UnityEngine.Rendering.Universal.CustomRendererFeature2D
+  m_Active: 1
+  injectionPoint2D: 100
+  sortingLayerID: -538112021
+--- !u!114 &-675228469949227643
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: ca7c3d2ecbc6d7b4c917e1e525696db0, type: 3}
+  m_Name: BeforeLightsRendererFeature2D
+  m_EditorClassIdentifier: Universal2DGraphicsTests::UnityEngine.Rendering.Universal.CustomRendererFeature2D
+  m_Active: 1
+  injectionPoint2D: 500
+  sortingLayerID: 116359401
 --- !u!114 &11400000
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -13,11 +58,9 @@ MonoBehaviour:
   m_Name: 030_InjectionRenderPass2D
   m_EditorClassIdentifier: Unity.RenderPipelines.Universal.2D.Runtime::UnityEngine.Rendering.Universal.Renderer2DData
   debugShaders:
-    debugReplacementPS: {fileID: 4800000, guid: cf852408f2e174538bcd9b7fda1c5ae7,
-      type: 3}
+    debugReplacementPS: {fileID: 4800000, guid: cf852408f2e174538bcd9b7fda1c5ae7, type: 3}
     hdrDebugViewPS: {fileID: 4800000, guid: 573620ae32aec764abd4d728906d2587, type: 3}
-    probeVolumeSamplingDebugComputeShader: {fileID: 7200000, guid: 53626a513ea68ce47b59dc1299fe3959,
-      type: 3}
+    probeVolumeSamplingDebugComputeShader: {fileID: 7200000, guid: 53626a513ea68ce47b59dc1299fe3959, type: 3}
   probeVolumeResources:
     probeVolumeDebugShader: {fileID: 0}
     probeVolumeFragmentationDebugShader: {fileID: 0}
@@ -26,8 +69,11 @@ MonoBehaviour:
     probeSamplingDebugMesh: {fileID: 0}
     probeSamplingDebugTexture: {fileID: 0}
     probeVolumeBlendStatesCS: {fileID: 0}
-  m_RendererFeatures: []
-  m_RendererFeatureMap: 
+  m_RendererFeatures:
+  - {fileID: -1673627150717267422}
+  - {fileID: -3911986160458590877}
+  - {fileID: -675228469949227643}
+  m_RendererFeatureMap: 22520c43f914c6e863159f4b50d5b5c9851d72ba481ba1f6
   m_LayerMask:
     serializedVersion: 2
     m_Bits: 4294967295
@@ -56,5 +102,4 @@ MonoBehaviour:
   m_MaxShadowRenderTextureCount: 1
   m_PostProcessData: {fileID: 11400000, guid: 41439944d30ece34e96484bdb6645b55, type: 2}
   m_DefaultMaterialType: 0
-  m_DefaultCustomMaterial: {fileID: 2100000, guid: a97c105638bdf8b4a8650670310a4cd3,
-    type: 2}
+  m_DefaultCustomMaterial: {fileID: 2100000, guid: a97c105638bdf8b4a8650670310a4cd3, type: 2}

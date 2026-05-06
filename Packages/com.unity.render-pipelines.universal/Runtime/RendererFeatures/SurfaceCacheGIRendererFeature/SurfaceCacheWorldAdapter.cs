@@ -54,7 +54,9 @@ namespace UnityEngine.Rendering.Universal
             _entityIDToWorldMaterialDescriptors.Add(fallbackMaterial.GetEntityId(), _fallbackMaterialDescriptor);
         }
 
-        internal void Update(SceneUpdatesTracker sceneTracker, AmbientMode ambientMode, Material skyboxMaterial, Color ambientSkycolor, SurfaceCacheWorld world)
+        internal void Update(SceneUpdatesTracker sceneTracker, AmbientMode ambientMode, Material skyboxMaterial,
+            Color ambientSkycolor, Color ambientEquatorColor, Color ambientGroundColor, float envIntensityMultiplier,
+            SurfaceCacheWorld world)
         {
             const bool filterBakedLights = true;
             var changes = sceneTracker.GetChanges(filterBakedLights);
@@ -79,20 +81,31 @@ namespace UnityEngine.Rendering.Universal
             const bool multiplyPunctualLightIntensityByPI = false;
             UpdateLights(world, changes.addedLights, changes.removedLights, changes.changedLights, multiplyPunctualLightIntensityByPI);
 
-            if (ambientMode == AmbientMode.Skybox)
+            switch (ambientMode)
             {
-                world.SetEnvironmentMode(CubemapRender.Mode.Material);
-                world.SetEnvironmentMaterial(skyboxMaterial);
-            }
-            else if (ambientMode == AmbientMode.Flat)
-            {
-                world.SetEnvironmentMode(CubemapRender.Mode.Color);
-                world.SetEnvironmentColor(ambientSkycolor);
-            }
-            else
-            {
-                world.SetEnvironmentMode(CubemapRender.Mode.Color);
-                world.SetEnvironmentColor(Color.black);
+                case AmbientMode.Skybox:
+                    world.SetEnvironmentMode(CubemapRender.Mode.Material);
+                    world.SetEnvironmentMaterial(skyboxMaterial);
+                    world.SetEnvironmentIntensityMultiplier(envIntensityMultiplier);
+                    break;
+
+                case AmbientMode.Flat:
+                    world.SetEnvironmentMode(CubemapRender.Mode.Color);
+                    world.SetEnvironmentColor(ambientSkycolor);
+                    world.SetEnvironmentIntensityMultiplier(1.0f);
+                    break;
+
+                case AmbientMode.Trilight:
+                    world.SetEnvironmentMode(CubemapRender.Mode.Color);
+                    world.SetEnvironmentGradientColors(ambientSkycolor, ambientEquatorColor, ambientGroundColor);
+                    world.SetEnvironmentIntensityMultiplier(1.0f);
+                    break;
+
+                default:
+                    world.SetEnvironmentMode(CubemapRender.Mode.Color);
+                    world.SetEnvironmentColor(Color.black);
+                    world.SetEnvironmentIntensityMultiplier(1.0f);
+                    break;
             }
         }
 

@@ -10,7 +10,7 @@ namespace Unity.GraphCommon.LowLevel.Editor
 
         bool WriteView(ShaderWriter shaderWriter, DataView usedDataView, DataView readDataView, DataView writtenDataView, string name, string sourceName, CompilationContext context) => false;
 
-        string GetSubdataName(IDataKey subDataKey) => throw new System.NotImplementedException();
+        string GetSubdataName(DataView dataView, IDataKey subDataKey) => throw new System.NotImplementedException();
 
         string GetSubdataTypeName(IDataKey subDataKey) => throw new System.NotImplementedException();
 

@@ -29,11 +29,13 @@ namespace UnityEditor.Rendering
         readonly Dictionary<DebugUI.Widget, WidgetSearchData> m_WidgetSearchElementCache = new();
         readonly List<TextElement> m_PanelHeaderTextElements = new();
         UIElementSearchFilter m_SearchFilter;
+        Label m_NoResultsLabel;
 
         void BuildSearchCache()
         {
             m_WidgetSearchElementCache.Clear();
             m_PanelHeaderTextElements.Clear();
+            m_NoResultsLabel = rootVisualElement.Q<Label>(name: "debug-window-no-results-label");
 
             foreach (var panelElement in m_RightPaneElement.Children())
             {
@@ -76,6 +78,9 @@ namespace UnityEditor.Rendering
                             tab.style.display = shouldShow ? DisplayStyle.Flex : DisplayStyle.None;
                         }
                     }
+
+                    bool noResults = !string.IsNullOrEmpty(searchString) && visiblePanels.Count == 0;
+                    m_NoResultsLabel.style.display = noResults ? DisplayStyle.Flex : DisplayStyle.None;
                 }
             );
             m_SearchFilter.InitializeSearchField("search-field");

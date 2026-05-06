@@ -1101,13 +1101,13 @@ namespace UnityEngine.Rendering.Tests
 
             var result = g.CompileNativeRenderGraph(g.ComputeGraphHash());
 
-            // The resource with the biggest MaxReaders is buffer2:
-            // 1 implicit read (TestPass0) + 1 explicit read (TestPass1) + 1 for the offset.
-            Assert.AreEqual(result.contextData.resources.MaxReaders[(int)RenderGraphResourceType.Buffer], 3);
-
-            // The resource with the biggest MaxVersion is buffer2:
-            // 1 explicit write (TestPass0) + 1 explicit readwrite (TestPass1) + 1 for the offset
-            Assert.AreEqual(result.contextData.resources.MaxVersions[(int)RenderGraphResourceType.Buffer], 3);
+            // Verify sparse allocation works: buffer2 should have per-resource allocation metadata inlined in unversionedData
+            // buffer2: 1 explicit write (TestPass0) + 1 explicit readwrite (TestPass1) + 1 for v0 = 3 versions
+            // buffer2: 1 implicit read (TestPass0) + 1 explicit read (TestPass1) + 1 for implicit transient reads = 3 readers
+            var buffer2Handle = buffer2.handle;
+            ref var buffer2Unversioned = ref result.contextData.resources.unversionedData[(int)RenderGraphResourceType.Buffer].ElementAt(buffer2Handle.index);
+            Assert.AreEqual(3, buffer2Unversioned.versionedDataCount, "buffer2 should have 3 versions allocated");
+            Assert.AreEqual(3, buffer2Unversioned.maxReadersPerVersion, "buffer2 should have 3 max readers per version");
         }
 
         [Test]
@@ -1142,13 +1142,18 @@ namespace UnityEngine.Rendering.Tests
 
             var result = g.CompileNativeRenderGraph(g.ComputeGraphHash());
 
-            // Resources with the biggest MaxReaders are extraTextures[0] and depthBuffer (both being equal):
-            // 1 implicit read (TestPass0) + 2 explicit read (TestPass1 & TestPass2) + 1 for the offset
-            Assert.AreEqual(result.contextData.resources.MaxReaders[(int)RenderGraphResourceType.Texture], 4);
+            // Verify sparse allocation: extraTextures[0] should have proper per-resource allocation inlined in unversionedData
+            // extraTextures[0]: 1 explicit write (TestPass0) + 1 explicit read-write (TestPass1) + 1 for v0 = 3 versions
+            // extraTextures[0]: 1 implicit read (TestPass0) + 2 explicit read (TestPass1 & TestPass2) + 1 for implicit transient reads = 4 readers
+            var extraTex0Handle = renderTargets.extraTextures[0].handle;
+            ref var extraTex0Unversioned = ref result.contextData.resources.unversionedData[(int)RenderGraphResourceType.Texture].ElementAt(extraTex0Handle.index);
+            Assert.AreEqual(3, extraTex0Unversioned.versionedDataCount, "extraTextures[0] should have 3 versions allocated");
+            Assert.AreEqual(4, extraTex0Unversioned.maxReadersPerVersion, "extraTextures[0] should have 4 max readers per version");
 
-            // The resource with the biggest MaxVersion is extraTextures[0]:
-            // 1 explicit write (TestPass0) + 1 explicit read-write (TestPass1) + 1 for the offset
-            Assert.AreEqual(result.contextData.resources.MaxVersions[(int)RenderGraphResourceType.Texture], 3);
+            // Verify depthBuffer has its own allocation (only used by TestPass0 and TestPass1)
+            var depthHandle = renderTargets.depthBuffer.handle;
+            ref var depthUnversioned = ref result.contextData.resources.unversionedData[(int)RenderGraphResourceType.Texture].ElementAt(depthHandle.index);
+            Assert.AreEqual(3, depthUnversioned.maxReadersPerVersion, "depthBuffer should have 3 max readers per version (sparse allocation)");
         }
 
         [Test]
@@ -1184,13 +1189,13 @@ namespace UnityEngine.Rendering.Tests
 
             var result = g.CompileNativeRenderGraph(g.ComputeGraphHash());
 
-            // The resource with the biggest MaxReaders is buffer2:
-            // 5 implicit read (TestPass0-2-4-6-8) + 5 explicit read (TestPass1-3-5-7-9) + 1 for the offset.
-            Assert.AreEqual(result.contextData.resources.MaxReaders[(int)RenderGraphResourceType.Buffer], 11);
-
-            // The resource with the biggest MaxVersion is buffer2:
-            // 5 explicit write (TestPass0-2-4-6-8) + 5 explicit readwrite (TestPass1-3-5-7-9) + 1 for the offset
-            Assert.AreEqual(result.contextData.resources.MaxVersions[(int)RenderGraphResourceType.Buffer], 11);
+            // Verify sparse allocation: buffer2 should have per-resource allocation metadata inlined in unversionedData
+            // buffer2: 5 explicit write (TestPass0-2-4-6-8) + 5 explicit readwrite (TestPass1-3-5-7-9) + 1 for v0 = 11 versions
+            // buffer2: 5 implicit read (TestPass0-2-4-6-8) + 5 explicit read (TestPass1-3-5-7-9) + 1 for implicit transient reads = 11 readers
+            var buffer2Handle = buffer2.handle;
+            ref var buffer2Unversioned = ref result.contextData.resources.unversionedData[(int)RenderGraphResourceType.Buffer].ElementAt(buffer2Handle.index);
+            Assert.AreEqual(11, buffer2Unversioned.versionedDataCount, "buffer2 should have 11 versions allocated");
+            Assert.AreEqual(11, buffer2Unversioned.maxReadersPerVersion, "buffer2 should have 11 max readers per version");
         }
 
         [Test]
@@ -1243,31 +1248,37 @@ namespace UnityEngine.Rendering.Tests
             var result = g.CompileNativeRenderGraph(g.ComputeGraphHash());
             var passes = result.contextData.GetNativePasses();
 
-            // VERIFY: MaxReaders and MaxVersions are calculated PER RESOURCE TYPE
-            // TEXTURE TYPE:
-            // 2 readwrite operations = 2 versions + 1 offset = 3 versions/readers.
-            Assert.AreEqual(result.contextData.resources.MaxReaders[(int)RenderGraphResourceType.Texture], 3);
-            Assert.AreEqual(result.contextData.resources.MaxVersions[(int)RenderGraphResourceType.Texture], 3);
+            // VERIFY: Sparse allocation allocates per-resource based on actual usage (inlined in unversionedData)
+            // TEXTURE TYPE: extraTextures[0]
+            // 2 readwrite operations = 2 versions + 1 for v0 = 3 versions
+            // 2 implicit reads + 0 explicit reads + 1 for implicit transient reads = 3 readers
+            var extraTex0Handle = renderTargets.extraTextures[0].handle;
+            ref var extraTex0Unversioned = ref result.contextData.resources.unversionedData[(int)RenderGraphResourceType.Texture].ElementAt(extraTex0Handle.index);
+            Assert.AreEqual(3, extraTex0Unversioned.versionedDataCount, "extraTextures[0] should have 3 versions allocated");
+            Assert.AreEqual(3, extraTex0Unversioned.maxReadersPerVersion, "extraTextures[0] should have 3 max readers per version");
 
-            // BUFFER TYPE:
-            // 5 write operations + 5 readwrite operations = 10 versions + 1 offset = 11 versions/readers.
-            Assert.AreEqual(result.contextData.resources.MaxReaders[(int)RenderGraphResourceType.Buffer], 11);
-            Assert.AreEqual(result.contextData.resources.MaxVersions[(int)RenderGraphResourceType.Buffer], 11);
+            // BUFFER TYPE: buffer
+            // 5 write operations + 5 readwrite operations = 10 versions + 1 for v0 = 11 versions
+            // 5 implicit reads + 5 explicit reads + 1 for implicit transient reads = 11 readers
+            var bufferHandle = buffer.handle;
+            ref var bufferUnversioned = ref result.contextData.resources.unversionedData[(int)RenderGraphResourceType.Buffer].ElementAt(bufferHandle.index);
+            Assert.AreEqual(11, bufferUnversioned.versionedDataCount, "buffer should have 11 versions allocated");
+            Assert.AreEqual(11, bufferUnversioned.maxReadersPerVersion, "buffer should have 11 max readers per version");
 
-            // VERIFY: Index calculations work correctly with per-type maximums
+            // VERIFY: Index calculations work correctly with sparse allocation
             // Get the texture handle from the first native pass attachment
             var textureHandle = passes[0].attachments[0].handle;
             Assert.AreEqual(renderTargets.extraTextures[0].handle.index, passes[0].attachments[0].handle.index);
 
-            // Test Index() calculation uses correct MaxVersions for texture type
-            int indexExpected = textureHandle.index * result.contextData.resources.MaxVersions[(int)RenderGraphResourceType.Texture] + textureHandle.version;
-            Assert.AreEqual(result.contextData.resources.Index(textureHandle), indexExpected);
-            Assert.IsTrue(indexExpected < result.contextData.resources.versionedData[(int)RenderGraphResourceType.Texture].Capacity);
+            // Test Index() returns valid indices within bounds (sparse allocation uses per-resource offsets)
+            int actualIndex = result.contextData.resources.Index(textureHandle);
+            Assert.IsTrue(actualIndex >= 0);
+            Assert.IsTrue(actualIndex < result.contextData.resources.versionedData[(int)RenderGraphResourceType.Texture].Length);
 
-            // Test IndexReader() calculation uses correct MaxReaders for texture type
-            int indexReaderExpected = indexExpected * result.contextData.resources.MaxReaders[(int)RenderGraphResourceType.Texture] + 0;
-            Assert.AreEqual(result.contextData.resources.IndexReader(textureHandle, 0), indexReaderExpected);
-            Assert.IsTrue(indexExpected < result.contextData.resources.readerData[(int)RenderGraphResourceType.Texture].Capacity);
+            // Test IndexReader() returns valid indices within bounds (sparse allocation uses per-resource offsets)
+            int actualReaderIndex = result.contextData.resources.IndexReader(textureHandle, 0);
+            Assert.IsTrue(actualReaderIndex >= 0);
+            Assert.IsTrue(actualReaderIndex < result.contextData.resources.readerData[(int)RenderGraphResourceType.Texture].Length);
         }
 
         [Test]

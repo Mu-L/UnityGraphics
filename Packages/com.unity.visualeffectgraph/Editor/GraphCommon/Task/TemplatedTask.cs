@@ -219,12 +219,18 @@ namespace Unity.GraphCommon.LowLevel.Editor
         /// <summary>
         /// Unique data key that represents the graph values data used by this task.
         /// </summary>
-        public static UniqueDataKey GraphValuesKey { get; } = new UniqueDataKey("GraphValues");
+        public static UniqueDataKey GraphValuesBufferKey { get; } = new UniqueDataKey("GraphValuesBuffer");
         /// <summary>
         /// Unique data key that represents the (legacy) context data used by this task.
         /// </summary>
         public static UniqueDataKey ContextDataKey { get; } = new UniqueDataKey("ContextData");
+        public static UniqueDataKey MaxParticleCountKey { get; } = new UniqueDataKey("maxParticleCount");
+        public static UniqueDataKey SystemSeedKey { get; } = new UniqueDataKey("systemSeed");
+        public static UniqueDataKey InitSpawnIndexKey { get; } = new UniqueDataKey("initSpawnIndex");
 
+        public static DataPath MaxParticleCountPath => new(MaxParticleCountKey);
+        public static DataPath SystemSeedPath => new(SystemSeedKey);
+        public static DataPath InitSpawnIndexPath => new(InitSpawnIndexKey);
         /// <summary>
         /// Initializes a new instance of the <see cref="TemplatedTask"/> class using the specified template name and arguments.
         /// </summary>

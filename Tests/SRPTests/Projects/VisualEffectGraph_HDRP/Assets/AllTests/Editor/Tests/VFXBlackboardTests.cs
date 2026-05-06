@@ -33,7 +33,67 @@ namespace UnityEditor.VFX.Test
             VFXViewWindow.GetAllWindows().ToList().ForEach(x => x.Close());
             VFXTestCommon.DeleteAllTemporaryGraph();
         }
+        [UnityTest]
+        public IEnumerator Select_Parameter_RecordsToHistory_AndCanNavigate()
+        {
+            // Arrange
+            BoardPreferenceHelper.SetVisible(BoardPreferenceHelper.Board.blackboard, true);
+            var graph = VFXTestCommon.MakeTemporaryGraph();
+            var window = VFXViewWindow.GetWindow(graph, true);
+            window.LoadResource(graph.visualEffectResource);
+            VFXBlackboard blackboard = window.graphView.blackboard;
+            yield return null;
+            blackboard.Update();
+            yield return null;
 
+            var paramDescArray = VFXLibrary.GetParameters().ToArray();
+            for (int i = 0; i < paramDescArray.Length; i++)
+            {
+                AddParameter(blackboard, paramDescArray[i]);
+            }
+
+            yield return null;
+            blackboard.Focus();
+            yield return null;
+
+            // Act
+            VFXBlackboardField parameterFieldFirst = null;
+            VFXBlackboardField parameterFieldLast = null;
+            var maxFrames = 16;
+            while (parameterFieldFirst == null && parameterFieldLast == null && maxFrames-- > 0)
+            {
+                yield return null;
+                parameterFieldFirst = blackboard.Query<VFXBlackboardField>().First();
+                parameterFieldLast = blackboard.Query<VFXBlackboardField>().Last();
+            }
+            Assert.NotNull(parameterFieldFirst);
+            Assert.NotNull(parameterFieldLast);
+
+            SelectionHistory.instance.ClearHistory();
+            window.graphView.AddToSelection(parameterFieldFirst);
+            Undo.IncrementCurrentGroup();
+            yield return null;
+
+            // Assert
+            Assert.IsTrue(SelectionHistory.instance.GetHistory().Count == 1);
+
+            window.graphView.ClearSelection();
+            yield return null;
+
+            window.graphView.AddToSelection(parameterFieldLast);
+            Undo.IncrementCurrentGroup();
+            yield return null;
+
+            Assert.IsTrue(SelectionHistory.instance.GetHistory().Count == 2);
+            var currentSelection = SelectionHistory.instance.GetHistory()[SelectionHistory.instance.GetIndex()];
+            Assert.IsTrue(currentSelection.m_CustomData.Contains(parameterFieldLast.PropertyItem.title));
+
+            SelectionHistory.instance.GoBack();
+            yield return null;
+
+            currentSelection = SelectionHistory.instance.GetHistory()[SelectionHistory.instance.GetIndex()];
+            Assert.IsTrue(currentSelection.m_CustomData.Contains(parameterFieldFirst.PropertyItem.title));
+        }
         [UnityTest]
         public IEnumerator Add_Category()
         {

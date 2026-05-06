@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
+using Unity.Scripting.LifecycleManagement;
 using UnityEditor.Rendering;
 using UnityEngine.Rendering.HighDefinition.Attributes;
 using UnityEngine.Rendering.RenderGraphModule;
@@ -254,24 +255,25 @@ namespace UnityEngine.Rendering.HighDefinition
     [Serializable]
     public partial class DebugDisplaySettings : IDebugData, ISerializedDebugDisplaySettings
     {
-        static string k_PanelMaterials = "Material";
-        static string k_PanelLighting = "Lighting";
-        static string k_PanelRendering = "Rendering";
+        static readonly string k_PanelMaterials = "Material";
+        static readonly string k_PanelLighting = "Lighting";
+        static readonly string k_PanelRendering = "Rendering";
 
         DebugUI.Widget[] m_DebugMaterialItems;
         DebugUI.Widget[] m_DebugLightingItems;
         DebugUI.Widget[] m_DebugRenderingItems;
 
-        static GUIContent[] s_LightingFullScreenDebugStrings = null;
-        static int[] s_LightingFullScreenDebugValues = null;
-        static GUIContent[] s_RenderingFullScreenDebugStrings = null;
-        static int[] s_RenderingFullScreenDebugValues = null;
-        static GUIContent[] s_MaterialFullScreenDebugStrings = null;
-        static int[] s_MaterialFullScreenDebugValues = null;
-        static GUIContent[] s_RenderingHistoryBuffersStrings = null;
-        static int[] s_RenderingHistoryBuffersValues = null;
-        static GUIContent[] s_RenderingMipmapDebugMaterialTextureSlotStrings = null;
-        static int[] s_RenderingMipmapDebugMaterialTextureSlotValues = null;
+        // No cleanup needed (populated once and not modified)
+        [NoAutoStaticsCleanup] static GUIContent[] s_LightingFullScreenDebugStrings = null;
+        [NoAutoStaticsCleanup] static int[] s_LightingFullScreenDebugValues = null;
+        [NoAutoStaticsCleanup] static GUIContent[] s_RenderingFullScreenDebugStrings = null;
+        [NoAutoStaticsCleanup] static int[] s_RenderingFullScreenDebugValues = null;
+        [NoAutoStaticsCleanup] static GUIContent[] s_MaterialFullScreenDebugStrings = null;
+        [NoAutoStaticsCleanup] static int[] s_MaterialFullScreenDebugValues = null;
+        [NoAutoStaticsCleanup] static GUIContent[] s_RenderingHistoryBuffersStrings = null;
+        [NoAutoStaticsCleanup] static int[] s_RenderingHistoryBuffersValues = null;
+        [NoAutoStaticsCleanup] static GUIContent[] s_RenderingMipmapDebugMaterialTextureSlotStrings = null;
+        [NoAutoStaticsCleanup] static int[] s_RenderingMipmapDebugMaterialTextureSlotValues = null;
 
 #if ENABLE_NVIDIA && ENABLE_NVIDIA_MODULE
         internal UnityEngine.NVIDIA.DebugView nvidiaDebugView { get; } = new UnityEngine.NVIDIA.DebugView();

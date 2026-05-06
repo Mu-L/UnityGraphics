@@ -377,9 +377,9 @@ namespace UnityEngine.PathTracing.Integration
                 _accumulationShader.SetIntParam(cmd, LightmapIntegratorShaderIDs.SampleOffset, (int)currentSampleCountPerTexel);
                 _accumulationShader.SetIntParam(cmd, LightmapIntegratorShaderIDs.MaxLocalSampleCount, (int)sampleCountToTakePerTexel);
 
-                cmd.BeginSample("Accumulation (Expanded)");
+                cmd.BeginSample(LightmapIntegratorShaderIDs.k_AccumulationExpanded);
                 _accumulationShader.Dispatch(cmd, traceScratchBuffer, _accumulationDispatchBuffer);
-                cmd.EndSample("Accumulation (Expanded)");
+                cmd.EndSample(LightmapIntegratorShaderIDs.k_AccumulationExpanded);
             }
         }
 

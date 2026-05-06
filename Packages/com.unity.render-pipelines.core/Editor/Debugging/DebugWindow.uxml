@@ -15,6 +15,7 @@
         <ui:VisualElement name="debug-window-tab-container" class="">
             <ui:ScrollView horizontal-scroller-visibility="Hidden" view-data-key="debug-window-tab-container-scrollview">
                 <ui:VisualElement name="panels-inspector-insertion-element" />
+                <ui:Label name="debug-window-no-results-label" text="No results match your search." />
                 <ui:VisualElement name="scroll-buffer" />
             </ui:ScrollView>
         </ui:VisualElement>
